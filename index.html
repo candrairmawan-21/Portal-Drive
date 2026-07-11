@@ -109,9 +109,9 @@
             return result;
         }
 
-        async function fetchData() {
-            try {
-                const response = await fetch(CSV_URL);
+       async function fetchData() {
+    try {
+        const response = await fetch(API_URL); // <-- Diubah menjadi API_URL
                 const csvText = await response.text();
                 allFiles = parseCSV(csvText);
                 renderPortal();
