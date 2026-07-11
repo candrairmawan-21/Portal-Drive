@@ -1,8 +1,101 @@
+// ==========================================
+// 1. CONFIG & GLOBAL VARIABLES
+// ==========================================
 // URL CSV Khusus untuk Dashboard UPT
 const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=425930614&single=true&output=csv';
 
 let dashboardData = [];
 let chartInstance = null;
+
+// Jalankan inisialisasi utama setelah DOM siap
+document.addEventListener('DOMContentLoaded', () => {
+    // A. Tampilkan User Terlogin di Pojok Kanan Atas
+    renderLoggedInUser();
+
+    // B. Jalankan pemuatan data & pengecekan akses
+    fetchDashboardData();
+});
+
+// ==========================================
+// 2. FITUR TAMBAHAN: TAMPILAN USER LOGIN & PROTEKSI AKSES
+// ==========================================
+
+// Fungsi menampilkan nama & role user di bagian atas (navbar/header)
+function renderLoggedInUser() {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const userName = currentUser.name || currentUser.username || 'Guest User';
+    const userRole = (currentUser.role || 'Staff').toUpperCase();
+
+    // Mencari elemen kontainer navigasi atas yang tersedia di HTML portal Anda
+    const userContainer = document.getElementById('user-profile-nav') || 
+                          document.querySelector('.navbar-right') || 
+                          document.querySelector('header .flex.items-center.gap-4') ||
+                          document.querySelector('nav .flex.items-center');
+
+    if (userContainer) {
+        const existingBadge = document.getElementById('dynamic-user-badge');
+        if (existingBadge) existingBadge.remove();
+
+        const badgeHTML = `
+            <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-800/40 border border-slate-700/60 px-4 py-1.5 rounded-xl backdrop-blur-sm ml-auto">
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs font-black text-white leading-none">${userName}</p>
+                    <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${userRole}</p>
+                </div>
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-xs shadow-sm uppercase">
+                    ${userName.charAt(0)}
+                </div>
+            </div>
+        `;
+        userContainer.insertAdjacentHTML('beforeend', badgeHTML);
+    }
+}
+
+// Fungsi memeriksa hak akses bertingkat
+function checkDashboardAccess(pageRestrictionValue) {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    // Default ke admin saat development agar tidak terkunci jika data localStorage kosong
+    const userRole = (currentUser.role || 'admin').toLowerCase().trim();
+    const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
+
+    // 1. Jika batasan kosong atau "-", semua boleh masuk
+    if (pageRestriction === "" || pageRestriction === "-") return true;
+    
+    // 2. Jika Admin (Godmode), bypass dan izinkan akses penuh
+    if (userRole === "admin") return true; 
+
+    // 3. Batasan khusus 'bm': Hanya BM yang boleh
+    if (pageRestriction === "bm") {
+        return userRole === "bm";
+    }
+
+    // 4. Batasan khusus 'abm': ABM dan BM boleh masuk
+    if (pageRestriction === "abm") {
+        return userRole === "abm" || userRole === "bm";
+    }
+
+    return false;
+}
+
+// Menampilkan view "Akses Terkunci" yang rapi jika tidak memiliki izin
+function showAccessDenied() {
+    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-content') || document.body;
+    mainContent.innerHTML = `
+        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 w-full grid col-span-full">
+            <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
+                </svg>
+                <h2 class="text-xl font-black text-slate-800 mb-1">Akses Terkunci</h2>
+                <p class="text-sm text-slate-500">Maaf, file atau halaman ini dikunci berdasarkan regulasi hak akses jabatan Anda.</p>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// 3. CORE LOGIC (DIPERTAHANKAN KEASLIANNYA)
+// ==========================================
 
 // Fungsi Utama untuk Memuat Data Dashboard
 async function fetchDashboardData() {
@@ -13,6 +106,15 @@ async function fetchDashboardData() {
         const response = await fetch(DASHBOARD_API_URL);
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
+        
+        // --- PROSES VALIDASI HAK AKSES DI SINI ---
+        // Atur parameter di bawah ini (misal: 'abm' atau 'bm') sesuai kebutuhan halaman UPT ini
+        const currentFileRestriction = "abm"; 
+
+        if (!checkDashboardAccess(currentFileRestriction)) {
+            showAccessDenied();
+            return; // Hentikan script, jangan render apapun
+        }
         
         // Inisialisasi awal slicer setelah data siap
         initSlicers();
@@ -101,14 +203,14 @@ function initSlicers() {
         applyDashboardFilters();
     });
 
-    document.getElementById('slicerBulan').addEventListener('change', applyDashboardFilters);
-    document.getElementById('slicerSpesifik').addEventListener('change', applyDashboardFilters);
+    document.getElementById('slicerBulan')?.addEventListener('change', applyDashboardFilters);
+    document.getElementById('slicerSpesifik')?.addEventListener('change', applyDashboardFilters);
 }
 
 // FUNGSI UNTUK MENYARING DATA BERDASARKAN PILIHAN SLICER
 function applyDashboardFilters() {
-    const kategori = document.getElementById('slicerKategori').value;
-    const spesifik = document.getElementById('slicerSpesifik').value;
+    const kategori = document.getElementById('slicerKategori')?.value || 'all';
+    const spesifik = document.getElementById('slicerSpesifik')?.value || 'all';
 
     let filteredData = [...dashboardData];
 
@@ -219,8 +321,8 @@ function renderChartPerforma(data) {
     if (!ctx) return;
 
     let performanceMap = {};
-    const kategoriSlicer = document.getElementById('slicerKategori').value;
-    const spesifikSlicer = document.getElementById('slicerSpesifik').value;
+    const kategoriSlicer = document.getElementById('slicerKategori')?.value || 'all';
+    const spesifikSlicer = document.getElementById('slicerSpesifik')?.value || 'all';
 
     data.forEach(item => {
         let key = item.namaBM; 
