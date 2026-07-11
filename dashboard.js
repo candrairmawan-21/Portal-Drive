@@ -7,30 +7,55 @@ const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSx
 let dashboardData = [];
 let chartInstance = null;
 
-// Jalankan inisialisasi utama setelah DOM siap
+// Jalankan saat halaman selesai dimuat
 document.addEventListener('DOMContentLoaded', () => {
-    // A. Tampilkan User Terlogin di Pojok Kanan Atas
+    // 1. Render profil user login secara dinamis
     renderLoggedInUser();
-
-    // B. Jalankan pemuatan data & pengecekan akses
+    // 2. Load data & proteksi akses
     fetchDashboardData();
 });
 
 // ==========================================
-// 2. FITUR TAMBAHAN: TAMPILAN USER LOGIN & PROTEKSI AKSES
+// 2. FITUR TAMBAHAN: LOGIN & HAK AKSES (DINAMIS)
 // ==========================================
 
-// Fungsi menampilkan nama & role user di bagian atas (navbar/header)
-function renderLoggedInUser() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userName = currentUser.name || currentUser.username || 'Guest User';
-    const userRole = (currentUser.role || 'Staff').toUpperCase();
+// Helper untuk mengambil data session login dari berbagai kemungkinan key localStorage
+function getSessionUser() {
+    try {
+        // Coba format object 1: currentUser
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        // Coba format object 2: user
+        const userObj = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        // Ambil nama (prioritas: currentUser -> userObj -> direct string)
+        const name = currentUser.name || currentUser.username || userObj.name || userObj.username || localStorage.getItem('username') || 'Guest User';
+        // Ambil role (prioritas: currentUser -> userObj -> direct string)
+        const role = currentUser.role || userObj.role || localStorage.getItem('role') || 'staff';
 
-    // Mencari elemen kontainer navigasi atas yang tersedia di HTML portal Anda
+        return {
+            name: name,
+            role: role.toLowerCase().trim()
+        };
+    } catch (e) {
+        // Fallback jika JSON.parse error (misal localStorage isinya string biasa)
+        return {
+            name: localStorage.getItem('username') || 'Guest User',
+            role: (localStorage.getItem('role') || 'staff').toLowerCase().trim()
+        };
+    }
+}
+
+// Fungsi menampilkan nama & role user di navbar secara dinamis
+function renderLoggedInUser() {
+    const user = getSessionUser();
+    const displayRole = user.role.toUpperCase();
+
+    // Mencari elemen kontainer navigasi atas
     const userContainer = document.getElementById('user-profile-nav') || 
                           document.querySelector('.navbar-right') || 
                           document.querySelector('header .flex.items-center.gap-4') ||
-                          document.querySelector('nav .flex.items-center');
+                          document.querySelector('nav .flex.items-center') ||
+                          document.getElementById('user-profile'); // ID fallback tambahan
 
     if (userContainer) {
         const existingBadge = document.getElementById('dynamic-user-badge');
@@ -39,11 +64,11 @@ function renderLoggedInUser() {
         const badgeHTML = `
             <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-800/40 border border-slate-700/60 px-4 py-1.5 rounded-xl backdrop-blur-sm ml-auto">
                 <div class="text-right hidden sm:block">
-                    <p class="text-xs font-black text-white leading-none">${userName}</p>
-                    <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${userRole}</p>
+                    <p class="text-xs font-black text-white leading-none">${user.name}</p>
+                    <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${displayRole}</p>
                 </div>
                 <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-xs shadow-sm uppercase">
-                    ${userName.charAt(0)}
+                    ${user.name.charAt(0)}
                 </div>
             </div>
         `;
@@ -53,35 +78,37 @@ function renderLoggedInUser() {
 
 // Fungsi memeriksa hak akses bertingkat
 function checkDashboardAccess(pageRestrictionValue) {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    // Default ke admin saat development agar tidak terkunci jika data localStorage kosong
-    const userRole = (currentUser.role || 'admin').toLowerCase().trim();
+    const user = getSessionUser();
     const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
 
     // 1. Jika batasan kosong atau "-", semua boleh masuk
     if (pageRestriction === "" || pageRestriction === "-") return true;
     
     // 2. Jika Admin (Godmode), bypass dan izinkan akses penuh
-    if (userRole === "admin") return true; 
+    if (user.role === "admin") return true; 
 
     // 3. Batasan khusus 'bm': Hanya BM yang boleh
     if (pageRestriction === "bm") {
-        return userRole === "bm";
+        return user.role === "bm";
     }
 
     // 4. Batasan khusus 'abm': ABM dan BM boleh masuk
     if (pageRestriction === "abm") {
-        return userRole === "abm" || userRole === "bm";
+        return user.role === "abm" || user.role === "bm";
     }
 
     return false;
 }
 
-// Menampilkan view "Akses Terkunci" yang rapi jika tidak memiliki izin
+// Menampilkan view "Akses Terkunci" jika tidak memiliki izin
 function showAccessDenied() {
-    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-content') || document.body;
+    const mainContent = document.getElementById('main-content') || 
+                        document.getElementById('dashboard-content') || 
+                        document.querySelector('.flex-1.p-6') || // Selektor layout utama
+                        document.body;
+                        
     mainContent.innerHTML = `
-        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 w-full grid col-span-full">
+        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 w-full m-auto">
             <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto flex flex-col items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
@@ -107,16 +134,16 @@ async function fetchDashboardData() {
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
         
-        // --- PROSES VALIDASI HAK AKSES DI SINI ---
-        // Atur parameter di bawah ini (misal: 'abm' atau 'bm') sesuai kebutuhan halaman UPT ini
+        // --- VALIDASI HAK AKSES DI SINI ---
+        // Ganti "abm" menjadi batasan role yang diinginkan untuk file/halaman ini.
         const currentFileRestriction = "abm"; 
 
         if (!checkDashboardAccess(currentFileRestriction)) {
             showAccessDenied();
-            return; // Hentikan script, jangan render apapun
+            return; // Kunci halaman, hentikan pemrosesan data
         }
         
-        // Inisialisasi awal slicer setelah data siap
+        // Inisialisasi awal slicer setelah data siap dan lolos verifikasi akses
         initSlicers();
         // Render pertama kali dengan seluruh data
         applyDashboardFilters();
@@ -327,7 +354,7 @@ function renderChartPerforma(data) {
     data.forEach(item => {
         let key = item.namaBM; 
         if (kategoriSlicer === 'abm') key = item.namaABM;
-        if (spesifikSlicer !== 'all') key = item.namaStaff; // Breakdown ke nama staff jika nama BM/ABM dipilih
+        if (spesifikSlicer !== 'all') key = item.namaStaff; 
 
         if (key && key !== "-") {
             performanceMap[key] = (performanceMap[key] || 0) + item.uptJuly;
