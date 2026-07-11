@@ -7,36 +7,30 @@ const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSx
 let dashboardData = [];
 let chartInstance = null;
 
-// Jalankan saat halaman selesai dimuat
+// Jalankan inisialisasi utama setelah DOM siap
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Render profil user login secara dinamis di navbar
+    // A. Tampilkan User Terlogin di Pojok Kanan Atas
     renderLoggedInUser();
-    // 2. Load data dan filter berdasarkan siapa yang sedang melihat
+
+    // B. Jalankan pemuatan data & pengecekan akses
     fetchDashboardData();
 });
 
 // ==========================================
-// 2. LOGIKA SESSION LOGIN USER
+// 2. FITUR TAMBAHAN: TAMPILAN USER LOGIN & PROTEKSI AKSES
 // ==========================================
 
-// Mengambil data session login dari localStorage portal
-function getSessionUser() {
-    const name = localStorage.getItem('username') || 'Guest User';
-    const role = (localStorage.getItem('role') || 'staff').toLowerCase().trim();
-
-    return { name, role };
-}
-
-// Menampilkan nama & role user di navbar secara dinamis
+// Fungsi menampilkan nama & role user di bagian atas (navbar/header)
 function renderLoggedInUser() {
-    const user = getSessionUser();
-    const displayRole = user.role.toUpperCase();
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const userName = currentUser.name || currentUser.username || 'Guest User';
+    const userRole = (currentUser.role || 'Staff').toUpperCase();
 
+    // Mencari elemen kontainer navigasi atas yang tersedia di HTML portal Anda
     const userContainer = document.getElementById('user-profile-nav') || 
                           document.querySelector('.navbar-right') || 
                           document.querySelector('header .flex.items-center.gap-4') ||
-                          document.querySelector('nav .flex.items-center') ||
-                          document.getElementById('user-profile');
+                          document.querySelector('nav .flex.items-center');
 
     if (userContainer) {
         const existingBadge = document.getElementById('dynamic-user-badge');
@@ -45,11 +39,11 @@ function renderLoggedInUser() {
         const badgeHTML = `
             <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-800/40 border border-slate-700/60 px-4 py-1.5 rounded-xl backdrop-blur-sm ml-auto">
                 <div class="text-right hidden sm:block">
-                    <p class="text-xs font-black text-white leading-none">${user.name}</p>
-                    <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${displayRole}</p>
+                    <p class="text-xs font-black text-white leading-none">${userName}</p>
+                    <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${userRole}</p>
                 </div>
                 <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-xs shadow-sm uppercase">
-                    ${user.name.charAt(0)}
+                    ${userName.charAt(0)}
                 </div>
             </div>
         `;
@@ -57,8 +51,50 @@ function renderLoggedInUser() {
     }
 }
 
+// Fungsi memeriksa hak akses bertingkat
+function checkDashboardAccess(pageRestrictionValue) {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    // Default ke admin saat development agar tidak terkunci jika data localStorage kosong
+    const userRole = (currentUser.role || 'admin').toLowerCase().trim();
+    const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
+
+    // 1. Jika batasan kosong atau "-", semua boleh masuk
+    if (pageRestriction === "" || pageRestriction === "-") return true;
+    
+    // 2. Jika Admin (Godmode), bypass dan izinkan akses penuh
+    if (userRole === "admin") return true; 
+
+    // 3. Batasan khusus 'bm': Hanya BM yang boleh
+    if (pageRestriction === "bm") {
+        return userRole === "bm";
+    }
+
+    // 4. Batasan khusus 'abm': ABM dan BM boleh masuk
+    if (pageRestriction === "abm") {
+        return userRole === "abm" || userRole === "bm";
+    }
+
+    return false;
+}
+
+// Menampilkan view "Akses Terkunci" yang rapi jika tidak memiliki izin
+function showAccessDenied() {
+    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-content') || document.body;
+    mainContent.innerHTML = `
+        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 w-full grid col-span-full">
+            <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
+                </svg>
+                <h2 class="text-xl font-black text-slate-800 mb-1">Akses Terkunci</h2>
+                <p class="text-sm text-slate-500">Maaf, file atau halaman ini dikunci berdasarkan regulasi hak akses jabatan Anda.</p>
+            </div>
+        </div>
+    `;
+}
+
 // ==========================================
-// 3. CORE LOGIC (PARSING & DATA PRIVACY FILTER)
+// 3. CORE LOGIC (DIPERTAHANKAN KEASLIANNYA)
 // ==========================================
 
 // Fungsi Utama untuk Memuat Data Dashboard
@@ -69,46 +105,21 @@ async function fetchDashboardData() {
     try {
         const response = await fetch(DASHBOARD_API_URL);
         const csvText = await response.text();
+        dashboardData = parseDashboardCSV(csvText);
         
-        // 1. Parse semua data dari Google Sheets
-        const allData = parseDashboardCSV(csvText);
-        
-        // 2. AMBIL DATA USER LOGIN
-        const user = getSessionUser();
-        const userNameLower = user.name.toLowerCase().trim();
-        
-        // 3. FILTER PRIVASI DATA (Dashboard tetap terbuka untuk semua)
-        if (user.role === 'admin') {
-            // Admin bebas melihat 100% data mentah
-            dashboardData = allData;
-        } else {
-            // Cek apakah user ini terdaftar sebagai BM atau ABM di dalam data spreadsheet
-            const isBM = allData.some(item => item.namaBM.toLowerCase().trim() === userNameLower);
-            const isABM = allData.some(item => item.namaABM.toLowerCase().trim() === userNameLower);
+        // --- PROSES VALIDASI HAK AKSES DI SINI ---
+        // Atur parameter di bawah ini (misal: 'abm' atau 'bm') sesuai kebutuhan halaman UPT ini
+        const currentFileRestriction = "abm"; 
 
-            if (isBM) {
-                // Jika terdaftar sebagai BM, filter data berdasarkan nama BM-nya
-                dashboardData = allData.filter(item => item.namaBM.toLowerCase().trim() === userNameLower);
-            } else if (isABM) {
-                // Jika terdaftar sebagai ABM, filter data berdasarkan nama ABM-nya
-                dashboardData = allData.filter(item => item.namaABM.toLowerCase().trim() === userNameLower);
-            } else {
-                // Jika Staff biasa / nama tidak match di kolom BM/ABM, hanya tampilkan data miliknya sendiri
-                dashboardData = allData.filter(item => item.namaStaff.toLowerCase().trim() === userNameLower);
-                
-                // Jika data pribadinya kosong (Guest/Baru), biarkan dashboard kosong tanpa crash
-                if (dashboardData.length === 0) {
-                    dashboardData = []; 
-                }
-            }
+        if (!checkDashboardAccess(currentFileRestriction)) {
+            showAccessDenied();
+            return; // Hentikan script, jangan render apapun
         }
-
-        // 4. Inisialisasi slicer berdasarkan data yang sudah disaring hak aksesnya
+        
+        // Inisialisasi awal slicer setelah data siap
         initSlicers();
-        
-        // 5. Jalankan render awal ke podium dan chart
+        // Render pertama kali dengan seluruh data
         applyDashboardFilters();
-        
     } catch (error) {
         console.error('Error memuat data dashboard:', error);
     } finally {
@@ -156,7 +167,7 @@ function initSlicers() {
 
     if (!slicerKategori || !slicerSpesifik) return;
 
-    // Bersihkan event listener lama dengan melakukan cloning
+    // Bersihkan event listener lama dengan mengganti elemen (clone) agar tidak double trigger
     const newSlicerKategori = slicerKategori.cloneNode(true);
     slicerKategori.parentNode.replaceChild(newSlicerKategori, slicerKategori);
 
@@ -177,13 +188,14 @@ function initSlicers() {
             targetSpesifik.disabled = false;
             targetSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
             
-            // Mengambil opsi unique hanya dari porsi data yang diizinkan untuk user saat ini
+            // Ambil data unique berdasarkan kategori yang dipilih (Kolom A untuk BM, Kolom B untuk ABM)
             let uniqueItems = new Set();
             dashboardData.forEach(item => {
                 if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
                 if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
             });
 
+            // Masukkan data unique ke dalam Slicer 3
             Array.from(uniqueItems).sort().forEach(name => {
                 targetSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
             });
@@ -213,7 +225,7 @@ function applyDashboardFilters() {
         }
     }
 
-    // Render komponen dengan data hasil saringan terakhir
+    // Render komponen dengan data yang sudah disaring
     renderPodiumTop3(filteredData);
     renderPodiumBottom3(filteredData);
     renderChartPerforma(filteredData);
@@ -237,6 +249,7 @@ function renderPodiumBottom3(data) {
     const container = document.getElementById('podium-bottom-content');
     if (!container) return;
 
+    // Abaikan data yang poin UPT-nya 0 agar pencarian bottom lebih akurat
     let validData = data.filter(item => item.uptJuly > 0);
     if (validData.length === 0) validData = data;
 
@@ -248,7 +261,7 @@ function renderPodiumBottom3(data) {
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'bottom');
 }
 
-// HELPER UNTUK MEMBUAT STRUKTUR HTML PODIUM
+// HELPER UNTUK MEMBUAT STRUKTUR HTML PODIUM (NAMA TIDAK TERPOTONG)
 function generatePodiumHTML(p1, p2, p3, type) {
     const isTop = type === 'top';
     const colorClass = isTop 
@@ -261,7 +274,7 @@ function generatePodiumHTML(p1, p2, p3, type) {
 
     return `
         <div class="flex items-end justify-center gap-2 sm:gap-4 pt-12 pb-2 max-w-md mx-auto w-full">
-            <!-- JUARA 2 -->
+            <!-- JUARA 2 (KIRI) -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p2.namaStaff}</p>
@@ -273,7 +286,7 @@ function generatePodiumHTML(p1, p2, p3, type) {
                 </div>
             </div>
 
-            <!-- JUARA 1 -->
+            <!-- JUARA 1 (TENGAH) -->
             <div class="flex flex-col items-center flex-1 transform -translate-y-4 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="flex justify-center mb-1">${iconSvg}</div>
@@ -286,7 +299,7 @@ function generatePodiumHTML(p1, p2, p3, type) {
                 </div>
             </div>
 
-            <!-- JUARA 3 -->
+            <!-- JUARA 3 (KANAN) -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="h-5"></div>
@@ -314,7 +327,7 @@ function renderChartPerforma(data) {
     data.forEach(item => {
         let key = item.namaBM; 
         if (kategoriSlicer === 'abm') key = item.namaABM;
-        if (spesifikSlicer !== 'all') key = item.namaStaff; 
+        if (spesifikSlicer !== 'all') key = item.namaStaff; // Breakdown ke nama staff jika nama BM/ABM dipilih
 
         if (key && key !== "-") {
             performanceMap[key] = (performanceMap[key] || 0) + item.uptJuly;
