@@ -43,15 +43,28 @@ document.addEventListener('DOMContentLoaded', () => {
 // 2. LOGIKA SESSION LOGIN USER
 // ==========================================
 function getSessionUser() {
-    const rawUsername = (localStorage.getItem('username') || 'guest').toLowerCase().trim();
+    // 1. Ambil username dari storage dan bersihkan dari semua jenis spasi/karakter aneh
+    let rawUsername = (localStorage.getItem('username') || 'guest').toLowerCase().trim();
     
-    if (USER_MAPPING[rawUsername]) {
+    // Versi bersih total (tanpa spasi, tanpa underscore, tanpa strip) untuk pencocokan aman
+    let superCleanUsername = rawUsername.replace(/[\s_\-]/g, ''); 
+    
+    // 2. Normalisasi USER_MAPPING agar kuncinya juga bersih total dari spasi/karakter aneh
+    const normalizedMapping = {};
+    Object.keys(USER_MAPPING).forEach(key => {
+        const cleanKey = key.toLowerCase().replace(/[\s_\-]/g, '').trim();
+        normalizedMapping[cleanKey] = USER_MAPPING[key];
+    });
+    
+    // 3. Lakukan pencocokan dengan versi yang sudah bersih total
+    if (normalizedMapping[superCleanUsername]) {
         return {
             username: rawUsername,
-            nameInSheets: USER_MAPPING[rawUsername].namaDiSheets.toLowerCase().trim(),
-            role: USER_MAPPING[rawUsername].role.toLowerCase().trim()
+            nameInSheets: normalizedMapping[superCleanUsername].namaDiSheets.toLowerCase().trim(),
+            role: normalizedMapping[superCleanUsername].role.toLowerCase().trim()
         };
     } else {
+        // Jika benar-benar tidak terdaftar di USER_MAPPING
         return {
             username: rawUsername,
             nameInSheets: rawUsername,
@@ -59,6 +72,7 @@ function getSessionUser() {
         };
     }
 }
+
 
 function renderLoggedInUser() {
     const user = getSessionUser();
