@@ -159,7 +159,7 @@ function renderPodiumBottom3(data) {
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'bottom');
 }
 
-// HELPER UNTUK MEMBUAT STRUKTUR HTML PODIUM (MENGGUNAKAN SVG MURNI)
+// HELPER UNTUK MEMBUAT STRUKTUR HTML PODIUM (NAMA TIDAK TERPOTONG)
 function generatePodiumHTML(p1, p2, p3, type) {
     const isTop = type === 'top';
     const colorClass = isTop 
@@ -172,38 +172,38 @@ function generatePodiumHTML(p1, p2, p3, type) {
 
     return `
         <div class="flex items-end justify-center gap-2 sm:gap-4 pt-12 pb-2 max-w-md mx-auto w-full">
-            <!-- JUARA 2 -->
+            <!-- JUARA 2 (KIRI) -->
             <div class="flex flex-col items-center flex-1 w-0">
-                <div class="text-center mb-2 w-full">
-                    <p class="font-extrabold text-xs text-slate-700 truncate px-1">${p2.namaStaff}</p>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase truncate px-1">${p2.namaStore}</p>
-                    <span class="text-xs font-black text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">${p2.uptJuly}</span>
+                <div class="text-center mb-2 w-full px-0.5">
+                    <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p2.namaStaff}</p>
+                    <p class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase truncate mt-0.5">${p2.namaStore}</p>
+                    <span class="inline-block mt-1 text-xs font-black text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">${p2.uptJuly}</span>
                 </div>
                 <div class="w-full bg-gradient-to-t from-slate-200 to-slate-100 h-20 rounded-t-2xl border-t-2 border-slate-300 flex items-center justify-center relative shadow-sm">
                     <span class="text-2xl font-black text-slate-400">2</span>
                 </div>
             </div>
 
-            <!-- JUARA 1 -->
+            <!-- JUARA 1 (TENGAH) -->
             <div class="flex flex-col items-center flex-1 transform -translate-y-4 w-0">
-                <div class="text-center mb-2 w-full">
-                    <div class="flex justify-center mb-0.5">${iconSvg}</div>
-                    <p class="font-black text-sm text-slate-800 truncate px-1">${p1.namaStaff}</p>
-                    <p class="text-[10px] ${colorClass.txt1} font-extrabold uppercase truncate px-1">${p1.namaStore}</p>
-                    <span class="text-xs font-black text-white bg-gradient-to-r ${colorClass.badge1} px-2.5 py-0.5 rounded-lg shadow-sm">${p1.uptJuly}</span>
+                <div class="text-center mb-2 w-full px-0.5">
+                    <div class="flex justify-center mb-1">${iconSvg}</div>
+                    <p class="font-black text-xs sm:text-sm text-slate-800 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p1.namaStaff}</p>
+                    <p class="text-[9px] sm:text-[10px] ${colorClass.txt1} font-extrabold uppercase truncate mt-0.5">${p1.namaStore}</p>
+                    <span class="inline-block mt-1 text-xs font-black text-white bg-gradient-to-r ${colorClass.badge1} px-2.5 py-0.5 rounded-lg shadow-sm">${p1.uptJuly}</span>
                 </div>
                 <div class="w-full bg-gradient-to-t ${colorClass.bar1} h-28 rounded-t-2xl border-t-2 border-white/20 flex items-center justify-center relative shadow-md">
                     <span class="text-3xl font-black text-white drop-shadow-sm">1</span>
                 </div>
             </div>
 
-            <!-- JUARA 3 -->
+            <!-- JUARA 3 (KANAN) -->
             <div class="flex flex-col items-center flex-1 w-0">
-                <div class="text-center mb-2 w-full">
+                <div class="text-center mb-2 w-full px-0.5">
                     <div class="h-5"></div>
-                    <p class="font-extrabold text-xs text-slate-700 truncate px-1">${p3.namaStaff}</p>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase truncate px-1">${p3.namaStore}</p>
-                    <span class="text-xs font-black text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">${p3.uptJuly}</span>
+                    <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p3.namaStaff}</p>
+                    <p class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase truncate mt-0.5">${p3.namaStore}</p>
+                    <span class="inline-block mt-1 text-xs font-black text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">${p3.uptJuly}</span>
                 </div>
                 <div class="w-full bg-gradient-to-t from-orange-100 to-orange-50/40 h-14 rounded-t-2xl border-t-2 border-orange-200 flex items-center justify-center relative shadow-sm">
                     <span class="text-xl font-black text-orange-400">3</span>
