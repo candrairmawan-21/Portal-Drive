@@ -1,10 +1,74 @@
+// ==========================================
+// 1. CONFIG & GLOBAL VARIABLES
+// ==========================================
 // URL CSV Khusus untuk Dashboard UPT
 const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=425930614&single=true&output=csv';
 
 let dashboardData = [];
 let chartInstance = null;
 
-// Fungsi Utama untuk Memuat Data Dashboard
+// Tunggu DOM selesai dimuat sebelum menjalankan inisialisasi utama
+document.addEventListener('DOMContentLoaded', () => {
+    // Jalankan pengecekan hak akses terlebih dahulu sebelum memuat data
+    if (checkDashboardAccess()) {
+        fetchDashboardData();
+    }
+});
+
+// ==========================================
+// 2. LOGIKA HAK AKSES (KOLOM F)
+// ==========================================
+function checkDashboardAccess() {
+    // Ambil data user yang sedang login dari localStorage portal Anda
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    // Jika tidak ada data role, asumsikan sebagai 'staff' demi keamanan
+    const userRole = (currentUser.role || 'staff').toLowerCase().trim();
+    
+    // Ambil indikator pembatasan halaman dari file/sistem menu Anda (Asumsi default untuk UPT ini)
+    // Sesuai aturan: jika kosong/'-' = semua bisa, 'abm' = abm/bm/admin, 'bm' = bm/admin, 'admin' = admin (godmode)
+    const pageRestriction = 'abm'; // Sesuai instruksi: halaman UPT ini diatur untuk tingkat 'abm'
+
+    if (pageRestriction === "" || pageRestriction === "-") return true;
+    if (userRole === "admin") return true; // Godmode bypass
+
+    if (pageRestriction === "bm") {
+        if (userRole !== "bm") {
+            showAccessDenied();
+            return false;
+        }
+    }
+
+    if (pageRestriction === "abm") {
+        if (userRole !== "abm" && userRole !== "bm") {
+            showAccessDenied();
+            return false;
+        }
+    }
+
+    if (pageRestriction === "admin" && userRole !== "admin") {
+        showAccessDenied();
+        return false;
+    }
+
+    return true;
+}
+
+function showAccessDenied() {
+    const mainContent = document.getElementById('main-content') || document.body;
+    mainContent.innerHTML = `
+        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
+            </svg>
+            <h2 class="text-xl font-black text-slate-800 mb-1">Akses Ditolak</h2>
+            <p class="text-sm text-slate-500 max-w-sm">Maaf, file atau halaman ini dikunci dan hanya dapat dibuka oleh level jabatan yang sesuai.</p>
+        </div>
+    `;
+}
+
+// ==========================================
+// 3. DATA FETCHING & PARSING
+// ==========================================
 async function fetchDashboardData() {
     const container = document.getElementById('dashboard-loading');
     if (container) container.classList.remove('hidden');
@@ -14,9 +78,7 @@ async function fetchDashboardData() {
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
         
-        // Inisialisasi awal slicer setelah data siap
         initSlicers();
-        // Render pertama kali dengan seluruh data
         applyDashboardFilters();
     } catch (error) {
         console.error('Error memuat data dashboard:', error);
@@ -25,7 +87,6 @@ async function fetchDashboardData() {
     }
 }
 
-// Parser CSV Sederhana untuk Dashboard UPT
 function parseDashboardCSV(text) {
     let lines = text.split('\n');
     if (lines.length === 0) return [];
@@ -58,21 +119,18 @@ function parseDashboardCSV(text) {
     return result;
 }
 
-// INISIALISASI & LOGIKA RELASI SLICER
+// ==========================================
+// 4. LOGIKA FILTERS & SLICERS
+// ==========================================
 function initSlicers() {
     const slicerKategori = document.getElementById('slicerKategori');
     const slicerSpesifik = document.getElementById('slicerSpesifik');
 
     if (!slicerKategori || !slicerSpesifik) return;
 
-    // Bersihkan event listener lama dengan mengganti elemen (clone) agar tidak double trigger
     const newSlicerKategori = slicerKategori.cloneNode(true);
     slicerKategori.parentNode.replaceChild(newSlicerKategori, slicerKategori);
 
-    const newSlicerSpesifik = slicerSpesifik.cloneNode(true);
-    slicerSpesifik.parentNode.replaceChild(newSlicerSpesifik, slicerSpesifik);
-
-    // Daftarkan ulang event listener pada elemen baru
     newSlicerKategori.addEventListener('change', function() {
         const kategori = this.value;
         const targetSpesifik = document.getElementById('slicerSpesifik');
@@ -86,14 +144,12 @@ function initSlicers() {
             targetSpesifik.disabled = false;
             targetSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
             
-            // Ambil data unique berdasarkan kategori yang dipilih (Kolom A untuk BM, Kolom B untuk ABM)
             let uniqueItems = new Set();
             dashboardData.forEach(item => {
                 if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
                 if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
             });
 
-            // Masukkan data unique ke dalam Slicer 3
             Array.from(uniqueItems).sort().forEach(name => {
                 targetSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
             });
@@ -101,35 +157,30 @@ function initSlicers() {
         applyDashboardFilters();
     });
 
-    document.getElementById('slicerBulan').addEventListener('change', applyDashboardFilters);
-    document.getElementById('slicerSpesifik').addEventListener('change', applyDashboardFilters);
+    document.getElementById('slicerBulan')?.addEventListener('change', applyDashboardFilters);
+    document.getElementById('slicerSpesifik')?.addEventListener('change', applyDashboardFilters);
 }
 
-// FUNGSI UNTUK MENYARING DATA BERDASARKAN PILIHAN SLICER
 function applyDashboardFilters() {
-    const kategori = document.getElementById('slicerKategori').value;
-    const spesifik = document.getElementById('slicerSpesifik').value;
+    const kategori = document.getElementById('slicerKategori')?.value || 'all';
+    const spesifik = document.getElementById('slicerSpesifik')?.value || 'all';
 
     let filteredData = [...dashboardData];
 
-    // Filter Kategori & Nama Spesifik (BM / ABM)
-    if (kategori === 'bm') {
-        if (spesifik !== 'all') {
-            filteredData = filteredData.filter(item => item.namaBM === spesifik);
-        }
-    } else if (kategori === 'abm') {
-        if (spesifik !== 'all') {
-            filteredData = filteredData.filter(item => item.namaABM === spesifik);
-        }
+    if (kategori === 'bm' && spesifik !== 'all') {
+        filteredData = filteredData.filter(item => item.namaBM === spesifik);
+    } else if (kategori === 'abm' && spesifik !== 'all') {
+        filteredData = filteredData.filter(item => item.namaABM === spesifik);
     }
 
-    // Render komponen dengan data yang sudah disaring
     renderPodiumTop3(filteredData);
     renderPodiumBottom3(filteredData);
     renderChartPerforma(filteredData);
 }
 
-// 1. RENDER TOP 3 STAFF
+// ==========================================
+// 5. PODIUM RENDERING (ANTI-TERPOTONG)
+// ==========================================
 function renderPodiumTop3(data) {
     const container = document.getElementById('podium-top-content');
     if (!container) return;
@@ -142,12 +193,10 @@ function renderPodiumTop3(data) {
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'top');
 }
 
-// 2. RENDER BOTTOM 3 STAFF
 function renderPodiumBottom3(data) {
     const container = document.getElementById('podium-bottom-content');
     if (!container) return;
 
-    // Abaikan data yang poin UPT-nya 0 agar pencarian bottom lebih akurat
     let validData = data.filter(item => item.uptJuly > 0);
     if (validData.length === 0) validData = data;
 
@@ -159,7 +208,6 @@ function renderPodiumBottom3(data) {
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'bottom');
 }
 
-// HELPER UNTUK MEMBUAT STRUKTUR HTML PODIUM (NAMA TIDAK TERPOTONG)
 function generatePodiumHTML(p1, p2, p3, type) {
     const isTop = type === 'top';
     const colorClass = isTop 
@@ -172,10 +220,10 @@ function generatePodiumHTML(p1, p2, p3, type) {
 
     return `
         <div class="flex items-end justify-center gap-2 sm:gap-4 pt-12 pb-2 max-w-md mx-auto w-full">
-            <!-- JUARA 2 (KIRI) -->
+            <!-- JUARA 2 -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
-                    <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p2.namaStaff}</p>
+                    <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2.2rem] flex items-center justify-center break-words">${p2.namaStaff}</p>
                     <p class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase truncate mt-0.5">${p2.namaStore}</p>
                     <span class="inline-block mt-1 text-xs font-black text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">${p2.uptJuly}</span>
                 </div>
@@ -184,11 +232,11 @@ function generatePodiumHTML(p1, p2, p3, type) {
                 </div>
             </div>
 
-            <!-- JUARA 1 (TENGAH) -->
+            <!-- JUARA 1 -->
             <div class="flex flex-col items-center flex-1 transform -translate-y-4 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="flex justify-center mb-1">${iconSvg}</div>
-                    <p class="font-black text-xs sm:text-sm text-slate-800 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p1.namaStaff}</p>
+                    <p class="font-black text-xs sm:text-sm text-slate-800 leading-tight min-h-[2.2rem] flex items-center justify-center break-words">${p1.namaStaff}</p>
                     <p class="text-[9px] sm:text-[10px] ${colorClass.txt1} font-extrabold uppercase truncate mt-0.5">${p1.namaStore}</p>
                     <span class="inline-block mt-1 text-xs font-black text-white bg-gradient-to-r ${colorClass.badge1} px-2.5 py-0.5 rounded-lg shadow-sm">${p1.uptJuly}</span>
                 </div>
@@ -197,11 +245,11 @@ function generatePodiumHTML(p1, p2, p3, type) {
                 </div>
             </div>
 
-            <!-- JUARA 3 (KANAN) -->
+            <!-- JUARA 3 -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="h-5"></div>
-                    <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p3.namaStaff}</p>
+                    <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2.2rem] flex items-center justify-center break-words">${p3.namaStaff}</p>
                     <p class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase truncate mt-0.5">${p3.namaStore}</p>
                     <span class="inline-block mt-1 text-xs font-black text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">${p3.uptJuly}</span>
                 </div>
@@ -213,19 +261,21 @@ function generatePodiumHTML(p1, p2, p3, type) {
     `;
 }
 
-// 3. GENERATE DIAGRAM BATANG BERDASARKAN AKUMULASI DATA (CHART.JS)
+// ==========================================
+// 6. CHART RENDERING (CHART.JS)
+// ==========================================
 function renderChartPerforma(data) {
     const ctx = document.getElementById('bmChart');
     if (!ctx) return;
 
     let performanceMap = {};
-    const kategoriSlicer = document.getElementById('slicerKategori').value;
-    const spesifikSlicer = document.getElementById('slicerSpesifik').value;
+    const kategoriSlicer = document.getElementById('slicerKategori')?.value || 'all';
+    const spesifikSlicer = document.getElementById('slicerSpesifik')?.value || 'all';
 
     data.forEach(item => {
         let key = item.namaBM; 
         if (kategoriSlicer === 'abm') key = item.namaABM;
-        if (spesifikSlicer !== 'all') key = item.namaStaff; // Breakdown ke nama staff jika nama BM/ABM dipilih
+        if (spesifikSlicer !== 'all') key = item.namaStaff; 
 
         if (key && key !== "-") {
             performanceMap[key] = (performanceMap[key] || 0) + item.uptJuly;
