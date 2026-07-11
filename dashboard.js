@@ -9,23 +9,27 @@ let chartInstance = null;
 // ==========================================
 // TOKO SETTING: ATUR USERNAME MANUAL DI SINI
 // ==========================================
-// Format: 'username_login_portal': { namaDiSheets: 'Nama Lengkap di Excel', role: 'bm/abm/staff' }
-// Tulis username login dengan HURUF KECIL semua.
 const USER_MAPPING = {
     'admin':     { namaDiSheets: 'Admin Global', role: 'admin' },
-'abm bayu': { namaDiSheets: 'Bayu Eka Nugraha', role: 'abm' },
-'abm satria': { namaDiSheets: 'Satriawan Sejati', role: 'abm' },
-'abm fachri': { namaDiSheets: 'Fachri Anggoro Budi', role: 'abm' }, 
-'abm gading': { namaDiSheets: 'Gading Hanif Prasetya', role: 'abm' }, 
     
-    // Contoh Akun BM
+    // Akun BM
     'bm_ika':    { namaDiSheets: 'Ika Nuraini', role: 'bm' },
+    'bm galih':  { namaDiSheets: 'Galih Bagus Perdana', role: 'bm' },
+    'bm didik':  { namaDiSheets: 'Didik Supriyadi', role: 'bm' }, // Spasi di awal sudah dihapus
     
-    // Contoh Akun ABM (Silakan tambah/ubah di sini sesuka Anda)
-    'abm_bayu':  { namaDiSheets: 'Bayu Setiawan', role: 'abm' },
-    'abm_ika':   { namaDiSheets: 'Ika', role: 'abm' }, 
+    // Akun ABM
+    'abm_bayu':   { namaDiSheets: 'Bayu Setiawan', role: 'abm' },
+    'abm_ika':    { namaDiSheets: 'Ika', role: 'abm' }, 
+    'abm bayu':   { namaDiSheets: 'Bayu Eka Nugraha', role: 'abm' },
+    'abm satria': { namaDiSheets: 'Satriawan Sejati', role: 'abm' },
+    'abm fachri': { namaDiSheets: 'Fachri Anggoro Budi', role: 'abm' }, 
+    'abm gading': { namaDiSheets: 'Gading Hanif Prasetya', role: 'abm' }, 
+    'abm anas':   { namaDiSheets: 'Anas Makruf', role: 'abm' },
+    'abm adinda': { namaDiSheets: 'Adinda Febiyanti', role: 'abm' },
+    'abm wildan': { namaDiSheets: 'Wildan Aulia Rakhman', role: 'abm' },
+    'abm ridho':  { namaDiSheets: 'Ridho Malandi', role: 'abm' },
     
-    // Contoh Akun Staff
+    // Akun Staff
     'staff_budi': { namaDiSheets: 'Budi Santoso', role: 'staff' }
 };
 
@@ -38,12 +42,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // 2. LOGIKA SESSION LOGIN USER
 // ==========================================
-
 function getSessionUser() {
-    // Mengambil username mentah dari portal login Anda
     const rawUsername = (localStorage.getItem('username') || 'guest').toLowerCase().trim();
     
-    // Cek apakah username ini ada di daftar settingan manual kita
     if (USER_MAPPING[rawUsername]) {
         return {
             username: rawUsername,
@@ -51,7 +52,6 @@ function getSessionUser() {
             role: USER_MAPPING[rawUsername].role.toLowerCase().trim()
         };
     } else {
-        // Jika tidak terdaftar di list manual, fallback pakai namanya langsung
         return {
             username: rawUsername,
             nameInSheets: rawUsername,
@@ -62,7 +62,6 @@ function getSessionUser() {
 
 function renderLoggedInUser() {
     const user = getSessionUser();
-    // Cari nama aslinya untuk dipajang di navbar, jika tidak ada pakai username login
     const displayName = USER_MAPPING[user.username] ? USER_MAPPING[user.username].namaDiSheets : user.username;
     const displayRole = user.role.toUpperCase();
 
@@ -94,7 +93,6 @@ function renderLoggedInUser() {
 // ==========================================
 // 3. CORE LOGIC (PARSING & SINKRONISASI DATA)
 // ==========================================
-
 async function fetchDashboardData() {
     const container = document.getElementById('dashboard-loading');
     if (container) container.classList.remove('hidden');
@@ -109,13 +107,10 @@ async function fetchDashboardData() {
         if (user.role === 'admin') {
             dashboardData = allData;
         } else if (user.role === 'bm') {
-            // Saring data berdasarkan nama lengkap BM yang sudah kita setel di USER_MAPPING
             dashboardData = allData.filter(item => item.namaBM.toLowerCase().trim() === user.nameInSheets);
         } else if (user.role === 'abm') {
-            // Saring data berdasarkan nama lengkap ABM yang sudah kita setel di USER_MAPPING
             dashboardData = allData.filter(item => item.namaABM.toLowerCase().trim() === user.nameInSheets);
         } else {
-            // Saring data berdasarkan nama lengkap Staff yang sudah kita setel di USER_MAPPING
             dashboardData = allData.filter(item => item.namaStaff.toLowerCase().trim() === user.nameInSheets);
         }
 
@@ -129,7 +124,6 @@ async function fetchDashboardData() {
     }
 }
 
-// Parser CSV Sederhana untuk Dashboard UPT
 function parseDashboardCSV(text) {
     let lines = text.split('\n');
     if (lines.length === 0) return [];
@@ -162,7 +156,6 @@ function parseDashboardCSV(text) {
     return result;
 }
 
-// LOGIKA RELASI SLICER
 function initSlicers() {
     const slicerKategori = document.getElementById('slicerKategori');
     const slicerSpesifik = document.getElementById('slicerSpesifik');
@@ -217,7 +210,7 @@ function applyDashboardFilters() {
         }
     } else if (kategori === 'abm') {
         if (spesifik !== 'all') {
-            filteredData = filteredData.filter(item => item.namaABM === GOP_spesifik);
+            filteredData = filteredData.filter(item => item.namaABM === spesifik); // FIX: GOP_spesifik diganti jadi spesifik
         }
     }
 
@@ -303,7 +296,6 @@ function generatePodiumHTML(p1, p2, p3, type) {
     `;
 }
 
-// 3. CHART PERFORMA
 function renderChartPerforma(data) {
     const ctx = document.getElementById('bmChart');
     if (!ctx) return;
