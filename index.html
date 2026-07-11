@@ -46,7 +46,6 @@
     </header>
 
     <main class="container mx-auto px-4 py-8">
-        
         <!-- Breadcrumbs Navigation -->
         <div class="flex items-center flex-wrap gap-2 text-sm text-gray-600 mb-6 bg-white p-4 rounded-xl border border-gray-100 shadow-sm" id="breadcrumbs"></div>
 
@@ -68,26 +67,21 @@
     </main>
 
     <script>
-        // TEMPELKAN LINK CSV YANG BARU ANDA SALIN DI SINI
+        // KODE SUDAH DISINKRONKAN DENGAN BENAR
         const API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=119812050&single=true&output=csv';
         
         let allFiles = [];
         let currentPath = []; 
 
-        // Fungsi pembaca CSV sederhana
         function parseCSV(text) {
             let lines = text.split('\n');
             let headers = lines[0].split(',').map(h => h.replace(/["\r]/g, "").trim());
             let result = [];
-            
             for (let i = 1; i < lines.length; i++) {
                 if (!lines[i]) continue;
-                
-                // Mengatasi koma di dalam tanda petik data
                 let row = [];
                 let inQuotes = false;
                 let currentStr = "";
-                
                 for (let char of lines[i]) {
                     if (char === '"') {
                         inQuotes = !inQuotes;
@@ -99,7 +93,6 @@
                     }
                 }
                 row.push(currentStr.trim());
-                
                 let obj = {};
                 headers.forEach((header, index) => {
                     obj[header] = row[index] ? row[index].replace(/[\r"]/g, "") : "";
@@ -109,9 +102,10 @@
             return result;
         }
 
-       async function fetchData() {
-    try {
-        const response = await fetch(API_URL); // <-- Diubah menjadi API_URL
+        async function fetchData() {
+            try {
+                // SEKARANG MEMANGGIL API_URL DENGAN BENAR
+                const response = await fetch(API_URL);
                 const csvText = await response.text();
                 allFiles = parseCSV(csvText);
                 renderPortal();
@@ -190,7 +184,7 @@
                         </div>
                         <a href="${file.Link || '#'}" target="_blank" class="inline-flex justify-center items-center px-4 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-blue-600 transition gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Open Link
+                            Buka Link
                         </a>
                     </div>`;
             });
