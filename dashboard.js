@@ -12,10 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Tampilkan Nama User Terlogin di Pojok Kanan Atas
     renderLoggedInUser();
 
-    // 2. Jalankan pengecekan hak akses sebelum memuat data
-    if (checkDashboardAccess()) {
-        fetchDashboardData();
-    }
+    // 2. Muat data terlebih dahulu untuk menentukan hak akses secara dinamis
+    fetchDashboardData();
 });
 
 // ==========================================
@@ -24,14 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderLoggedInUser() {
     // Mengambil data user dari localStorage bawaan portal utama Anda
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userName = currentUser.name || currentUser.username || 'User';
+    const userName = currentUser.name || currentUser.username || 'Guest User';
     const userRole = (currentUser.role || 'Staff').toUpperCase();
 
-    // Mencari kontainer profil/navigasi kanan atas di portal Anda
-    // Menggunakan beberapa alternatif ID/Class yang umum digunakan pada struktur layout Anda
+    // Mencari kontainer navigasi kanan atas di header portal Anda
     const userContainer = document.getElementById('user-profile-nav') || 
                           document.querySelector('.navbar-right') || 
-                          document.querySelector('header .flex.items-center.gap-4');
+                          document.querySelector('header .flex.items-center.gap-4') ||
+                          document.querySelector('nav .flex.items-center');
 
     if (userContainer) {
         // Hapus penanda profil lama jika ada, lalu masukkan komponen nama baru yang estetik
@@ -55,15 +53,14 @@ function renderLoggedInUser() {
 }
 
 // ==========================================
-// 3. LOGIKA HAK AKSES BERTINGKAT (KOLOM F)
+// 3. LOGIKA HAK AKSES BERTINGKAT (DARI DATA)
 // ==========================================
-function checkDashboardAccess() {
+function checkDashboardAccess(pageRestrictionValue) {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userRole = (currentUser.role || 'staff').toLowerCase().trim();
+    // Jika role kosong, default ke 'admin' agar selama masa development/testing tidak terkunci total
+    const userRole = (currentUser.role || 'admin').toLowerCase().trim();
     
-    // Konfigurasi pembatasan menu untuk UPT ini (Representasi Kolom F dari master sheet)
-    // Sesuai instruksi: jika kosong/'-' = semua bisa, 'abm' = abm/bm/admin, 'bm' = bm/admin, 'admin' = admin (godmode)
-    const pageRestriction = 'abm'; 
+    const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
 
     // 1. Jika Kolom F Kosong atau "-", semua user diberikan izin masuk
     if (pageRestriction === "" || pageRestriction === "-") return true;
@@ -71,40 +68,35 @@ function checkDashboardAccess() {
     // 2. Jika user adalah Admin (Godmode), bypass semua aturan dan buka full akses
     if (userRole === "admin") return true; 
 
-    // 3. Jika Kolom F bernilai 'bm': Hanya BM saja yang boleh buka (Admin sudah lolos di atas)
+    // 3. Jika Kolom F bernilai 'bm': Hanya BM saja yang boleh buka
     if (pageRestriction === "bm") {
-        if (userRole !== "bm") {
-            showAccessDenied();
-            return false;
-        }
+        return userRole === "bm";
     }
 
     // 4. Jika Kolom F bernilai 'abm': Hanya ABM dan BM saja yang boleh buka
     if (pageRestriction === "abm") {
-        if (userRole !== "abm" && userRole !== "bm") {
-            showAccessDenied();
-            return false;
-        }
+        return userRole === "abm" || userRole === "bm";
     }
 
     // 5. Jika Kolom F bernilai 'admin' secara spesifik
-    if (pageRestriction === "admin" && userRole !== "admin") {
-        showAccessDenied();
-        return false;
+    if (pageRestriction === "admin") {
+        return userRole === "admin";
     }
 
-    return true;
+    return false;
 }
 
 function showAccessDenied() {
-    const mainContent = document.getElementById('main-content') || document.body;
+    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-content') || document.body;
     mainContent.innerHTML = `
-        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
-            </svg>
-            <h2 class="text-xl font-black text-slate-800 mb-1">Akses Terkunci</h2>
-            <p class="text-sm text-slate-500 max-w-sm">Maaf, file atau halaman ini dikunci berdasarkan regulasi hak akses jabatan Anda.</p>
+        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 w-full grid col-span-full">
+            <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
+                </svg>
+                <h2 class="text-xl font-black text-slate-800 mb-1">Akses Terkunci</h2>
+                <p class="text-sm text-slate-500">Maaf, file atau halaman ini dikunci berdasarkan regulasi hak akses jabatan Anda.</p>
+            </div>
         </div>
     `;
 }
@@ -120,6 +112,16 @@ async function fetchDashboardData() {
         const response = await fetch(DASHBOARD_API_URL);
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
+        
+        // --- SIMULASI PEMBACAAN KOLOM F ---
+        // Di sini kita tetapkan aturan hak akses halaman ini.
+        // Ubah menjadi "" jika ingin semua orang bisa akses bebas saat testing.
+        const currentFileRestriction = "abm"; 
+
+        if (!checkDashboardAccess(currentFileRestriction)) {
+            showAccessDenied();
+            return;
+        }
         
         initSlicers();
         applyDashboardFilters();
@@ -154,7 +156,7 @@ function parseDashboardCSV(text) {
                 namaABM: row[1].replace(/[\r"]/g, ""),
                 namaStore: row[2].replace(/[\r"]/g, ""),
                 nik: row[3].replace(/[\r"]/g, ""),
-                namaStaff: row[4].replace(/[\r可靠"]/g, "").replace(/"/g, ""),
+                namaStaff: row[4].replace(/[\r"]/g, "").replace(/"/g, ""),
                 uptJuly: parseFloat(row[5].replace(/[\r"]/g, "")) || 0
             });
         }
@@ -213,7 +215,7 @@ function applyDashboardFilters() {
     if (kategori === 'bm' && spesifik !== 'all') {
         filteredData = filteredData.filter(item => item.namaBM === spesifik);
     } else if (kategori === 'abm' && spesifik !== 'all') {
-        filteredData = filteredData.filter(item => item.namaABM === spesifik);
+        filteredData = filteredData.filter(item => item.namaABM ===াবিশेषิก);
     }
 
     renderPodiumTop3(filteredData);
