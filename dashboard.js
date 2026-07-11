@@ -3,6 +3,11 @@
 // ==========================================
 const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=425930614&single=true&output=csv';
 
+// [PENTING] Jika halaman login terpisah Anda error/belum mengirim data, 
+// isi nama username di bawah ini untuk memaksa masuk. (Contoh: 'bm_ika', 'admin', 'abm bayu')
+// Kosongkan string ( '' ) jika sistem login sudah berjalan normal.
+const FORCE_LOGIN_USERNAME = ''; 
+
 let dashboardData = [];
 let chartInstance = null;
 
@@ -40,16 +45,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 2. LOGIKA SESSION LOGIN USER (STABIL & AMAN)
+// 2. LOGIKA SESSION LOGIN USER (DIPERBAIKI)
 // ==========================================
 function getSessionUser() {
-    // Ambil username asli dari portal
-    const originalUsername = (localStorage.getItem('username') || 'guest').trim();
+    // Ambil username dari variabel FORCE, lalu localStorage, lalu sessionStorage
+    let rawUser = FORCE_LOGIN_USERNAME || localStorage.getItem('username') || sessionStorage.getItem('username');
     
-    // Cari versi bersis tanpa spasi/karakter aneh untuk dicocokkan
+    // Jika tidak ada data login sama sekali, default ke guest
+    const originalUsername = (rawUser && rawUser.trim() !== '') ? rawUser.trim() : 'guest';
+    
+    // Hapus spasi, strip, dan underscore untuk pencocokan yang akurat
     const cleanRaw = originalUsername.toLowerCase().replace(/[\s_\-]/g, '');
     
-    // Cari kecocokan di USER_MAPPING
     let matchedKey = null;
     Object.keys(USER_MAPPING).forEach(key => {
         if (key.toLowerCase().replace(/[\s_\-]/g, '') === cleanRaw) {
@@ -65,12 +72,13 @@ function getSessionUser() {
             displayName: USER_MAPPING[matchedKey].namaDiSheets
         };
     } else {
-        // Fallback jika tidak terdaftar
+        // Fallback jika tidak terdaftar di USER_MAPPING
+        let fallbackRole = localStorage.getItem('role') || sessionStorage.getItem('role') || 'staff';
         return {
             username: originalUsername,
             nameInSheets: originalUsername.toLowerCase().trim(),
-            role: (localStorage.getItem('role') || 'staff').toLowerCase().trim(),
-            displayName: originalUsername
+            role: fallbackRole.toLowerCase().trim(),
+            displayName: originalUsername === 'guest' ? 'Guest / Unregistered' : originalUsername
         };
     }
 }
@@ -97,7 +105,7 @@ function renderLoggedInUser() {
                     <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${displayRole}</p>
                 </div>
                 <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-xs shadow-sm uppercase">
-                    ${displayName.charAt(0)}
+                    ${displayName.charAt(0).toUpperCase()}
                 </div>
             </div>
         `;
@@ -119,14 +127,15 @@ async function fetchDashboardData() {
         
         const user = getSessionUser();
         
+        // Filter Data berdasarkan Role & Nama di Sheets
         if (user.role === 'admin') {
             dashboardData = allData;
         } else if (user.role === 'bm') {
-            dashboardData = allData.filter(item => item.namaBM.toLowerCase().trim() === user.nameInSheets);
+            dashboardData = allData.filter(item => item.namaBM.toLowerCase() === user.nameInSheets);
         } else if (user.role === 'abm') {
-            dashboardData = allData.filter(item => item.namaABM.toLowerCase().trim() === user.nameInSheets);
+            dashboardData = allData.filter(item => item.namaABM.toLowerCase() === user.nameInSheets);
         } else {
-            dashboardData = allData.filter(item => item.namaStaff.toLowerCase().trim() === user.nameInSheets);
+            dashboardData = allData.filter(item => item.namaStaff.toLowerCase() === user.nameInSheets);
         }
 
         initSlicers();
@@ -139,13 +148,15 @@ async function fetchDashboardData() {
     }
 }
 
+// Parsing CSV Diperbaiki: Menangani baris kosong dan format koma desimal
 function parseDashboardCSV(text) {
     let lines = text.split('\n');
-    if (lines.length === 0) return [];
+    if (lines.length <= 1) return []; // Hindari error jika sheet kosong
     
     let result = [];
     for (let i = 1; i < lines.length; i++) {
-        if (!lines[i]) continue;
+        if (!lines[i].trim()) continue; // Skip baris kosong
+        
         let row = [];
         let inQuotes = false;
         let currentStr = "";
@@ -158,61 +169,76 @@ function parseDashboardCSV(text) {
         row.push(currentStr.trim());
         
         if (row.length >= 6) {
+            // Ganti koma dengan titik agar terbaca sebagai angka desimal yang sah di Javascript
+            let rawUpt = row[5].replace(/[\r"]/g, "").replace(',', '.');
+            
             result.push({
-                namaBM: row[0].replace(/[\r"]/g, ""),
-                namaABM: row[1].replace(/[\r"]/g, ""),
-                namaStore: row[2].replace(/[\r"]/g, ""),
-                nik: row[3].replace(/[\r"]/g, ""),
-                namaStaff: row[4].replace(/[\r"]/g, ""),
-                uptJuly: parseFloat(row[5].replace(/[\r"]/g, "")) || 0
+                namaBM: row[0].replace(/[\r"]/g, "").trim(),
+                namaABM: row[1].replace(/[\r"]/g, "").trim(),
+                namaStore: row[2].replace(/[\r"]/g, "").trim(),
+                nik: row[3].replace(/[\r"]/g, "").trim(),
+                namaStaff: row[4].replace(/[\r"]/g, "").trim(),
+                uptJuly: parseFloat(rawUpt) || 0
             });
         }
     }
     return result;
 }
 
+// Logika Slicer Diperbaiki: Event listener tidak akan mati saat diclone
 function initSlicers() {
     const slicerKategori = document.getElementById('slicerKategori');
     const slicerSpesifik = document.getElementById('slicerSpesifik');
+    const slicerBulan = document.getElementById('slicerBulan');
 
-    if (!slicerKategori || !slicerSpesifik) return;
-
-    const newSlicerKategori = slicerKategori.cloneNode(true);
-    slicerKategori.parentNode.replaceChild(newSlicerKategori, slicerKategori);
-
-    const newSlicerSpesifik = slicerSpesifik.cloneNode(true);
-    slicerSpesifik.parentNode.replaceChild(newSlicerSpesifik, slicerSpesifik);
-
-    newSlicerKategori.addEventListener('change', function() {
-        const kategori = this.value;
-        const targetSpesifik = document.getElementById('slicerSpesifik');
+    if (slicerKategori) {
+        const newSlicerKategori = slicerKategori.cloneNode(true);
+        slicerKategori.parentNode.replaceChild(newSlicerKategori, slicerKategori);
         
-        targetSpesifik.innerHTML = '<option value="all">-- Semua --</option>';
-        
-        if (kategori === 'all') {
-            targetSpesifik.disabled = true;
-            targetSpesifik.classList.add('bg-slate-100', 'cursor-not-allowed');
-        } else {
-            targetSpesifik.disabled = false;
-            targetSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
+        newSlicerKategori.addEventListener('change', function() {
+            const kategori = this.value;
+            // Panggil ulang document.getElementById agar tidak kehilangan referensi setelah clone
+            const targetSpesifik = document.getElementById('slicerSpesifik'); 
             
-            let uniqueItems = new Set();
-            dashboardData.forEach(item => {
-                if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
-                if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
-            });
+            if (!targetSpesifik) return;
 
-            Array.from(uniqueItems).sort().forEach(name => {
-                targetSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
-            });
-        }
-        applyDashboardFilters();
-    });
+            targetSpesifik.innerHTML = '<option value="all">-- Semua --</option>';
+            
+            if (kategori === 'all') {
+                targetSpesifik.disabled = true;
+                targetSpesifik.classList.add('bg-slate-100', 'cursor-not-allowed');
+            } else {
+                targetSpesifik.disabled = false;
+                targetSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
+                
+                let uniqueItems = new Set();
+                dashboardData.forEach(item => {
+                    if (kategori === 'bm' && item.namaBM && item.namaBM !== '-') uniqueItems.add(item.namaBM);
+                    if (kategori === 'abm' && item.namaABM && item.namaABM !== '-') uniqueItems.add(item.namaABM);
+                });
 
-    document.getElementById('slicerBulan')?.addEventListener('change', applyDashboardFilters);
-    document.getElementById('slicerSpesifik')?.addEventListener('change', applyDashboardFilters);
+                Array.from(uniqueItems).sort().forEach(name => {
+                    targetSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
+                });
+            }
+            applyDashboardFilters();
+        });
+    }
+
+    if (slicerSpesifik) {
+        const newSlicerSpesifik = slicerSpesifik.cloneNode(true);
+        slicerSpesifik.parentNode.replaceChild(newSlicerSpesifik, slicerSpesifik);
+        document.getElementById('slicerSpesifik').addEventListener('change', applyDashboardFilters);
+    }
+    
+    if (slicerBulan) {
+        const newSlicerBulan = slicerBulan.cloneNode(true);
+        slicerBulan.parentNode.replaceChild(newSlicerBulan, slicerBulan);
+        document.getElementById('slicerBulan').addEventListener('change', applyDashboardFilters);
+    }
 }
 
+// Logika Filter Diperbaiki: Menambahkan .trim() pada string agar akurat
 function applyDashboardFilters() {
     const kategori = document.getElementById('slicerKategori')?.value || 'all';
     const spesifik = document.getElementById('slicerSpesifik')?.value || 'all';
@@ -234,7 +260,9 @@ function applyDashboardFilters() {
     renderChartPerforma(filteredData);
 }
 
-// 1. RENDER TOP 3 STAFF
+// ==========================================
+// 4. RENDER UI COMPONENTS
+// ==========================================
 function renderPodiumTop3(data) {
     const container = document.getElementById('podium-top-content');
     if (!container) return;
@@ -247,7 +275,6 @@ function renderPodiumTop3(data) {
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'top');
 }
 
-// 2. RENDER BOTTOM 3 STAFF
 function renderPodiumBottom3(data) {
     const container = document.getElementById('podium-bottom-content');
     if (!container) return;
