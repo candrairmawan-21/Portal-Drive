@@ -9,53 +9,34 @@ let chartInstance = null;
 
 // Jalankan saat halaman selesai dimuat
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Render profil user login secara dinamis
+    // 1. Render profil user login secara dinamis di navbar
     renderLoggedInUser();
-    // 2. Load data & proteksi akses
+    // 2. Load data dan filter berdasarkan siapa yang sedang melihat
     fetchDashboardData();
 });
 
 // ==========================================
-// 2. FITUR TAMBAHAN: LOGIN & HAK AKSES (DINAMIS)
+// 2. LOGIKA SESSION LOGIN USER
 // ==========================================
 
-// Helper untuk mengambil data session login dari berbagai kemungkinan key localStorage
+// Mengambil data session login dari localStorage portal
 function getSessionUser() {
-    try {
-        // Coba format object 1: currentUser
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        // Coba format object 2: user
-        const userObj = JSON.parse(localStorage.getItem('user') || '{}');
-        
-        // Ambil nama (prioritas: currentUser -> userObj -> direct string)
-        const name = currentUser.name || currentUser.username || userObj.name || userObj.username || localStorage.getItem('username') || 'Guest User';
-        // Ambil role (prioritas: currentUser -> userObj -> direct string)
-        const role = currentUser.role || userObj.role || localStorage.getItem('role') || 'staff';
+    const name = localStorage.getItem('username') || 'Guest User';
+    const role = (localStorage.getItem('role') || 'staff').toLowerCase().trim();
 
-        return {
-            name: name,
-            role: role.toLowerCase().trim()
-        };
-    } catch (e) {
-        // Fallback jika JSON.parse error (misal localStorage isinya string biasa)
-        return {
-            name: localStorage.getItem('username') || 'Guest User',
-            role: (localStorage.getItem('role') || 'staff').toLowerCase().trim()
-        };
-    }
+    return { name, role };
 }
 
-// Fungsi menampilkan nama & role user di navbar secara dinamis
+// Menampilkan nama & role user di navbar secara dinamis
 function renderLoggedInUser() {
     const user = getSessionUser();
     const displayRole = user.role.toUpperCase();
 
-    // Mencari elemen kontainer navigasi atas
     const userContainer = document.getElementById('user-profile-nav') || 
                           document.querySelector('.navbar-right') || 
                           document.querySelector('header .flex.items-center.gap-4') ||
                           document.querySelector('nav .flex.items-center') ||
-                          document.getElementById('user-profile'); // ID fallback tambahan
+                          document.getElementById('user-profile');
 
     if (userContainer) {
         const existingBadge = document.getElementById('dynamic-user-badge');
@@ -76,52 +57,8 @@ function renderLoggedInUser() {
     }
 }
 
-// Fungsi memeriksa hak akses bertingkat
-function checkDashboardAccess(pageRestrictionValue) {
-    const user = getSessionUser();
-    const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
-
-    // 1. Jika batasan kosong atau "-", semua boleh masuk
-    if (pageRestriction === "" || pageRestriction === "-") return true;
-    
-    // 2. Jika Admin (Godmode), bypass dan izinkan akses penuh
-    if (user.role === "admin") return true; 
-
-    // 3. Batasan khusus 'bm': Hanya BM yang boleh
-    if (pageRestriction === "bm") {
-        return user.role === "bm";
-    }
-
-    // 4. Batasan khusus 'abm': ABM dan BM boleh masuk
-    if (pageRestriction === "abm") {
-        return user.role === "abm" || user.role === "bm";
-    }
-
-    return false;
-}
-
-// Menampilkan view "Akses Terkunci" jika tidak memiliki izin
-function showAccessDenied() {
-    const mainContent = document.getElementById('main-content') || 
-                        document.getElementById('dashboard-content') || 
-                        document.querySelector('.flex-1.p-6') || // Selektor layout utama
-                        document.body;
-                        
-    mainContent.innerHTML = `
-        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 w-full m-auto">
-            <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto flex flex-col items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
-                </svg>
-                <h2 class="text-xl font-black text-slate-800 mb-1">Akses Terkunci</h2>
-                <p class="text-sm text-slate-500">Maaf, file atau halaman ini dikunci berdasarkan regulasi hak akses jabatan Anda.</p>
-            </div>
-        </div>
-    `;
-}
-
 // ==========================================
-// 3. CORE LOGIC (DIPERTAHANKAN KEASLIANNYA)
+// 3. CORE LOGIC (PARSING & DATA PRIVACY FILTER)
 // ==========================================
 
 // Fungsi Utama untuk Memuat Data Dashboard
@@ -132,21 +69,46 @@ async function fetchDashboardData() {
     try {
         const response = await fetch(DASHBOARD_API_URL);
         const csvText = await response.text();
-        dashboardData = parseDashboardCSV(csvText);
         
-        // --- VALIDASI HAK AKSES DI SINI ---
-        // Ganti "abm" menjadi batasan role yang diinginkan untuk file/halaman ini.
-        const currentFileRestriction = "abm"; 
+        // 1. Parse semua data dari Google Sheets
+        const allData = parseDashboardCSV(csvText);
+        
+        // 2. AMBIL DATA USER LOGIN
+        const user = getSessionUser();
+        const userNameLower = user.name.toLowerCase().trim();
+        
+        // 3. FILTER PRIVASI DATA (Dashboard tetap terbuka untuk semua)
+        if (user.role === 'admin') {
+            // Admin bebas melihat 100% data mentah
+            dashboardData = allData;
+        } else {
+            // Cek apakah user ini terdaftar sebagai BM atau ABM di dalam data spreadsheet
+            const isBM = allData.some(item => item.namaBM.toLowerCase().trim() === userNameLower);
+            const isABM = allData.some(item => item.namaABM.toLowerCase().trim() === userNameLower);
 
-        if (!checkDashboardAccess(currentFileRestriction)) {
-            showAccessDenied();
-            return; // Kunci halaman, hentikan pemrosesan data
+            if (isBM) {
+                // Jika terdaftar sebagai BM, filter data berdasarkan nama BM-nya
+                dashboardData = allData.filter(item => item.namaBM.toLowerCase().trim() === userNameLower);
+            } else if (isABM) {
+                // Jika terdaftar sebagai ABM, filter data berdasarkan nama ABM-nya
+                dashboardData = allData.filter(item => item.namaABM.toLowerCase().trim() === userNameLower);
+            } else {
+                // Jika Staff biasa / nama tidak match di kolom BM/ABM, hanya tampilkan data miliknya sendiri
+                dashboardData = allData.filter(item => item.namaStaff.toLowerCase().trim() === userNameLower);
+                
+                // Jika data pribadinya kosong (Guest/Baru), biarkan dashboard kosong tanpa crash
+                if (dashboardData.length === 0) {
+                    dashboardData = []; 
+                }
+            }
         }
-        
-        // Inisialisasi awal slicer setelah data siap dan lolos verifikasi akses
+
+        // 4. Inisialisasi slicer berdasarkan data yang sudah disaring hak aksesnya
         initSlicers();
-        // Render pertama kali dengan seluruh data
+        
+        // 5. Jalankan render awal ke podium dan chart
         applyDashboardFilters();
+        
     } catch (error) {
         console.error('Error memuat data dashboard:', error);
     } finally {
@@ -194,7 +156,7 @@ function initSlicers() {
 
     if (!slicerKategori || !slicerSpesifik) return;
 
-    // Bersihkan event listener lama dengan mengganti elemen (clone) agar tidak double trigger
+    // Bersihkan event listener lama dengan melakukan cloning
     const newSlicerKategori = slicerKategori.cloneNode(true);
     slicerKategori.parentNode.replaceChild(newSlicerKategori, slicerKategori);
 
@@ -215,14 +177,13 @@ function initSlicers() {
             targetSpesifik.disabled = false;
             targetSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
             
-            // Ambil data unique berdasarkan kategori yang dipilih (Kolom A untuk BM, Kolom B untuk ABM)
+            // Mengambil opsi unique hanya dari porsi data yang diizinkan untuk user saat ini
             let uniqueItems = new Set();
             dashboardData.forEach(item => {
                 if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
                 if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
             });
 
-            // Masukkan data unique ke dalam Slicer 3
             Array.from(uniqueItems).sort().forEach(name => {
                 targetSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
             });
@@ -252,7 +213,7 @@ function applyDashboardFilters() {
         }
     }
 
-    // Render komponen dengan data yang sudah disaring
+    // Render komponen dengan data hasil saringan terakhir
     renderPodiumTop3(filteredData);
     renderPodiumBottom3(filteredData);
     renderChartPerforma(filteredData);
@@ -276,7 +237,6 @@ function renderPodiumBottom3(data) {
     const container = document.getElementById('podium-bottom-content');
     if (!container) return;
 
-    // Abaikan data yang poin UPT-nya 0 agar pencarian bottom lebih akurat
     let validData = data.filter(item => item.uptJuly > 0);
     if (validData.length === 0) validData = data;
 
@@ -288,7 +248,7 @@ function renderPodiumBottom3(data) {
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'bottom');
 }
 
-// HELPER UNTUK MEMBUAT STRUKTUR HTML PODIUM (NAMA TIDAK TERPOTONG)
+// HELPER UNTUK MEMBUAT STRUKTUR HTML PODIUM
 function generatePodiumHTML(p1, p2, p3, type) {
     const isTop = type === 'top';
     const colorClass = isTop 
@@ -301,7 +261,7 @@ function generatePodiumHTML(p1, p2, p3, type) {
 
     return `
         <div class="flex items-end justify-center gap-2 sm:gap-4 pt-12 pb-2 max-w-md mx-auto w-full">
-            <!-- JUARA 2 (KIRI) -->
+            <!-- JUARA 2 -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p2.namaStaff}</p>
@@ -313,7 +273,7 @@ function generatePodiumHTML(p1, p2, p3, type) {
                 </div>
             </div>
 
-            <!-- JUARA 1 (TENGAH) -->
+            <!-- JUARA 1 -->
             <div class="flex flex-col items-center flex-1 transform -translate-y-4 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="flex justify-center mb-1">${iconSvg}</div>
@@ -326,7 +286,7 @@ function generatePodiumHTML(p1, p2, p3, type) {
                 </div>
             </div>
 
-            <!-- JUARA 3 (KANAN) -->
+            <!-- JUARA 3 -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="h-5"></div>
