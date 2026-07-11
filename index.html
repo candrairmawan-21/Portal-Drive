@@ -1,133 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Midnorth Data Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f8fafc;
-        }
-        .hover-lift {
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
-        }
-        .hover-lift:hover {
-            transform: translateY(-4px);
-        }
-    </style>
-</head>
-<body class="text-slate-800 antialiased min-h-screen flex flex-col">
-
-    <!-- HEADER & BANNER UTAMA -->
-    <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl border-b border-indigo-500/20 relative overflow-hidden">
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.15),transparent_45%)]"></div>
-        <div class="max-w-7xl mx-auto px-6 py-8 sm:py-10 flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10">
-            <div class="flex items-center gap-4 text-center sm:text-left flex-col sm:flex-row">
-                <div class="bg-gradient-to-br from-amber-400 to-amber-500 p-3.5 rounded-2xl shadow-lg shadow-amber-500/20 border border-amber-300/30 flex items-center justify-center transform hover:rotate-6 transition-transform">
-                    <i data-lucide="database" class="w-7 h-7 text-slate-900 stroke-[2.5]"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">MIDNORTH REPORT HUB</h1>
-                    <p class="text-xs font-bold text-indigo-300/90 tracking-widest uppercase mt-0.5 flex items-center justify-center sm:justify-start gap-1.5"><i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-500"></i> Secure Workspace Integration</p>
-                </div>
-            </div>
-            
-            <!-- SEARCH BAR -->
-            <div class="w-full sm:w-80 relative group">
-                <i data-lucide="search" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-500 transition-colors"></i>
-                <input type="text" id="searchInput" oninput="renderPortal()" placeholder="Cari file atau dashboard..." class="w-full text-xs font-semibold bg-slate-950/40 text-slate-200 pl-11 pr-4 py-3 rounded-2xl border border-slate-700/60 focus:outline-none focus:border-amber-500/80 focus:bg-slate-950/80 focus:ring-4 focus:ring-amber-500/10 transition-all placeholder-slate-500">
-            </div>
-        </div>
-    </header>
-
-    <!-- KONTEN UTAMA -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
-        
-        <!-- BREADCRUMBS -->
-        <div id="breadcrumb" class="flex items-center flex-wrap gap-2 text-xs font-bold text-slate-400 mb-6 bg-white/60 backdrop-blur border border-slate-200/50 px-4 py-3 rounded-2xl max-w-max shadow-sm"></div>
-
-        <!-- AREA DASHBOARD CUSTOM UNTUK UPT PERFORMANCE -->
-        <div id="customDashboard" class="hidden"></div>
-
-        <!-- GRID UTAMA FOLDER & DIRECTORY FILE -->
-        <div id="portalGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-
-        <!-- FEEDBACK PENCARIAN KOSONG -->
-        <div id="noResults" class="hidden text-center py-16 bg-white rounded-3xl border border-slate-200/60 shadow-sm max-w-md mx-auto mt-6">
-            <div class="bg-slate-50 text-slate-400 p-4 rounded-full w-14 h-14 mx-auto mb-4 flex items-center justify-center border border-slate-100"><i data-lucide="folder-open" class="w-6 h-6"></i></div>
-            <h3 class="text-sm font-black text-slate-700 mb-1">Item Tidak Ditemukan</h3>
-            <p class="text-xs text-slate-400 font-medium px-6">Periksa kembali kata kunci pencarian Anda atau kriteria filter slicer yang dipilih.</p>
-        </div>
-    </main>
-
-    <!-- FOOTER -->
-    <footer class="bg-white border-t border-slate-200/60 py-4 px-6 text-center text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-        &copy; 2026 Midnorth operational framework. Powered by google apps script.
-    </footer>
-
-    <!-- INTI KODE JAVASCRIPT KONTROLLER -->
-    <script>
-        // Data file statis bawaan portal aplikasi Anda
-        const accessibleFiles = [
-            { "Folder": "UPT PERFORMANCE", "Nama": "UPT July", "Deskripsi": "Interactive Performance Dashboard Overview", "Tipe": "DASHBOARD", "Link": "#" },
-            { "Folder": "", "Nama": "UPT Monitoring", "Deskripsi": "Form input & monitoring harian seluruh unit kerja", "Tipe": "SHEET", "Link": "https://docs.google.com/spreadsheets/d/12vSCxOpGjXWG9I30gtNUu5_hPFJG9YVLc2sySVwWnSY/edit" }
-        ];
-
-        let currentPath = [];
-
-        function navigateToFolder(folderName) {
-            currentPath.push(folderName);
-            renderPortal();
-        }
-
-        function navigateToBreadcrumb(index) {
-            if (index === -1) { currentPath = []; } 
-            else { currentPath = currentPath.slice(0, index + 1); }
-            renderPortal();
-        }
-
-        function renderBreadcrumbs() {
-            const container = document.getElementById('breadcrumb');
-            let html = `<span onclick="navigateToBreadcrumb(-1)" class="cursor-pointer text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1"><i data-lucide="home" class="w-3.5 h-3.5"></i> ROOT</span>`;
-            
-            currentPath.forEach((folder, idx) => {
-                html += ` <i data-lucide="chevron-right" class="w-3 h-3 text-slate-300"></i> <span onclick="navigateToBreadcrumb(${idx})" class="cursor-pointer ${idx === currentPath.length - 1 ? 'text-indigo-600 font-black' : 'text-slate-400 hover:text-indigo-600 transition-colors'}">${folder}</span>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function renderFilesOnly(files, gridElement) {
-            files.forEach(file => {
-                const isDashboard = file.Tipe === 'DASHBOARD';
-                const iconName = isDashboard ? 'sliders' : 'file-spreadsheet';
-                const iconColorClass = isDashboard ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100';
-                const actionClick = isDashboard ? '' : `onclick="window.open('${file.Link}', '_blank')"`;
-                const cursorClass = isDashboard ? 'cursor-default' : 'cursor-pointer hover:shadow-xl hover:border-emerald-500/40';
-
-                gridElement.innerHTML += `
-                    <div ${actionClick} class="bg-white rounded-3xl border border-slate-200/60 p-5 flex flex-col justify-between shadow-sm transition-all duration-300 hover-lift group ${cursorClass}">
-                        <div class="flex items-start gap-4">
-                            <div class="${iconColorClass} p-3 rounded-2xl border shadow-inner flex items-center justify-center transition-transform group-hover:scale-105 duration-300">
-                                <i data-lucide="${iconName}" class="w-6 h-6"></i>
-                            </div>
-                            <div class="overflow-hidden flex-1">
-                                <h3 class="font-bold text-slate-700 text-sm tracking-tight truncate group-hover:text-indigo-600 transition-colors duration-200">${file.Nama}</h3>
-                                <p class="text-slate-400 text-[11px] font-medium leading-relaxed mt-0.5 line-clamp-2">${file.Deskripsi}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between border-t border-slate-100 pt-3 mt-4">
-                            <span class="text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">${file.Tipe}</span>
-                            ${isDashboard ? `<span class="text-[10px] font-black text-indigo-500 flex items-center gap-1 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-100">Active View <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping"></span></span>` : `<span class="text-[10px] font-black text-emerald-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1">Buka File <i data-lucide="arrow-right" class="w-3 h-3"></i></span>`}
-                        </div>
-                    </div>`;
-            });
-        }
-
-        function renderPortal() {
+function renderPortal() {
             const grid = document.getElementById('portalGrid');
             const noResults = document.getElementById('noResults');
             const customDashboard = document.getElementById('customDashboard');
@@ -156,61 +27,113 @@
             const currentFolderStr = currentPath.join(' / ');
 
             // =========================================================
-            // INJEKSI INTERACTIVE DASHBOARD UTAMA
+            // AMBIL DATA DARI TAB DASHBOARD (IMPORTRANGE & QUERY)
             // =========================================================
             if (currentFolderStr.toUpperCase() === 'UPT PERFORMANCE') {
                 if (customDashboard) {
                     customDashboard.classList.remove('hidden');
+                    customDashboard.innerHTML = `<p class="text-xs text-slate-400 animate-pulse text-center py-6 font-medium">Memuat ranking performa UPT...</p>`;
                     
-                    // Render UI kerangka Slicer dan Grafik Balok Podium
-                    customDashboard.innerHTML = `
-                        <div class="bg-white/90 backdrop-blur-md rounded-3xl border border-slate-200/60 p-6 sm:p-8 shadow-sm mb-8">
+                    // Gunakan URL CSV hasil Publish to Web khusus tab Dashboard_UPT Anda
+                    const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=425930614&single=true&output=csv';
+
+                    fetch(DASHBOARD_API_URL)
+                        .then(res => res.text())
+                        .then(csvText => {
+                            const dataPeringkat = parseCSV(csvText);
                             
-                            <!-- JUDUL SEKSI INTEGRASI -->
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-5">
-                                <div class="flex items-center gap-3">
-                                    <div class="bg-amber-500 text-white p-2.5 rounded-xl shadow-md shadow-amber-500/20">
-                                        <i data-lucide="sliders" class="w-5 h-5"></i>
-                                    </div>
-                                    <div>
-                                        <h2 class="text-base font-black text-slate-800 tracking-tight">Interactive Performance Slicer</h2>
-                                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Filter terhubung langsung dengan Google Apps Script</p>
-                                    </div>
-                                </div>
-                            </div>
+                            // Karena struktur CSV memanjang ke samping (Kolom A, B, C, D, E)
+                            // Kita mapping data Top 3 dari properti kolom pertama
+                            const top1 = { Nama: dataPeringkat[0]?.['Nama ABM'] || '-', Nilai: dataPeringkat[0]?.['UPT July'] || '0' };
+                            const top2 = { Nama: dataPeringkat[1]?.['Nama ABM'] || '-', Nilai: dataPeringkat[1]?.['UPT July'] || '0' };
+                            const top3 = { Nama: dataPeringkat[2]?.['Nama ABM'] || '-', Nilai: dataPeringkat[2]?.['UPT July'] || '0' };
+                            
+                            // Ambil data Bottom 3 dari properti objek kolom kanan berindex "_1" (akibat header kembar saat di-parse)
+                            const bottom1 = { Nama: dataPeringkat[0]?.['Nama ABM_1'] || '-', Nilai: dataPeringkat[0]?.['UPT July_1'] || '0' };
+                            const bottom2 = { Nama: dataPeringkat[1]?.['Nama ABM_1'] || '-', Nilai: dataPeringkat[1]?.['UPT July_1'] || '0' };
+                            const bottom3 = { Nama: dataPeringkat[2]?.['Nama ABM_1'] || '-', Nilai: dataPeringkat[2]?.['UPT July_1'] || '0' };
 
-                            <!-- ELEMEN KONTROL DROP-DOWN FILTER (SLICER) -->
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                <div>
-                                    <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1.5">Slicer 1: Personil / BM</label>
-                                    <select id="slicerBM" onchange="jalankanFilterPodium()" class="w-full text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500">
-                                        <option value="ALL">-- SEMUA BM --</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1.5">Slicer 2: ABM</label>
-                                    <select id="slicerABM" onchange="jalankanFilterPodium()" class="w-full text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500">
-                                        <option value="ALL">-- SEMUA ABM --</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1.5">Slicer 3: Periode Bulan</label>
-                                    <select id="slicerBulan" onchange="jalankanFilterPodium()" class="w-full text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500">
-                                        <!-- Diisi secara dinamis dari Apps Script server -->
-                                    </select>
-                                </div>
-                            </div>
+                            const bottomData = [bottom1, bottom2, bottom3];
 
-                            <!-- GRAPHS PODIUM OUTPUT AREA -->
-                            <div id="podiumContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <p class="text-xs text-slate-400 animate-pulse text-center py-6 font-medium col-span-2">Menghubungkan ke server Apps Script...</p>
-                            </div>
-                        </div>`;
-                    
-                    lucide.createIcons();
-                    
-                    // Ambil opsi data pengisi dropdown dari backend secara paralel
-                    muatOpsiSlicerDariServer();
+                            // Mengubah format desimal 0.xx menjadi persentase jika diperlukan
+                            const formatSkor = (val) => {
+                                let num = parseFloat(val);
+                                if (isNaN(num)) return '0%';
+                                return num <= 1 ? Math.round(num * 100) + '%' : Math.round(num) + '%';
+                            };
+
+                            let dashboardHTML = `
+                                <div class="bg-white/80 backdrop-blur-md rounded-3xl border border-slate-200/50 p-6 sm:p-8 shadow-sm mb-8">
+                                    <div class="flex items-center gap-3 mb-8">
+                                        <div class="bg-amber-100 text-amber-600 p-2.5 rounded-xl">
+                                            <i data-lucide="trophy" class="w-5 h-5"></i>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-lg font-extrabold text-slate-800 leading-tight">Dashboard Performa UPT</h2>
+                                            <p class="text-xs font-medium text-slate-400">Peringkat pencapaian real-time lintas spreadsheet</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-end">
+                                        <!-- TAMPILAN PODIUM TOP 3 -->
+                                        <div class="bg-gradient-to-b from-slate-50/50 to-slate-50 rounded-2xl p-6 border border-slate-100 shadow-sm">
+                                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2 justify-center">
+                                                <i data-lucide="trending-up" class="w-4 h-4 text-emerald-500"></i> Pencapaian Tertinggi (Top 3)
+                                            </h3>
+                                            <div class="flex items-end justify-center gap-4 h-48">
+                                                <!-- Posisi 2 -->
+                                                <div class="flex flex-col items-center flex-1 max-w-[110px]">
+                                                    <span class="text-xs font-bold text-slate-700 mb-1 truncate w-full text-center">${top2.Nama}</span>
+                                                    <span class="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md mb-2">${formatSkor(top2.Nilai)}</span>
+                                                    <div class="w-full bg-slate-200 h-24 rounded-t-xl flex items-center justify-center font-black text-slate-400">2</div>
+                                                </div>
+                                                <!-- Posisi 1 -->
+                                                <div class="flex flex-col items-center flex-1 max-w-[120px]">
+                                                    <i data-lucide="crown" class="w-5 h-5 text-amber-500 animate-bounce mb-1"></i>
+                                                    <span class="text-sm font-black text-slate-800 mb-1 truncate w-full text-center">${top1.Nama}</span>
+                                                    <span class="text-xs font-black text-white bg-amber-500 px-2.5 py-0.5 rounded-md mb-2 shadow-sm">${formatSkor(top1.Nilai)}</span>
+                                                    <div class="w-full bg-amber-400 h-32 rounded-t-xl flex items-center justify-center font-black text-amber-950">1</div>
+                                                </div>
+                                                <!-- Posisi 3 -->
+                                                <div class="flex flex-col items-center flex-1 max-w-[110px]">
+                                                    <span class="text-xs font-bold text-slate-700 mb-1 truncate w-full text-center">${top3.Nama}</span>
+                                                    <span class="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md mb-2">${formatSkor(top3.Nilai)}</span>
+                                                    <div class="w-full bg-slate-200 h-16 rounded-t-xl flex items-center justify-center font-black text-slate-400">3</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- LIST BOTTOM 3 -->
+                                        <div class="space-y-4">
+                                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
+                                                <i data-lucide="trending-down" class="w-4 h-4 text-rose-500"></i> Perlu Evaluasi (Bottom 3)
+                                            </h3>`;
+                                            
+                            bottomData.forEach((item, idx) => {
+                                let wPercent = parseFloat(item.Nilai) <= 1 ? Math.round(parseFloat(item.Nilai) * 100) : parseFloat(item.Nilai);
+                                dashboardHTML += `
+                                            <div class="bg-slate-50/60 p-4 rounded-2xl border border-slate-100 shadow-inner">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="text-sm font-bold text-slate-700">${idx + 1}. ${item.Nama}</span>
+                                                    <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">${formatSkor(item.Nilai)}</span>
+                                                </div>
+                                                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                                    <div class="bg-gradient-to-r from-rose-400 to-rose-500 h-full rounded-full" style="width: ${isNaN(wPercent) ? 0 : wPercent}%"></div>
+                                                </div>
+                                            </div>`;
+                            });
+
+                            dashboardHTML += `
+                                        </div>
+                                    </div>
+                                </div>`;
+                            
+                            customDashboard.innerHTML = dashboardHTML;
+                            lucide.createIcons();
+                        })
+                        .catch(() => {
+                            customDashboard.innerHTML = `<p class="text-xs text-rose-500 text-center py-4">Gagal menghubungkan ke data Google Sheets.</p>`;
+                        });
                 }
             }
             // =========================================================
@@ -232,10 +155,7 @@
                 }
             });
 
-            if (SubFolders.size === 0 && filesInThisFolder.length === 0 && currentFolderStr.toUpperCase() !== 'UPT PERFORMANCE') { 
-                noResults.classList.remove('hidden'); 
-                return; 
-            }
+            if (SubFolders.size === 0 && filesInThisFolder.length === 0) { noResults.classList.remove('hidden'); return; }
             noResults.classList.add('hidden');
 
             SubFolders.forEach(folderName => {
@@ -255,150 +175,3 @@
             renderFilesOnly(filesInThisFolder, grid);
             lucide.createIcons();
         }
-
-        // =========================================================
-        // HUBUNGAN JAVASCRIPT ASINKRON DENGAN APPS SCRIPT (CODE.GS)
-        // =========================================================
-        
-        function muatOpsiSlicerDariServer() {
-            // 1. Tarik opsi Personil BM
-            if (typeof google !== 'undefined' && google.script) {
-                google.script.run.withSuccessHandler(function(opsiBM) {
-                    const selectBM = document.getElementById('slicerBM');
-                    if (opsiBM && opsiBM.length > 0) {
-                        opsiBM.forEach(opt => {
-                            selectBM.innerHTML += `<option value="${opt}">${opt}</option>`;
-                        });
-                    }
-                }).ambilOpsiFilter('BM');
-
-                // 2. Tarik opsi ABM
-                google.script.run.withSuccessHandler(function(opsiABM) {
-                    const selectABM = document.getElementById('slicerABM');
-                    if (opsiABM && opsiABM.length > 0) {
-                        opsiABM.forEach(opt => {
-                            selectABM.innerHTML += `<option value="${opt}">${opt}</option>`;
-                        });
-                    }
-                }).ambilOpsiFilter('ABM');
-
-                // 3. Tarik Header Daftar Bulan & jalankan filter awal
-                google.script.run.withSuccessHandler(function(listBulan) {
-                    const selectBulan = document.getElementById('slicerBulan');
-                    if (selectBulan && listBulan && listBulan.length > 0) {
-                        selectBulan.innerHTML = '';
-                        listBulan.forEach(bln => {
-                            selectBulan.innerHTML += `<option value="${bln}">${bln}</option>`;
-                        });
-                    }
-                    jalankanFilterPodium();
-                }).ambilDaftarBulan();
-            } else {
-                // Mockup data fallback jika dijalankan di luar ekosistem Apps Script
-                document.getElementById('podiumContainer').innerHTML = `<p class="text-xs text-rose-500 font-bold text-center py-4 col-span-2">Mode Offline: google.script.run tidak terdeteksi.</p>`;
-            }
-        }
-
-        function jalankanFilterPodium() {
-            const container = document.getElementById('podiumContainer');
-            if (!container) return;
-            
-            container.innerHTML = `<p class="text-xs text-amber-500 animate-pulse text-center py-6 font-medium col-span-2">Memproses data podium terfilter...</p>`;
-
-            const bmTersaring = document.getElementById('slicerBM').value;
-            const abmTersaring = document.getElementById('slicerABM').value;
-            const bulanTersaring = document.getElementById('slicerBulan').value;
-
-            let tipeFilter = "ALL";
-            let nilaiFilter = "";
-
-            if (bmTersaring !== "ALL") {
-                tipeFilter = "BM";
-                nilaiFilter = bmTersaring;
-            } else if (abmTersaring !== "ALL") {
-                tipeFilter = "ABM";
-                nilaiFilter = abmTersaring;
-            }
-
-            if (typeof google !== 'undefined' && google.script) {
-                google.script.run.withSuccessHandler(function(hasilPodium) {
-                    renderGrafikPodiumDinamis(hasilPodium);
-                }).ambilDataJuaraTerfilter(tipeFilter, nilaiFilter, bulanTersaring);
-            }
-        }
-
-        function renderGrafikPodiumDinamis(data) {
-            const container = document.getElementById('podiumContainer');
-            if (!container) return;
-
-            const top = data.top || [];
-            const bot = data.bottom || [];
-
-            const t1 = top[0] || { nama: '-', skor: 0 };
-            const t2 = top[1] || { nama: '-', skor: 0 };
-            const t3 = top[2] || { nama: '-', skor: 0 };
-
-            const b1 = bot[0] || { nama: '-', skor: 0 };
-            const b2 = bot[1] || { nama: '-', skor: 0 };
-            const b3 = bot[2] || { nama: '-', skor: 0 };
-
-            container.innerHTML = `
-                <!-- PODIUM TOP 3 HIGHEST -->
-                <div class="bg-gradient-to-b from-slate-50/50 to-slate-50 rounded-2xl p-5 border border-slate-100 flex flex-col justify-between shadow-sm">
-                    <h3 class="text-xs font-black uppercase tracking-widest text-emerald-600 mb-6 flex items-center justify-center gap-2">
-                        🎉 TOP 3 HIGHEST UPT 🎉
-                    </h3>
-                    <div class="flex items-end justify-center gap-3 h-44 pt-4">
-                        <div class="flex flex-col items-center flex-1 max-w-[110px]">
-                            <span class="text-[11px] font-bold text-slate-600 mb-1 truncate w-full text-center">${t2.nama}</span>
-                            <span class="text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md mb-2 border border-blue-100">${parseFloat(t2.skor || 0).toFixed(2)}</span>
-                            <div class="w-full bg-gradient-to-t from-blue-300 to-blue-400 h-20 rounded-t-xl flex items-center justify-center font-black text-white text-lg shadow-inner">2</div>
-                        </div>
-                        <div class="flex flex-col items-center flex-1 max-w-[120px]">
-                            <i data-lucide="crown" class="w-4 h-4 text-amber-500 animate-bounce mb-1"></i>
-                            <span class="text-xs font-black text-slate-800 mb-1 truncate w-full text-center">${t1.nama}</span>
-                            <span class="text-[11px] font-black text-white bg-gradient-to-r from-amber-500 to-orange-500 px-2.5 py-0.5 rounded-md mb-2 shadow-sm">${parseFloat(t1.skor || 0).toFixed(2)}</span>
-                            <div class="w-full bg-gradient-to-t from-amber-400 to-amber-500 h-28 rounded-t-xl flex items-center justify-center font-black text-white text-2xl shadow">1</div>
-                        </div>
-                        <div class="flex flex-col items-center flex-1 max-w-[110px]">
-                            <span class="text-[11px] font-bold text-slate-600 mb-1 truncate w-full text-center">${t3.nama}</span>
-                            <span class="text-[10px] font-extrabold text-blue-500 bg-blue-50/50 px-2 py-0.5 rounded-md mb-2 border border-blue-100/50">${parseFloat(t3.skor || 0).toFixed(2)}</span>
-                            <div class="w-full bg-gradient-to-t from-blue-200 to-blue-300 h-14 rounded-t-xl flex items-center justify-center font-black text-white text-base shadow-inner">3</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PODIUM BOTTOM 3 LOWEST -->
-                <div class="bg-gradient-to-b from-slate-50/50 to-slate-50 rounded-2xl p-5 border border-slate-100 flex flex-col justify-between shadow-sm">
-                    <h3 class="text-xs font-black uppercase tracking-widest text-rose-600 mb-6 flex items-center justify-center gap-2">
-                        ⚠️ BOTTOM 3 LOWEST UPT ⚠️
-                    </h3>
-                    <div class="flex items-end justify-center gap-3 h-44 pt-4">
-                        <div class="flex flex-col items-center flex-1 max-w-[110px]">
-                            <span class="text-[11px] font-bold text-slate-600 mb-1 truncate w-full text-center">${b2.nama}</span>
-                            <span class="text-[10px] font-extrabold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md mb-2 border border-orange-100">${parseFloat(b2.skor || 0).toFixed(2)}</span>
-                            <div class="w-full bg-gradient-to-t from-orange-300 to-orange-400 h-20 rounded-t-xl flex items-center justify-center font-black text-white text-lg shadow-inner">2</div>
-                        </div>
-                        <div class="flex flex-col items-center flex-1 max-w-[120px]">
-                            <span class="text-xs font-black text-slate-800 mb-1 truncate w-full text-center">${b1.nama}</span>
-                            <span class="text-[11px] font-black text-white bg-gradient-to-r from-rose-500 to-red-500 px-2.5 py-0.5 rounded-md mb-2 shadow-sm">${parseFloat(b1.skor || 0).toFixed(2)}</span>
-                            <div class="w-full bg-gradient-to-t from-rose-400 to-rose-500 h-28 rounded-t-xl flex items-center justify-center font-black text-white text-2xl shadow">1</div>
-                        </div>
-                        <div class="flex flex-col items-center flex-1 max-w-[110px]">
-                            <span class="text-[11px] font-bold text-slate-600 mb-1 truncate w-full text-center">${b3.nama}</span>
-                            <span class="text-[10px] font-extrabold text-orange-500 bg-orange-50/50 px-2 py-0.5 rounded-md mb-2 border border-orange-100/50">${parseFloat(b3.skor || 0).toFixed(2)}</span>
-                            <div class="w-full bg-gradient-to-t from-orange-200 to-orange-300 h-14 rounded-t-xl flex items-center justify-center font-black text-white text-base shadow-inner">3</div>
-                        </div>
-                    </div>
-                </div>`;
-            
-            lucide.createIcons();
-        }
-
-        // Jalankan inisialisasi awal portal saat halaman di-load
-        window.onload = function() {
-            renderPortal();
-        };
-    </script>
-</body>
-</html>
