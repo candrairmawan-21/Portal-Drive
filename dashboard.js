@@ -15,7 +15,7 @@ const USER_MAPPING = {
     // Akun BM
     'bm_ika':    { namaDiSheets: 'Ika Nuraini', role: 'bm' },
     'bm galih':  { namaDiSheets: 'Galih Bagus Perdana', role: 'bm' },
-    'bm didik':  { namaDiSheets: 'Didik Supriyadi', role: 'bm' }, // Spasi di awal sudah dihapus
+    'bm didik':  { namaDiSheets: 'Didik Supriyadi', role: 'bm' },
     
     // Akun ABM
     'abm_bayu':   { namaDiSheets: 'Bayu Setiawan', role: 'abm' },
@@ -40,23 +40,21 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 2. LOGIKA SESSION LOGIN USER
+// 2. LOGIKA SESSION LOGIN USER (VERSI AMAN)
 // ==========================================
 function getSessionUser() {
-    // 1. Ambil username dari storage dan bersihkan dari semua jenis spasi/karakter aneh
     let rawUsername = (localStorage.getItem('username') || 'guest').toLowerCase().trim();
     
-    // Versi bersih total (tanpa spasi, tanpa underscore, tanpa strip) untuk pencocokan aman
+    // Bersihkan karakter pemisah (spasi, strip, underscore)
     let superCleanUsername = rawUsername.replace(/[\s_\-]/g, ''); 
     
-    // 2. Normalisasi USER_MAPPING agar kuncinya juga bersih total dari spasi/karakter aneh
+    // Normalisasi mapping agar kebal spasi/karakter pemisah
     const normalizedMapping = {};
     Object.keys(USER_MAPPING).forEach(key => {
         const cleanKey = key.toLowerCase().replace(/[\s_\-]/g, '').trim();
         normalizedMapping[cleanKey] = USER_MAPPING[key];
     });
     
-    // 3. Lakukan pencocokan dengan versi yang sudah bersih total
     if (normalizedMapping[superCleanUsername]) {
         return {
             username: rawUsername,
@@ -64,7 +62,6 @@ function getSessionUser() {
             role: normalizedMapping[superCleanUsername].role.toLowerCase().trim()
         };
     } else {
-        // Jika benar-benar tidak terdaftar di USER_MAPPING
         return {
             username: rawUsername,
             nameInSheets: rawUsername,
@@ -73,10 +70,18 @@ function getSessionUser() {
     }
 }
 
-
 function renderLoggedInUser() {
     const user = getSessionUser();
-    const displayName = USER_MAPPING[user.username] ? USER_MAPPING[user.username].namaDiSheets : user.username;
+    // Cari nama tampilan asli dari objek mapping asli
+    let displayName = user.username;
+    let cleanTarget = user.username.replace(/[\s_\-]/g, '');
+    
+    Object.keys(USER_MAPPING).forEach(key => {
+        if (key.toLowerCase().replace(/[\s_\-]/g, '').trim() === cleanTarget) {
+            displayName = USER_MAPPING[key].namaDiSheets;
+        }
+    });
+    
     const displayRole = user.role.toUpperCase();
 
     const userContainer = document.getElementById('user-profile-nav') || 
@@ -224,7 +229,7 @@ function applyDashboardFilters() {
         }
     } else if (kategori === 'abm') {
         if (spesifik !== 'all') {
-            filteredData = filteredData.filter(item => item.namaABM === spesifik); // FIX: GOP_spesifik diganti jadi spesifik
+            filteredData = filteredData.filter(item => item.namaABM === spesifik);
         }
     }
 
