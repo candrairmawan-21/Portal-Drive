@@ -1,36 +1,79 @@
 // ==========================================
 // 1. CONFIG & GLOBAL VARIABLES
 // ==========================================
-// URL CSV Khusus untuk Dashboard UPT
 const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=425930614&single=true&output=csv';
 
 let dashboardData = [];
 let chartInstance = null;
 
+// ==========================================
+// TOKO SETTING: ATUR USERNAME MANUAL DI SINI
+// ==========================================
+const USER_MAPPING = {
+    'admin':     { namaDiSheets: 'Admin Global', role: 'admin' },
+    
+    // Akun BM
+    'bm_ika':    { namaDiSheets: 'Ika Nuraini', role: 'bm' },
+    'bm galih':  { namaDiSheets: 'Galih Bagus Perdana', role: 'bm' },
+    'bm didik':  { namaDiSheets: 'Didik Supriyadi', role: 'bm' },
+    
+    // Akun ABM
+    'abm_bayu':   { namaDiSheets: 'Bayu Setiawan', role: 'abm' },
+    'abm_ika':    { namaDiSheets: 'Ika', role: 'abm' }, 
+    'abm bayu':   { namaDiSheets: 'Bayu Eka Nugraha', role: 'abm' },
+    'abm satria': { namaDiSheets: 'Satriawan Sejati', role: 'abm' },
+    'abm fachri': { namaDiSheets: 'Fachri Anggoro Budi', role: 'abm' }, 
+    'abm gading': { namaDiSheets: 'Gading Hanif Prasetya', role: 'abm' }, 
+    'abm anas':   { namaDiSheets: 'Anas Makruf', role: 'abm' },
+    'abm adinda': { namaDiSheets: 'Adinda Febiyanti', role: 'abm' },
+    'abm wildan': { namaDiSheets: 'Wildan Aulia Rakhman', role: 'abm' },
+    'abm ridho':  { namaDiSheets: 'Ridho Malandi', role: 'abm' },
+    
+    // Akun Staff
+    'staff_budi': { namaDiSheets: 'Budi Santoso', role: 'staff' }
+};
+
 // Jalankan saat halaman selesai dimuat
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Render profil user login secara dinamis di navbar
     renderLoggedInUser();
-    // 2. Load data dan filter berdasarkan siapa yang sedang melihat
     fetchDashboardData();
 });
 
 // ==========================================
-// 2. LOGIKA SESSION LOGIN USER
+// 2. LOGIKA SESSION LOGIN USER (PERBAIKAN TOTAL)
 // ==========================================
-
-// Mengambil data session login dari localStorage portal
 function getSessionUser() {
-    const name = localStorage.getItem('username') || 'Guest User';
-    const role = (localStorage.getItem('role') || 'staff').toLowerCase().trim();
-
-    return { name, role };
+    const originalUsername = (localStorage.getItem('username') || 'guest').trim();
+    
+    // Normalisasi input login (kecilkan huruf dan buang spasi/strip/underscore)
+    const cleanRaw = originalUsername.toLowerCase().replace(/[\s_\-]/g, '');
+    
+    let matchedKey = null;
+    Object.keys(USER_MAPPING).forEach(key => {
+        if (key.toLowerCase().replace(/[\s_\-]/g, '') === cleanRaw) {
+            matchedKey = key;
+        }
+    });
+    
+    if (matchedKey) {
+        return {
+            username: originalUsername,
+            nameInSheets: USER_MAPPING[matchedKey].namaDiSheets.trim(), // Huruf asli sesuai Sheets
+            role: USER_MAPPING[matchedKey].role.toLowerCase().trim()
+        };
+    } else {
+        return {
+            username: originalUsername,
+            nameInSheets: originalUsername.trim(),
+            role: (localStorage.getItem('role') || 'staff').toLowerCase().trim()
+        };
+    }
 }
 
-// Menampilkan nama & role user di navbar secara dinamis
 function renderLoggedInUser() {
     const user = getSessionUser();
     const displayRole = user.role.toUpperCase();
+    const displayName = user.nameInSheets;
 
     const userContainer = document.getElementById('user-profile-nav') || 
                           document.querySelector('.navbar-right') || 
@@ -45,11 +88,11 @@ function renderLoggedInUser() {
         const badgeHTML = `
             <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-800/40 border border-slate-700/60 px-4 py-1.5 rounded-xl backdrop-blur-sm ml-auto">
                 <div class="text-right hidden sm:block">
-                    <p class="text-xs font-black text-white leading-none">${user.name}</p>
+                    <p class="text-xs font-black text-white leading-none">${displayName}</p>
                     <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${displayRole}</p>
                 </div>
                 <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-xs shadow-sm uppercase">
-                    ${user.name.charAt(0)}
+                    ${displayName.charAt(0)}
                 </div>
             </div>
         `;
@@ -58,10 +101,8 @@ function renderLoggedInUser() {
 }
 
 // ==========================================
-// 3. CORE LOGIC (PARSING & DATA PRIVACY FILTER)
+// 3. CORE LOGIC (PARSING & SINKRONISASI DATA)
 // ==========================================
-
-// Fungsi Utama untuk Memuat Data Dashboard
 async function fetchDashboardData() {
     const container = document.getElementById('dashboard-loading');
     if (container) container.classList.remove('hidden');
@@ -69,44 +110,22 @@ async function fetchDashboardData() {
     try {
         const response = await fetch(DASHBOARD_API_URL);
         const csvText = await response.text();
-        
-        // 1. Parse semua data dari Google Sheets
         const allData = parseDashboardCSV(csvText);
         
-        // 2. AMBIL DATA USER LOGIN
         const user = getSessionUser();
-        const userNameLower = user.name.toLowerCase().trim();
+        const targetName = user.nameInSheets.toLowerCase();
         
-        // 3. FILTER PRIVASI DATA (Dashboard tetap terbuka untuk semua)
         if (user.role === 'admin') {
-            // Admin bebas melihat 100% data mentah
             dashboardData = allData;
+        } else if (user.role === 'bm') {
+            dashboardData = allData.filter(item => item.namaBM.toLowerCase().trim() === targetName);
+        } else if (user.role === 'abm') {
+            dashboardData = allData.filter(item => item.namaABM.toLowerCase().trim() === targetName);
         } else {
-            // Cek apakah user ini terdaftar sebagai BM atau ABM di dalam data spreadsheet
-            const isBM = allData.some(item => item.namaBM.toLowerCase().trim() === userNameLower);
-            const isABM = allData.some(item => item.namaABM.toLowerCase().trim() === userNameLower);
-
-            if (isBM) {
-                // Jika terdaftar sebagai BM, filter data berdasarkan nama BM-nya
-                dashboardData = allData.filter(item => item.namaBM.toLowerCase().trim() === userNameLower);
-            } else if (isABM) {
-                // Jika terdaftar sebagai ABM, filter data berdasarkan nama ABM-nya
-                dashboardData = allData.filter(item => item.namaABM.toLowerCase().trim() === userNameLower);
-            } else {
-                // Jika Staff biasa / nama tidak match di kolom BM/ABM, hanya tampilkan data miliknya sendiri
-                dashboardData = allData.filter(item => item.namaStaff.toLowerCase().trim() === userNameLower);
-                
-                // Jika data pribadinya kosong (Guest/Baru), biarkan dashboard kosong tanpa crash
-                if (dashboardData.length === 0) {
-                    dashboardData = []; 
-                }
-            }
+            dashboardData = allData.filter(item => item.namaStaff.toLowerCase().trim() === targetName);
         }
 
-        // 4. Inisialisasi slicer berdasarkan data yang sudah disaring hak aksesnya
         initSlicers();
-        
-        // 5. Jalankan render awal ke podium dan chart
         applyDashboardFilters();
         
     } catch (error) {
@@ -116,7 +135,6 @@ async function fetchDashboardData() {
     }
 }
 
-// Parser CSV Sederhana untuk Dashboard UPT
 function parseDashboardCSV(text) {
     let lines = text.split('\n');
     if (lines.length === 0) return [];
@@ -149,21 +167,18 @@ function parseDashboardCSV(text) {
     return result;
 }
 
-// INISIALISASI & LOGIKA RELASI SLICER
 function initSlicers() {
     const slicerKategori = document.getElementById('slicerKategori');
     const slicerSpesifik = document.getElementById('slicerSpesifik');
 
     if (!slicerKategori || !slicerSpesifik) return;
 
-    // Bersihkan event listener lama dengan melakukan cloning
     const newSlicerKategori = slicerKategori.cloneNode(true);
     slicerKategori.parentNode.replaceChild(newSlicerKategori, slicerKategori);
 
     const newSlicerSpesifik = slicerSpesifik.cloneNode(true);
     slicerSpesifik.parentNode.replaceChild(newSlicerSpesifik, slicerSpesifik);
 
-    // Daftarkan ulang event listener pada elemen baru
     newSlicerKategori.addEventListener('change', function() {
         const kategori = this.value;
         const targetSpesifik = document.getElementById('slicerSpesifik');
@@ -177,7 +192,6 @@ function initSlicers() {
             targetSpesifik.disabled = false;
             targetSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
             
-            // Mengambil opsi unique hanya dari porsi data yang diizinkan untuk user saat ini
             let uniqueItems = new Set();
             dashboardData.forEach(item => {
                 if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
@@ -195,14 +209,12 @@ function initSlicers() {
     document.getElementById('slicerSpesifik')?.addEventListener('change', applyDashboardFilters);
 }
 
-// FUNGSI UNTUK MENYARING DATA BERDASARKAN PILIHAN SLICER
 function applyDashboardFilters() {
     const kategori = document.getElementById('slicerKategori')?.value || 'all';
     const spesifik = document.getElementById('slicerSpesifik')?.value || 'all';
 
     let filteredData = [...dashboardData];
 
-    // Filter Kategori & Nama Spesifik (BM / ABM)
     if (kategori === 'bm') {
         if (spesifik !== 'all') {
             filteredData = filteredData.filter(item => item.namaBM === spesifik);
@@ -213,7 +225,6 @@ function applyDashboardFilters() {
         }
     }
 
-    // Render komponen dengan data hasil saringan terakhir
     renderPodiumTop3(filteredData);
     renderPodiumBottom3(filteredData);
     renderChartPerforma(filteredData);
@@ -248,7 +259,6 @@ function renderPodiumBottom3(data) {
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'bottom');
 }
 
-// HELPER UNTUK MEMBUAT STRUKTUR HTML PODIUM
 function generatePodiumHTML(p1, p2, p3, type) {
     const isTop = type === 'top';
     const colorClass = isTop 
@@ -261,7 +271,6 @@ function generatePodiumHTML(p1, p2, p3, type) {
 
     return `
         <div class="flex items-end justify-center gap-2 sm:gap-4 pt-12 pb-2 max-w-md mx-auto w-full">
-            <!-- JUARA 2 -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p2.namaStaff}</p>
@@ -272,8 +281,6 @@ function generatePodiumHTML(p1, p2, p3, type) {
                     <span class="text-2xl font-black text-slate-400">2</span>
                 </div>
             </div>
-
-            <!-- JUARA 1 -->
             <div class="flex flex-col items-center flex-1 transform -translate-y-4 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="flex justify-center mb-1">${iconSvg}</div>
@@ -285,8 +292,6 @@ function generatePodiumHTML(p1, p2, p3, type) {
                     <span class="text-3xl font-black text-white drop-shadow-sm">1</span>
                 </div>
             </div>
-
-            <!-- JUARA 3 -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="h-5"></div>
@@ -302,7 +307,6 @@ function generatePodiumHTML(p1, p2, p3, type) {
     `;
 }
 
-// 3. GENERATE DIAGRAM BATANG BERDASARKAN AKUMULASI DATA (CHART.JS)
 function renderChartPerforma(data) {
     const ctx = document.getElementById('bmChart');
     if (!ctx) return;
@@ -343,9 +347,7 @@ function renderChartPerforma(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
                 x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10, weight: '600' } } },
                 y: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8' } }
