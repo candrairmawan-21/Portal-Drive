@@ -40,48 +40,44 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 2. LOGIKA SESSION LOGIN USER (VERSI AMAN)
+// 2. LOGIKA SESSION LOGIN USER (STABIL & AMAN)
 // ==========================================
 function getSessionUser() {
-    let rawUsername = (localStorage.getItem('username') || 'guest').toLowerCase().trim();
+    // Ambil username asli dari portal
+    const originalUsername = (localStorage.getItem('username') || 'guest').trim();
     
-    // Bersihkan karakter pemisah (spasi, strip, underscore)
-    let superCleanUsername = rawUsername.replace(/[\s_\-]/g, ''); 
+    // Cari versi bersis tanpa spasi/karakter aneh untuk dicocokkan
+    const cleanRaw = originalUsername.toLowerCase().replace(/[\s_\-]/g, '');
     
-    // Normalisasi mapping agar kebal spasi/karakter pemisah
-    const normalizedMapping = {};
+    // Cari kecocokan di USER_MAPPING
+    let matchedKey = null;
     Object.keys(USER_MAPPING).forEach(key => {
-        const cleanKey = key.toLowerCase().replace(/[\s_\-]/g, '').trim();
-        normalizedMapping[cleanKey] = USER_MAPPING[key];
+        if (key.toLowerCase().replace(/[\s_\-]/g, '') === cleanRaw) {
+            matchedKey = key;
+        }
     });
     
-    if (normalizedMapping[superCleanUsername]) {
+    if (matchedKey) {
         return {
-            username: rawUsername,
-            nameInSheets: normalizedMapping[superCleanUsername].namaDiSheets.toLowerCase().trim(),
-            role: normalizedMapping[superCleanUsername].role.toLowerCase().trim()
+            username: originalUsername,
+            nameInSheets: USER_MAPPING[matchedKey].namaDiSheets.toLowerCase().trim(),
+            role: USER_MAPPING[matchedKey].role.toLowerCase().trim(),
+            displayName: USER_MAPPING[matchedKey].namaDiSheets
         };
     } else {
+        // Fallback jika tidak terdaftar
         return {
-            username: rawUsername,
-            nameInSheets: rawUsername,
-            role: (localStorage.getItem('role') || 'staff').toLowerCase().trim()
+            username: originalUsername,
+            nameInSheets: originalUsername.toLowerCase().trim(),
+            role: (localStorage.getItem('role') || 'staff').toLowerCase().trim(),
+            displayName: originalUsername
         };
     }
 }
 
 function renderLoggedInUser() {
     const user = getSessionUser();
-    // Cari nama tampilan asli dari objek mapping asli
-    let displayName = user.username;
-    let cleanTarget = user.username.replace(/[\s_\-]/g, '');
-    
-    Object.keys(USER_MAPPING).forEach(key => {
-        if (key.toLowerCase().replace(/[\s_\-]/g, '').trim() === cleanTarget) {
-            displayName = USER_MAPPING[key].namaDiSheets;
-        }
-    });
-    
+    const displayName = user.displayName;
     const displayRole = user.role.toUpperCase();
 
     const userContainer = document.getElementById('user-profile-nav') || 
