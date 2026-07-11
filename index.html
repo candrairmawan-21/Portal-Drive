@@ -36,19 +36,16 @@
 
     <!-- ================= LOGIN PAGE OVERLAY ================= -->
     <div id="loginOverlay" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-[9999] p-4 transition-all duration-500">
-        <!-- Pendaran Latar Belakang Login -->
         <div class="absolute top-12 left-1/4 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute bottom-12 right-1/4 w-72 h-72 bg-amber-700/10 rounded-full blur-3xl pointer-events-none"></div>
         
         <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 p-8 relative overflow-hidden text-center transform scale-100 transition-transform duration-300">
-            <!-- Logo area di Login -->
             <div class="flex justify-center mb-5">
                 <img src="midnorth java (1).png" alt="Logo" class="h-20 w-auto object-contain">
             </div>
             <h2 class="text-xl font-extrabold text-amber-950 tracking-tight">Midnorth <span class="text-amber-500">Data Portal</span></h2>
             <p class="text-slate-400 text-xs mt-1 font-medium">Silakan masukkan username Anda untuk mengakses portal hub.</p>
             
-            <!-- Form Login -->
             <form id="loginForm" class="mt-8 text-left">
                 <div class="mb-5">
                     <label for="usernameInput" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Username</label>
@@ -58,32 +55,26 @@
                         </span>
                         <input type="text" id="usernameInput" required placeholder="Ketik username resmi Anda..." class="block w-full pl-11 pr-4 py-3 border border-slate-200 rounded-2xl bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 transition-all duration-200 font-medium text-sm text-slate-700">
                     </div>
-                    <!-- Pesan Error -->
                     <p id="loginError" class="text-rose-500 text-xs font-semibold mt-2 hidden flex items-center gap-1">
                         <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Username tidak terdaftar atau salah!
                     </p>
                 </div>
                 
                 <button type="submit" class="w-full flex justify-center items-center py-3.5 bg-slate-900 text-white text-sm font-bold rounded-2xl hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 shadow-md hover:shadow-xl hover:shadow-amber-500/20 transition-all duration-300 gap-2 hover-lift">
-    <i data-lucide="log-in" class="w-4 h-4"></i>
-    Masuk ke Portal
-</button>
+                    <i data-lucide="log-in" class="w-4 h-4"></i>
+                    Masuk ke Portal
+                </button>
             </form>
             <p class="text-[10px] text-slate-400 font-bold tracking-widest uppercase mt-8">Corporate Secured Hub</p>
         </div>
     </div>
 
-
     <!-- ================= MAIN WEB CONTENT ================= -->
-    <!-- Glowing Background Decorative Dots -->
     <div class="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl -z-20 pointer-events-none"></div>
     <div class="absolute top-40 right-1/4 w-96 h-96 bg-amber-700/5 rounded-full blur-3xl -z-20 pointer-events-none"></div>
 
-    <!-- Header & Navigation -->
     <header class="bg-white/70 backdrop-blur-xl shadow-[0_2px_20px_-5px_rgba(0,0,0,0.05)] sticky top-0 z-50 border-b border-slate-200/50">
         <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            
-            <!-- Logo Section -->
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
                     <img src="midnorth java (1).png" alt="Logo" class="h-16 w-auto object-contain">
@@ -97,16 +88,13 @@
                 </div>
             </div>
             
-            <!-- Right Section: Search & Logout -->
             <div class="flex items-center w-full md:w-auto gap-4">
-                <!-- Search Bar -->
                 <div class="relative w-full md:w-80 group">
                     <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <i data-lucide="search" class="h-4 w-4 text-slate-400 group-focus-within:text-amber-600 transition-colors duration-200"></i>
                     </span>
                     <input type="text" id="searchInput" placeholder="Cari berkas di semua folder..." class="block w-full pl-11 pr-4 py-2.5 border border-slate-200/80 rounded-2xl leading-5 bg-slate-50/50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 transition-all duration-200 shadow-inner text-sm font-medium text-slate-700">
                 </div>
-                <!-- Tombol Keluar Portal -->
                 <button onclick="logoutPortal()" class="p-2.5 bg-slate-100 hover:bg-rose-50 border border-slate-200/60 hover:border-rose-200 text-slate-500 hover:text-rose-600 rounded-2xl transition shadow-sm flex items-center justify-center group" title="Keluar Portal">
                     <i data-lucide="log-out" class="w-5 h-5 group-hover:translate-x-0.5 transition-transform"></i>
                 </button>
@@ -115,10 +103,8 @@
     </header>
 
     <main class="container mx-auto px-6 py-10">
-        <!-- Breadcrumbs Navigation -->
         <div class="flex items-center flex-wrap gap-2 text-sm text-slate-600 mb-8 bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/40 shadow-sm" id="breadcrumbs"></div>
 
-        <!-- Grid Folder & Cards Container -->
         <div id="portalGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <div class="skeleton h-48 rounded-2xl"></div>
             <div class="skeleton h-48 rounded-2xl"></div>
@@ -126,13 +112,12 @@
             <div class="skeleton h-48 rounded-2xl"></div>
         </div>
 
-        <!-- No Results -->
         <div id="noResults" class="hidden text-center py-20 bg-white/80 backdrop-blur-md rounded-3xl border border-slate-200/50 shadow-sm mt-4">
             <div class="bg-slate-100/80 p-4 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto mb-4 border border-slate-200/30">
                 <i data-lucide="folder-search" class="w-8 h-8 text-slate-400"></i>
             </div>
             <h3 class="text-base font-bold text-slate-700">Tidak ada folder atau berkas</h3>
-            <p class="mt-1 text-sm text-slate-400 font-medium">Coba periksa kata kunci pencarian Anda kembali.</p>
+            <p class="mt-1 text-sm text-slate-400 font-medium">Coba periksa kata kunci pencarian Anda kembali atau hak akses akun Anda.</p>
         </div>
     </main>
 
@@ -140,11 +125,14 @@
         const API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=119812050&single=true&output=csv';
         
         let allFiles = [];
+        let accessibleFiles = []; 
         let currentPath = []; 
-        let validUsernames = new Set();
 
-        // DATABASE MANUAL CADANGAN (Bisa Anda ketik manual langsung di sini)
-        const manualDatabase = ['admin', 'midnorth', 'candra', 'mrdiy'];
+        // DATABASE USERNAME RESMI YANG BOLEH LOGIN
+        const manualDatabase = [
+            'admin', 'midnorth', 'candra', 'mrdiy',
+            'jc2017', 'jc8001', 'jc2021', 'jc1029', 'jc1020', 'jc3001', 'jc2001', 'jc2008', 'jc5005', 'jc6003', 'jc2012', 'jc1014', 'jc2018', 'jc4006', 'jc8005', 'jc3003', 'jc1005', 'jc5002', 'jc1012', 'jc21002', 'jc5003', 'jc8006', 'jc2016', 'jc1027', 'jc8004', 'bm agus', 'bm didi', 'bm gali', 'abm an', 'abm ba', 'abm ika', 'abm ad', 'abm ri'
+        ];
 
         function getIconByKategori(kategori) {
             const kat = (kategori || '').toUpperCase().trim();
@@ -187,37 +175,55 @@
                 const csvText = await response.text();
                 allFiles = parseCSV(csvText);
                 
-                // Ambil daftar username unik dari kolom 'Username' di Google Sheet
-                allFiles.forEach(row => {
-                    if (row.Username && row.Username.trim() !== "") {
-                        validUsernames.add(row.Username.trim().toLowerCase());
-                    }
-                });
-                
-                // Tambahkan database manual ke daftar validasi
-                manualDatabase.forEach(user => validUsernames.add(user.toLowerCase()));
-
-                // Periksa apakah user sudah login sebelumnya di browser ini
                 if (sessionStorage.getItem('portalLoggedIn') === 'true') {
+                    filterAndRender();
                     bypassLogin();
                 }
-
-                renderPortal();
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('portalGrid').innerHTML = '<p class="text-rose-500 text-center col-span-full font-bold">Gagal memuat data dari Publikasi CSV Web.</p>';
             }
         }
 
-        // Aksi Submit Form Login
+        function filterAndRender() {
+            const loggedInUser = sessionStorage.getItem('portalUser') || '';
+            
+            accessibleFiles = allFiles.filter(file => {
+                // 1. JIKA USER 'admin', MAKA BISA BUKA SEMUA FILE
+                if (loggedInUser === 'admin') {
+                    return true;
+                }
+
+                const fileTargetUser = file.Username ? file.Username.trim().toLowerCase() : '';
+                
+                // 2. BISA DIBUKA USERNAME MANAPUN (Jika kolom Username kosong)
+                if (fileTargetUser === '') {
+                    return true;
+                }
+
+                // 3. JIKA FILE DI-SET UNTUK 'abm', BISA DIBUKA OLEH USER YANG BERAWALAN 'abm' MAUPUN 'bm'
+                if (fileTargetUser === 'abm') {
+                    return loggedInUser.startsWith('abm') || loggedInUser.startsWith('bm');
+                }
+
+                // 4. JIKA FILE DI-SET UNTUK USERNAME SPESIFIK INDIVIDU (Misal: jc2017)
+                return (fileTargetUser === loggedInUser);
+            });
+
+            renderPortal();
+        }
+
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const inputUser = document.getElementById('usernameInput').value.trim().toLowerCase();
             const errorText = document.getElementById('loginError');
 
-            if (validUsernames.has(inputUser)) {
+            if (manualDatabase.includes(inputUser)) {
                 errorText.classList.add('hidden');
                 sessionStorage.setItem('portalLoggedIn', 'true');
+                sessionStorage.setItem('portalUser', inputUser);
+                
+                filterAndRender();
                 bypassLogin();
             } else {
                 errorText.classList.remove('hidden');
@@ -226,13 +232,16 @@
 
         function bypassLogin() {
             const overlay = document.getElementById('loginOverlay');
-            overlay.classList.add('opacity-0', 'pointer-events-none');
-            document.getElementById('mainBody').classList.remove('overflow-hidden');
-            setTimeout(() => overlay.remove(), 500);
+            if (overlay) {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                document.getElementById('mainBody').classList.remove('overflow-hidden');
+                setTimeout(() => overlay.remove(), 500);
+            }
         }
 
         function logoutPortal() {
             sessionStorage.removeItem('portalLoggedIn');
+            sessionStorage.removeItem('portalUser');
             window.location.reload();
         }
 
@@ -245,7 +254,7 @@
             grid.innerHTML = '';
 
             if (searchTerm) {
-                const filtered = allFiles.filter(f => 
+                const filtered = accessibleFiles.filter(f => 
                     (f.Nama && f.Nama.toLowerCase().includes(searchTerm)) || 
                     (f.Deskripsi && f.Deskripsi.toLowerCase().includes(searchTerm))
                 );
@@ -260,7 +269,7 @@
             let SubFolders = new Set();
             let filesInThisFolder = [];
 
-            allFiles.forEach(file => {
+            accessibleFiles.forEach(file => {
                 const itemFolderStr = file.Folder ? file.Folder.trim() : '';
                 if (currentPath.length === 0) {
                     if (!itemFolderStr) { filesInThisFolder.push(file); } 
