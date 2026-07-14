@@ -417,17 +417,27 @@
             window.location.href = 'index.html';
         }
 
-        // CEK LOGIN TANPA REDIRECT (AMAN)
+                // CEK LOGIN AMAN & BYPASS KE UPT
         document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('loginOverlay');
+            const mainBody = document.getElementById('mainBody');
             const isLoggedIn = sessionStorage.getItem('portalLoggedIn') || localStorage.getItem('portalLoggedIn');
 
-            if (!isLoggedIn) {
-                if (overlay) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+            if (isLoggedIn) {
+                // 1. Hapus layar hitam seketika agar tidak berkedip
+                if (overlay) overlay.remove(); 
+                if (mainBody) mainBody.classList.remove('overflow-hidden');
+                
+                // 2. Cek apakah ada perintah buka UPT dari halaman Sales
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('view') === 'dashboard') {
+                    switchView('dashboard');
+                }
             } else {
-                if (overlay) overlay.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+                if (overlay) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
             }
         });
+
     </script>
     <script src="dashboard.js"></script>
 </body>
