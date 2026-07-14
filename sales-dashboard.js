@@ -1,22 +1,17 @@
 // ==========================================
 // 1. CONFIG & GLOBAL VARIABLES
 // ==========================================
-// URL CSV Utama yang sudah dipublish dari Google Sheet Sales Target Anda
 const BASE_PUBLISH_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?output=csv';
 
 let salesData = [];
 let salesChartInstance = null;
 
-// Database User Manual (Sinkron dengan login utama Anda)
+// Database User Manual
 const USER_MAPPING = {
     'admin':     { namaDiSheets: 'Admin Global', role: 'admin' },
-    
-    // Akun BM
     'bm_ika':    { namaDiSheets: 'Ika Nuraini', role: 'bm' },
     'bm galih':  { namaDiSheets: 'Galih Bagus Perdana', role: 'bm' },
     'bm didik':  { namaDiSheets: 'Didik Supriyadi', role: 'bm' },
-    
-    // Akun ABM
     'abm_bayu':   { namaDiSheets: 'Bayu Setiawan', role: 'abm' },
     'abm_ika':    { namaDiSheets: 'Ika', role: 'abm' }, 
     'abm bayu':   { namaDiSheets: 'Bayu Eka Nugraha', role: 'abm' },
@@ -30,38 +25,24 @@ const USER_MAPPING = {
     'abm ridho':  { namaDiSheets: 'Ridho Malandi', role: 'abm' }
 };
 
-// Inisialisasi awal saat halaman selesai dimuat
 document.addEventListener('DOMContentLoaded', () => {
     renderLoggedInUser();
-    initMonthSlicer(); // Deteksi otomatis bulan berjalan saat ini
-    fetchSalesData();  // Tarik data sales dari Google Sheet
+    initMonthSlicer();
+    fetchSalesData();
 });
 
-// Helper mengenali user login secara aman (anti-spasi/huruf besar kecil)
 function getNormalizedUser() {
-    // Ubah localStorage menjadi sessionStorage agar sinkron dengan login
-    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}'); 
+    // Sinkron dengan sessionStorage
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
     const loginUsername = (currentUser.username || sessionStorage.getItem('portalUser') || 'guest').toLowerCase().trim();
-    const cleanUsername = loginUsername.replace(/[\s_\-]/g, '');
-
-    let matchedKey = null;
-    Object.keys(USER_MAPPING).forEach(key => {
-        if (key.toLowerCase().replace(/[\s_\-]/g, '') === cleanUsername) { matchedKey = key; }
-    });
-
-    if (matchedKey) {
-        return { name: USER_MAPPING[matchedKey].namaDiSheets, role: USER_MAPPING[matchedKey].role, username: loginUsername };
-    }
-    return { name: currentUser.name || loginUsername, role: currentUser.role || 'staff', username: loginUsername };
+    
+    return { 
+        name: currentUser.name || loginUsername, 
+        role: currentUser.role || 'staff', 
+        username: loginUsername 
+    };
 }
 
-    if (matchedKey) {
-        return { name: USER_MAPPING[matchedKey].namaDiSheets, role: USER_MAPPING[matchedKey].role, username: loginUsername };
-    }
-    return { name: currentUser.name || loginUsername, role: currentUser.role || 'staff', username: loginUsername };
-}
-
-// Menampilkan User Profile Ringkas di Header Dashboard Sales
 function renderLoggedInUser() {
     const user = getNormalizedUser();
     const userContainer = document.getElementById('user-profile-nav');
@@ -80,50 +61,31 @@ function renderLoggedInUser() {
     }
 }
 
-// Sinkronisasi Slicer Bulan dengan Waktu Riil di HP/Sistem
 function initMonthSlicer() {
     const slicerBulan = document.getElementById('slicerBulanSales');
     if (!slicerBulan) return;
-
-    // Menghasilkan format 3 huruf awal bulan ini (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec)
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const currentMonthName = months[new Date().getMonth()];
-
-    // Atur value select option ke bulan saat ini secara otomatis
-    slicerBulan.value = currentMonthName;
-
-    // Daftarkan aksi ketika user mengubah bulan data di dashboard
-    slicerBulan.addEventListener('change', () => {
-        fetchSalesData();
-    });
+    slicerBulan.value = months[new Date().getMonth()];
+    slicerBulan.addEventListener('change', () => { fetchSalesData(); });
 }
 
-// ==========================================
-// 2. FETCH & PARSE DATA SALES DYNAMIC URL
-// ==========================================
 async function fetchSalesData() {
     const loader = document.getElementById('sales-loading');
     if (loader) loader.classList.remove('hidden');
 
     try {
-        // Baca bulan apa yang sedang dipilih di Slicer
         const selectedMonth = document.getElementById('slicerBulanSales')?.value || 'Jul';
-        
-        // Gabungkan base URL Google Sheet dengan parameter nama Sheet bulan
         const finalUrl = `${BASE_PUBLISH_URL}&sheet=${selectedMonth}`;
 
         const response = await fetch(finalUrl);
         const csvText = await response.text();
-        const allData = parseSalesCSV(csvText);
+        
+        // --- DATA SEMUA DITAMPILKAN (Otorisasi Dihapus) ---
+        salesData = parseSalesCSV(csvText);
 
-                salesData = allData;
-
-
-        // Render hasil pemrosesan data ke UI komponen masing-masing
         renderSalesSummary();
         renderSalesChart();
         renderSalesTable();
-
     } catch (error) {
         console.error('Error load data sales:', error);
     } finally {
@@ -131,154 +93,70 @@ async function fetchSalesData() {
     }
 }
 
-// Parser Data khusus membaca struktur baris target sales baru Anda
 function parseSalesCSV(text) {
     let lines = text.split('\n');
-    if (lines.length === 0) return [];
-
     let result = [];
-    // Data di Google Sheet Anda dimulai dari baris index ke-3 (baris ke-4 di Excel/Sheet asli)
     for (let i = 3; i < lines.length; i++) { 
         if (!lines[i]) continue;
-        let row = [];
-        let inQuotes = false;
-        let currentStr = "";
-
+        let row = []; let inQuotes = false; let currentStr = "";
         for (let char of lines[i]) {
             if (char === '"') { inQuotes = !inQuotes; } 
             else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; } 
             else { currentStr += char; }
         }
         row.push(currentStr.trim());
-
         if (row.length >= 20) {
             result.push({
                 bm: row[0].replace(/[\r"]/g, ""),
                 abm: row[1].replace(/[\r"]/g, ""),
                 store: row[2].replace(/[\r"]/g, ""),
                 targetPoint: row[3].replace(/[\r"]/g, ""),
-                lastDaySales: parseFloat(row[5].replace(/[^0-9.-]+/g,"")) || 0, // Kolom F
-                mtdSales: parseFloat(row[7].replace(/[^0-9.-]+/g,"")) || 0,    // Kolom H
-                mtdTarget: parseFloat(row[9].replace(/[^0-9.-]+/g,"")) || 0,   // Kolom J
-                selisihNext: row[11].replace(/[\r"]/g, ""),                    // Kolom L
-                atv: parseFloat(row[17].replace(/[^0-9.-]+/g,"")) || 0,        // Kolom R
-                upt: parseFloat(row[19]) || 0,                                 // Kolom T
-                achPercent: parseFloat(row[22].replace(/[^0-9.-]+/g,"")) || 0  // Kolom W
+                mtdSales: parseFloat(row[7].replace(/[^0-9.-]+/g,"")) || 0,
+                mtdTarget: parseFloat(row[9].replace(/[^0-9.-]+/g,"")) || 0,
+                selisihNext: row[11].replace(/[\r"]/g, ""),
+                achPercent: parseFloat(row[22].replace(/[^0-9.-]+/g,"")) || 0
             });
         }
     }
     return result;
 }
 
-// ==========================================
-// 3. RENDER METRIK RINGKASAN UTAMA (CARDS)
-// ==========================================
 function renderSalesSummary() {
-    let totalSales = 0;
-    let totalTarget = 0;
-    let totalUPT = 0;
-    let countStore = salesData.length;
-
-    salesData.forEach(item => {
-        totalSales += item.mtdSales;
-        totalTarget += item.mtdTarget;
-        totalUPT += item.upt;
-    });
-
+    let totalSales = 0, totalTarget = 0, totalUPT = 0, countStore = salesData.length;
+    salesData.forEach(item => { totalSales += item.mtdSales; totalTarget += item.mtdTarget; });
     const averageAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
-    const averageUPT = countStore > 0 ? (totalUPT / countStore).toFixed(2) : 0;
-
-    const totalSalesEl = document.getElementById('summary-total-sales');
-    const averageAchEl = document.getElementById('summary-avg-ach');
-    const averageUptEl = document.getElementById('summary-avg-upt');
-
-    if (totalSalesEl) totalSalesEl.innerText = "Rp " + totalSales.toLocaleString('id-ID');
-    if (averageAchEl) averageAchEl.innerText = averageAch + "%";
-    if (averageUptEl) averageUptEl.innerText = averageUPT;
+    document.getElementById('summary-total-sales').innerText = "Rp " + totalSales.toLocaleString('id-ID');
+    document.getElementById('summary-avg-ach').innerText = averageAch + "%";
 }
 
-// ==========================================
-// 4. GENERATE GRAFIK TARGET VS SALES (CHART.JS)
-// ==========================================
 function renderSalesChart() {
     const ctx = document.getElementById('salesTargetChart');
     if (!ctx) return;
-
-    const labels = salesData.map(item => item.store);
-    const mtdSalesValues = salesData.map(item => item.mtdSales);
-    const mtdTargetValues = salesData.map(item => item.mtdTarget);
-
-    if (salesChartInstance) { salesChartInstance.destroy(); }
-
+    if (salesChartInstance) salesChartInstance.destroy();
     salesChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: salesData.map(item => item.store),
             datasets: [
-                {
-                    label: 'Pencapaian (MTD Sales)',
-                    backgroundColor: 'rgba(34, 197, 94, 0.85)', // Warna Hijau rapi
-                    data: mtdSalesValues,
-                    borderRadius: 6
-                },
-                {
-                    label: 'Target (MTD Target)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.5)',  // Warna Merah transparan
-                    data: mtdTargetValues,
-                    borderRadius: 6
-                }
+                { label: 'MTD Sales', backgroundColor: 'rgba(34, 197, 94, 0.85)', data: salesData.map(item => item.mtdSales) },
+                { label: 'MTD Target', backgroundColor: 'rgba(239, 68, 68, 0.5)', data: salesData.map(item => item.mtdTarget) }
             ]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top', labels: { boxWidth: 12, font: { weight: '600', size: 11 } } }
-            },
-            scales: {
-                x: { grid: { display: false } },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) { return 'Rp ' + (value / 1000000) + ' Jt'; }
-                    }
-                }
-            }
-        }
+        options: { responsive: true, maintainAspectRatio: false }
     });
 }
 
-// ==========================================
-// 5. RENDER TABEL MONITOR TARGET TOKO
-// ==========================================
 function renderSalesTable() {
     const tbody = document.getElementById('sales-table-body');
     if (!tbody) return;
-
-    tbody.innerHTML = '';
-
-    if (salesData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-slate-400 py-6 font-medium">Tidak ada data toko atau tab bulan belum tersedia</td></tr>`;
-        return;
-    }
-
-    salesData.forEach(item => {
-        // Jika pencapaian >= 100% kasih warna hijau, jika di bawah kasih warna merah mendalam
-        const badgeColor = item.achPercent >= 100 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-        
-        tbody.innerHTML += `
-            <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
-                <td class="px-4 py-3 font-bold text-slate-800">${item.store}</td>
-                <td class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wide">${item.targetPoint}</td>
-                <td class="px-4 py-3 text-right text-slate-700 font-semibold">Rp ${item.mtdSales.toLocaleString('id-ID')}</td>
-                <td class="px-4 py-3 text-right text-slate-400 text-xs">Rp ${item.mtdTarget.toLocaleString('id-ID')}</td>
-                <td class="px-4 py-3 text-right text-xs text-orange-600 font-black tracking-wide">${item.selisihNext}</td>
-                <td class="px-4 py-3 text-center">
-                    <span class="px-2.5 py-1 rounded-full text-xs font-black ${badgeColor}">
-                        ${item.achPercent.toFixed(1)}%
-                    </span>
-                </td>
-            </tr>
-        `;
-    });
+    tbody.innerHTML = salesData.map(item => `
+        <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+            <td class="px-5 py-4 font-bold">${item.store}</td>
+            <td class="px-5 py-4 text-slate-400">${item.targetPoint}</td>
+            <td class="px-5 py-4 text-right">Rp ${item.mtdSales.toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-right">Rp ${item.mtdTarget.toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-right text-orange-500">${item.selisihNext}</td>
+            <td class="px-5 py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-black ${item.achPercent >= 100 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${item.achPercent.toFixed(1)}%</span></td>
+        </tr>
+    `).join('');
 }
