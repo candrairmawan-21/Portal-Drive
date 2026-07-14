@@ -145,15 +145,34 @@ function renderSalesChart() {
 }
 
 function renderSalesTable() {
-    const tbody = document.getElementById('sales-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = salesData.map(item => `
-        <tr class="border-b border-slate-800/80 hover:bg-slate-800/40">
-            <td class="px-5 py-4 font-bold text-sm text-slate-200">${item.store}</td>
-            <td class="px-5 py-4 text-slate-400 text-[10px] font-black uppercase">${item.targetPoint}</td>
-            <td class="px-5 py-4 text-right text-sm">Rp ${item.mtdSales.toLocaleString('id-ID')}</td>
-            <td class="px-5 py-4 text-right text-sm">Rp ${item.mtdTarget.toLocaleString('id-ID')}</td>
-            <td class="px-5 py-4 text-center"><span class="px-3 py-1 rounded-full text-[10px] font-black ${item.achPercent >= 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">${item.achPercent.toFixed(1)}%</span></td>
-        </tr>
-    `).join('');
-}
+    const tbody.innerHTML = salesData.map(item => `
+<tr class="border-b border-slate-800/80 hover:bg-slate-800/40">
+
+    <td class="px-5 py-4 font-bold text-sm text-slate-200">
+        ${item.store}
+    </td>
+
+    <td class="px-5 py-4 text-right text-sm">
+        Rp ${item.mtdSales.toLocaleString('id-ID')}
+    </td>
+
+    <td class="px-5 py-4 text-right text-sm">
+        Rp ${item.mtdTarget.toLocaleString('id-ID')}
+    </td>
+
+    <td class="px-5 py-4 text-right text-sm text-amber-400 font-bold">
+        Rp ${Number(item.selisihNext).toLocaleString('id-ID')}
+    </td>
+
+    <td class="px-5 py-4 text-center">
+        <span class="px-3 py-1 rounded-full text-[10px] font-black ${
+            item.achPercent >= 100
+            ? 'bg-emerald-500/20 text-emerald-400'
+            : 'bg-rose-500/20 text-rose-400'
+        }">
+            ${item.achPercent.toFixed(2)}%
+        </span>
+    </td>
+
+</tr>
+`).join('');
