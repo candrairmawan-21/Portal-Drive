@@ -18,7 +18,6 @@
         @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .hover-lift { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease; }
         .hover-lift:hover { transform: translateY(-4px); }
-        /* Animasi transisi lebar sidebar desktop */
         .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
@@ -69,18 +68,18 @@
             </div>
 
             <nav class="space-y-2">
-                <button onclick="switchView('files')" id="menu-files" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm bg-amber-500 text-white transition-all whitespace-nowrap">
+                <button onclick="switchView('files')" id="menu-files" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
                     <i data-lucide="folder-open" class="w-4 h-4 flex-shrink-0"></i> 
                     <span class="sidebar-text-element">File Manager</span>
                 </button>
-                <button onclick="switchView('dashboard')" id="menu-dashboard" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
+                <button onclick="switchView('dashboard')" id="menu-dashboard" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
                     <i data-lucide="bar-chart-3" class="w-4 h-4 flex-shrink-0"></i> 
                     <span class="sidebar-text-element">Performa UPT</span>
                 </button>
-                <a href="sales.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                    <i data-lucide="trending-up" class="w-5 h-5"></i>
-                    <span class="font-bold text-sm">Dashboard Sales Target</span>
-                </a>
+                <button onclick="switchView('sales')" id="menu-sales" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
+                    <i data-lucide="trending-up" class="w-4 h-4 flex-shrink-0"></i> 
+                    <span class="sidebar-text-element">Dashboard Sales Target</span>
+                </button>
             </nav>
         </div>
 
@@ -120,7 +119,7 @@
         </header>
 
         <!-- SEKSI 1: FILE MANAGER -->
-        <main id="section-files" class="container mx-auto px-6 py-8 flex-1">
+        <main id="section-files" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="flex items-center flex-wrap gap-2 text-sm text-slate-600 mb-6 bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/40 shadow-sm" id="breadcrumbs"></div>
             <div id="portalGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <div class="skeleton h-64 rounded-3xl"></div>
@@ -189,6 +188,67 @@
                 </div>
             </div>
         </main>
+
+        <!-- SEKSI 3: DASHBOARD SALES (Desain disesuaikan ke Light Mode) -->
+        <main id="section-sales" class="container mx-auto px-6 py-8 flex-1 hidden">
+            <!-- Header Sales & Slicer -->
+            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm mb-6 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">Sales Dashboard</h1>
+                    <p id="update-date" class="text-[10px] text-amber-500 font-bold uppercase tracking-widest mt-1"></p>
+                </div>
+                <select id="slicerBulanSales" class="block px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
+                    <option value="Jul26" selected>Juli 2026</option>
+                    <option value="Jun26">Juni 2026</option>
+                    <option value="May26">Mei 2026</option>
+                    <option value="Apr26">April 2026</option>
+                    <option value="Mar26">Maret 2026</option>
+                    <option value="Feb26">Februari 2026</option>
+                    <option value="Jan26">Januari 2026</option>
+                    <option value="Dec25">Desember 2025</option>
+                    <option value="Nov25">November 2025</option>
+                </select>
+            </div>
+
+            <div id="sales-loading" class="hidden text-center py-8 skeleton rounded-3xl mb-6">
+                <p class="text-sm font-bold text-slate-500">Memuat data sales...</p>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">TOTAL MTD SALES</p>
+                    <h3 id="summary-total-sales" class="text-2xl font-black text-emerald-500">Rp 0</h3>
+                </div>
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">AVG ACHIEVEMENT</p>
+                    <h3 id="summary-avg-ach" class="text-2xl font-black text-indigo-500">0%</h3>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm mb-6 h-80 relative">
+                <canvas id="salesTargetChart"></canvas>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white border border-slate-200/60 rounded-3xl shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-50 text-slate-500 border-b border-slate-200/60">
+                            <tr>
+                                <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider">Store</th>
+                                <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">MTD Sales</th>
+                                <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">MTD Target</th>
+                                <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">Best Estimate</th>
+                                <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider">Achv %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-table-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
     </div>
 
     <!-- SCRIPT UTAMA PORTAL MANAGER -->
@@ -218,30 +278,52 @@
             lucide.createIcons();
         }
 
+        // FUNGSI NAVIGASI YANG DIPERBARUI
         function switchView(view) {
-            const btnFiles = document.getElementById('menu-files');
-            const btnDash = document.getElementById('menu-dashboard');
-            const secFiles = document.getElementById('section-files');
-            const secDash = document.getElementById('section-dashboard');
-            const fileTools = document.getElementById('fileTools');
-            const title = document.getElementById('pageTitle');
+            // Sembunyikan semua halaman
+            ['files', 'dashboard', 'sales'].forEach(id => {
+                const el = document.getElementById('section-' + id);
+                if(el) el.classList.add('hidden');
+            });
+            
+            // Reset semua style menu ke default
+            ['files', 'dashboard', 'sales'].forEach(id => {
+                const btn = document.getElementById('menu-' + id);
+                if(btn) {
+                    btn.classList.remove('bg-amber-500', 'text-white');
+                    btn.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                }
+            });
 
+            // Elemen Umum
+            const title = document.getElementById('pageTitle');
+            const fileTools = document.getElementById('fileTools');
+
+            // Aktifkan Halaman & Menu yang dipilih
             if (view === 'dashboard') {
-                secFiles.classList.add('hidden');
-                fileTools.classList.add('invisible');
-                secDash.classList.remove('hidden');
+                document.getElementById('section-dashboard').classList.remove('hidden');
+                document.getElementById('menu-dashboard').classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                document.getElementById('menu-dashboard').classList.add('bg-amber-500', 'text-white');
                 title.innerText = "Performa UPT Dashboard";
-                btnDash.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm bg-amber-500 text-white transition-all whitespace-nowrap";
-                btnFiles.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap";
+                if(fileTools) fileTools.classList.add('invisible');
                 if (typeof fetchDashboardData === "function") fetchDashboardData();
+            } else if (view === 'sales') {
+                document.getElementById('section-sales').classList.remove('hidden');
+                document.getElementById('menu-sales').classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                document.getElementById('menu-sales').classList.add('bg-amber-500', 'text-white');
+                title.innerText = "Sales Target Dashboard";
+                if(fileTools) fileTools.classList.add('invisible');
+                if (typeof fetchSalesData === "function") fetchSalesData();
             } else {
-                secDash.classList.add('hidden');
-                secFiles.classList.remove('hidden');
-                fileTools.classList.remove('invisible');
+                // Default is Files
+                document.getElementById('section-files').classList.remove('hidden');
+                document.getElementById('menu-files').classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                document.getElementById('menu-files').classList.add('bg-amber-500', 'text-white');
                 title.innerText = "File Manager";
-                btnFiles.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm bg-amber-500 text-white transition-all whitespace-nowrap";
-                btnDash.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap";
+                if(fileTools) fileTools.classList.remove('invisible');
             }
+
+            // Tutup sidebar di HP saat menu diklik
             if(window.innerWidth < 768) toggleSidebarMobile();
         }
 
@@ -298,10 +380,7 @@
                 const response = await fetch(API_URL);
                 const csvText = await response.text();
                 allFiles = parseCSV(csvText);
-                if (sessionStorage.getItem('portalLoggedIn') === 'true' || localStorage.getItem('portalLoggedIn')) { 
-                    filterAndRender(); 
-                    bypassLogin(); 
-                }
+                filterAndRender(); 
             } catch (error) {
                 console.error('Error:', error);
             }
@@ -327,18 +406,14 @@
                 errorText.classList.add('hidden');
                 sessionStorage.setItem('portalLoggedIn', 'true');
                 sessionStorage.setItem('portalUser', inputUser);
-                filterAndRender(); bypassLogin();
+                
+                document.getElementById('loginOverlay').remove();
+                document.getElementById('mainBody').classList.remove('overflow-hidden');
+                
+                fetchData();
+                switchView('files');
             } else { errorText.classList.remove('hidden'); }
         });
-
-        function bypassLogin() {
-            const overlay = document.getElementById('loginOverlay');
-            if (overlay) {
-                overlay.classList.add('opacity-0', 'pointer-events-none');
-                document.getElementById('mainBody').classList.remove('overflow-hidden');
-                setTimeout(() => overlay.remove(), 500);
-            }
-        }
 
         function renderPortal() {
             const grid = document.getElementById('portalGrid');
@@ -408,30 +483,37 @@
         function jumpToBreadcrumb(index) { currentPath = currentPath.slice(0, index + 1); history.pushState({ pathDepth: currentPath.length }, ""); renderPortal(); }
 
         document.getElementById('searchInput').addEventListener('input', renderPortal);
-        fetchData();
 
-        // FUNGSI LOGOUT
+        // FUNGSI LOGOUT AMAN
         function logoutPortal() {
             sessionStorage.clear();
             localStorage.clear();
             window.location.href = 'index.html';
         }
 
-                // CEK LOGIN AMAN & BYPASS KE UPT
+        // CEK LOGIN DAN ROUTING URL INSTAN
         document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('loginOverlay');
             const mainBody = document.getElementById('mainBody');
             const isLoggedIn = sessionStorage.getItem('portalLoggedIn') || localStorage.getItem('portalLoggedIn');
 
             if (isLoggedIn) {
-                // 1. Hapus layar hitam seketika agar tidak berkedip
                 if (overlay) overlay.remove(); 
                 if (mainBody) mainBody.classList.remove('overflow-hidden');
                 
-                // 2. Cek apakah ada perintah buka UPT dari halaman Sales
+                // Ambil data untuk file manager
+                fetchData();
+
+                // Cek URL: Buka halaman UPT atau Sales jika di-request, jika tidak default ke Files
                 const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('view') === 'dashboard') {
+                const requestedView = urlParams.get('view');
+                
+                if (requestedView === 'dashboard') {
                     switchView('dashboard');
+                } else if (requestedView === 'sales') {
+                    switchView('sales');
+                } else {
+                    switchView('files');
                 }
             } else {
                 if (overlay) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
@@ -439,6 +521,8 @@
         });
 
     </script>
+    <!-- Pastikan kedua script ini ada di folder yang sama -->
     <script src="dashboard.js"></script>
+    <script src="sales-dashboard.js"></script>
 </body>
 </html>
