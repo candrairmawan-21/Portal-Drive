@@ -14,7 +14,7 @@
 
     <!-- SIDEBAR -->
     <aside id="sidebarMenu" class="w-64 bg-slate-900 h-screen fixed md:static -translate-x-full md:translate-x-0 border-r border-slate-800 z-40 p-4">
-        <div class="flex items-center gap-3 mb-6">
+        <div class="flex items-center gap-3 mb-6 px-2">
             <img src="midnorth java (1).png" alt="Logo" class="h-10 w-auto bg-white rounded-lg p-1">
             <h1 class="text-sm font-black text-white">Midnorth Portal</h1>
         </div>
@@ -37,18 +37,18 @@
     </aside>
 
     <div class="flex-1 flex flex-col h-screen overflow-y-auto">
-        <header class="h-16 flex items-center justify-between px-6 border-b border-slate-800/60 sticky top-0 bg-slate-950/50 backdrop-blur-md">
-            <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span class="text-xs font-semibold text-slate-400 uppercase">Live Connection</span>
-            </div>
+        <header class="h-16 flex items-center justify-between px-6 border-b border-slate-800/60 sticky top-0 bg-slate-950/50 backdrop-blur-md z-30">
+            <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span><span class="text-xs font-semibold text-slate-400 uppercase">Live Connection</span></div>
             <div id="user-profile-nav"></div>
         </header>
 
         <main class="p-6 space-y-6">
-            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800">
-                <h1 class="text-2xl font-black">Sales & Target Dashboard</h1>
-                <select id="slicerBulanSales" class="mt-4 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm font-bold">
+            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-black">Sales & Target Dashboard</h1>
+                    <p id="update-date" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1"></p>
+                </div>
+                <select id="slicerBulanSales" class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm font-bold">
                     <option value="Jan">Januari</option><option value="Feb">Februari</option><option value="Mar">Maret</option>
                     <option value="Apr">April</option><option value="May">Mei</option><option value="Jun">Juni</option>
                     <option value="Jul" selected>Juli</option><option value="Aug">Agustus</option><option value="Sep">September</option>
@@ -56,13 +56,13 @@
                 </select>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500">TOTAL MTD SALES</p><h3 id="summary-total-sales" class="text-2xl font-black text-emerald-400">Rp 0</h3></div>
-                <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500">AVG ACHIEVEMENT</p><h3 id="summary-avg-ach" class="text-2xl font-black text-indigo-400">0%</h3></div>
+                <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500 uppercase tracking-wider">TOTAL MTD SALES</p><h3 id="summary-total-sales" class="text-2xl font-black text-emerald-400">Rp 0</h3></div>
+                <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500 uppercase tracking-wider">AVG ACHIEVEMENT</p><h3 id="summary-avg-ach" class="text-2xl font-black text-indigo-400">0%</h3></div>
             </div>
-            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><canvas id="salesTargetChart" class="h-80"></canvas></div>
+            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 h-96"><canvas id="salesTargetChart"></canvas></div>
             <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                 <table class="w-full text-left">
-                    <thead class="bg-slate-950/60 text-slate-500 text-[11px] uppercase"><tr><th class="px-5 py-4">Store</th><th class="px-5 py-4">Level</th><th class="px-5 py-4 text-right">Sales</th><th class="px-5 py-4 text-right">Target</th><th class="px-5 py-4 text-center">Ach %</th></tr></thead>
+                    <thead class="bg-slate-950/60 text-slate-500 text-[11px] uppercase border-b border-slate-800"><tr><th class="px-5 py-4">Store</th><th class="px-5 py-4">Level</th><th class="px-5 py-4 text-right">Sales</th><th class="px-5 py-4 text-right">Target</th><th class="px-5 py-4 text-center">Ach %</th></tr></thead>
                     <tbody id="sales-table-body" class="divide-y divide-slate-800"></tbody>
                 </table>
             </div>
@@ -72,31 +72,15 @@
     <script>
         lucide.createIcons();
         function logoutPortal() { sessionStorage.clear(); window.location.href = 'index.html'; }
-        document.addEventListener('DOMContentLoaded', () => { if (!sessionStorage.getItem('portalLoggedIn')) window.location.href = 'index.html'; });
+        
+        // Pengecekan Login yang aman
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!sessionStorage.getItem('portalLoggedIn')) {
+                // Hanya redirect jika kita yakin user tidak login
+                window.location.href = 'index.html';
+            }
+        });
     </script>
     <script src="sales-dashboard.js"></script>
 </body>
 </html>
-<!-- Bagian script di bawah -->
-<script>
-    lucide.createIcons();
-
-    // Perbaikan: Hapus sessionStorage.clear() karena itu menghapus status login Anda!
-    function logoutPortal() {
-        sessionStorage.removeItem('portalLoggedIn');
-        sessionStorage.removeItem('currentUser');
-        window.location.href = 'index.html'; 
-    }
-
-    // Perbaikan: Pengecekan login yang tidak menyebabkan looping
-    document.addEventListener('DOMContentLoaded', () => {
-        // Cek apakah user pernah login
-        if (!sessionStorage.getItem('portalLoggedIn')) {
-            // Jika tidak ada session, baru arahkan ke index.html
-            // Pastikan tidak looping jika sudah di index.html
-            if (window.location.pathname.indexOf('index.html') === -1) {
-                window.location.href = 'index.html';
-            }
-        }
-    });
-</script>
