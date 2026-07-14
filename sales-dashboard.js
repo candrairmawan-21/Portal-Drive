@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchSalesData();
 });
 
-// Menampilkan tanggal hari ini
 function displayUpdateDate() {
     const dateEl = document.getElementById('update-date');
     if (dateEl) {
@@ -21,12 +20,11 @@ function displayUpdateDate() {
     }
 }
 
-// Inisialisasi Slicer dengan Event Listener yang pasti
 function initMonthSlicer() {
     const slicer = document.getElementById('slicerBulanSales');
     if (slicer) {
+        // Gunakan event change dengan pemicu fetch
         slicer.addEventListener('change', function() {
-            console.log("Bulan diubah ke:", this.value);
             fetchSalesData();
         });
     }
@@ -58,7 +56,10 @@ async function fetchSalesData() {
 
     try {
         const selectedMonth = document.getElementById('slicerBulanSales').value;
-        const response = await fetch(`${BASE_PUBLISH_URL}&sheet=${selectedMonth}`);
+        // Tambahkan &t=${Date.now()} untuk menghindari cache
+        const url = `${BASE_PUBLISH_URL}&sheet=${selectedMonth}&t=${Date.now()}`;
+        
+        const response = await fetch(url);
         const csvText = await response.text();
         
         salesData = parseSalesCSV(csvText);
@@ -76,9 +77,9 @@ async function fetchSalesData() {
 function parseSalesCSV(text) {
     let lines = text.split('\n');
     let result = [];
-    // Parsing baris data (asumsi baris header index 0, baris 1-2 info, data mulai indeks 3)
+    // Data mulai dari baris ke-4 (indeks 3)
     for (let i = 3; i < lines.length; i++) { 
-        if (!lines[i]) continue;
+        if (!lines[i].trim()) continue;
         let row = lines[i].split(',');
         if (row.length > 5) {
             result.push({
@@ -98,8 +99,10 @@ function renderSalesSummary() {
     let totalSales = 0, totalTarget = 0;
     salesData.forEach(item => { totalSales += item.mtdSales; totalTarget += item.mtdTarget; });
     const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
-    document.getElementById('summary-total-sales').innerText = "Rp " + totalSales.toLocaleString('id-ID');
-    document.getElementById('summary-avg-ach').innerText = avgAch + "%";
+    const sEl = document.getElementById('summary-total-sales');
+    const aEl = document.getElementById('summary-avg-ach');
+    if(sEl) sEl.innerText = "Rp " + totalSales.toLocaleString('id-ID');
+    if(aEl) aEl.innerText = avgAch + "%";
 }
 
 function renderSalesChart() {
