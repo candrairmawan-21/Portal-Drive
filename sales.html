@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Target Sales</title>
+    <!-- Library CSS untuk Tampilan Modern & Bagus (Tailwind CSS) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library untuk Grafik Diagram Batang (Chart.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-600">
+
+    <div class="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+        
+        <!-- HEADER UTAMA -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 text-white p-5 rounded-2xl shadow-md">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black tracking-tight">Sales & Target Dashboard</h1>
+                <p class="text-xs text-slate-400 mt-1">Sistem Pemantauan Target Wilayah Real-Time</p>
+            </div>
+            <!-- Wadah Informasi Akun yang Sedang Login (Dibuat otomatis oleh JS) -->
+            <div id="user-profile-nav"></div>
+        </div>
+
+        <!-- AREA KONTROL (SLICER BULAN) -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-col gap-1.5">
+                <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Pilih Bulan Data Sales</label>
+                <select id="slicerBulanSales" class="bg-slate-50 border border-slate-200 text-sm rounded-xl px-4 py-2.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all cursor-pointer">
+                    <option value="Jan">Januari</option>
+                    <option value="Feb">Februari</option>
+                    <option value="Mar">Maret</option>
+                    <option value="Apr">April</option>
+                    <option value="May">Mei</option>
+                    <option value="Jun">Juni</option>
+                    <option value="Jul" selected>Juli</option> <!-- Default Juli sesuai data aktif saat ini -->
+                    <option value="Aug">Agustus</option>
+                    <option value="Sep">September</option>
+                    <option value="Oct">Oktober</option>
+                    <option value="Nov">November</option>
+                    <option value="Dec">Desember</option>
+                </select>
+            </div>
+            
+            <!-- Indikator Loading Berputar -->
+            <div id="sales-loading" class="hidden animate-spin rounded-full h-6 w-6 border-2 border-amber-500 border-t-transparent"></div>
+        </div>
+
+        <!-- 1. RINGKASAN UTAMA (CARDS UTAMA) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Card Total Sales -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total MTD Sales Wilayah</p>
+                <h3 id="summary-total-sales" class="text-2xl font-black text-emerald-600 mt-2">Rp 0</h3>
+            </div>
+            <!-- Card Rata-rata Ach -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Rata-rata Ach Target</p>
+                <h3 id="summary-avg-ach" class="text-2xl font-black text-indigo-600 mt-2">0%</h3>
+            </div>
+            <!-- Card Rata-rata UPT -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Rata-rata UPT Pelanggan</p>
+                <h3 id="summary-avg-upt" class="text-2xl font-black text-amber-500 mt-2">0</h3>
+            </div>
+        </div>
+
+        <!-- 2. GRAFIK TARGET VS AKTUAL -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <h2 class="text-base font-black text-slate-800 mb-4">Grafik MTD Sales vs MTD Target Per Store</h2>
+            <div class="h-80 relative w-full">
+                <canvas id="salesTargetChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 3. TABEL MONITOR DETAIL TARGET TOKO -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-5 border-b border-slate-100">
+                <h2 class="text-base font-black text-slate-800">Detail Kinerja & Target Naik Tingkat Store</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+                            <th class="px-4 py-3">Store</th>
+                            <th class="px-4 py-3">Current Level</th>
+                            <th class="px-4 py-3 text-right">MTD Sales</th>
+                            <th class="px-4 py-3 text-right">MTD Target</th>
+                            <th class="px-4 py-3 text-right">Selisih ke Next Level</th>
+                            <th class="px-4 py-3 text-center">Ach %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sales-table-body" class="divide-y divide-slate-100 text-sm">
+                        <!-- Data dimasukkan via JS secara otomatis -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- HUBUNGKAN DENGAN SCRIPT JS YANG SUDAH ANDA PASANG -->
+    <script src="sales-dashboard.js"></script>
+</body>
+</html>
