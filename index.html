@@ -419,9 +419,28 @@
         function navigateToFolder(name) { currentPath.push(name); history.pushState({ pathDepth: currentPath.length }, ""); renderPortal(); }
         function jumpToBreadcrumb(index) { currentPath = currentPath.slice(0, index + 1); history.pushState({ pathDepth: currentPath.length }, ""); renderPortal(); }
 
-        document.getElementById('searchInput').addEventListener('input', renderPortal);
-        fetchData();
-    </script>
+        <script>
+    // FUNGSI LOGOUT
+    function logoutPortal() {
+        sessionStorage.clear();
+        localStorage.clear();
+        window.location.href = 'index.html';
+    }
+
+    // CEK LOGIN TANPA REDIRECT (AMAN)
+    document.addEventListener('DOMContentLoaded', () => {
+        const overlay = document.getElementById('loginOverlay');
+        const isLoggedIn = sessionStorage.getItem('portalLoggedIn');
+
+        // Jika belum login, tampilkan login. JANGAN REDIRECT.
+        if (!isLoggedIn) {
+            if (overlay) overlay.classList.remove('hidden');
+        } else {
+            // Jika sudah login, pastikan login disembunyikan
+            if (overlay) overlay.classList.add('hidden');
+        }
+    });
+</script>
     <script src="dashboard.js"></script>
 </body>
 </html>
