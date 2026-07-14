@@ -96,26 +96,23 @@ function parseSalesCSV(text) {
 
         if (row.length >= 8) {
             result.push({
-    store: row[2]?.replace(/[\r"]/g, "") || "-",          // C
-    targetPoint: row[3]?.replace(/[\r"]/g, "") || "-",    // D
+    // B
+    store: row[1]?.replace(/[\r"]/g, "") || "-",
+
+    // Tidak dipakai lagi, biarkan agar tidak merusak kode lain
+    targetPoint: "-",
 
     // F
-    mtdSales: parseFloat(
-        row[5]?.replace(/[^0-9.-]+/g, "")
-    ) || 0,
+    mtdSales: parseFloat(row[5]?.replace(/[^0-9.-]+/g, "")) || 0,
 
-    // H
-    mtdTarget: parseFloat(
-        row[7]?.replace(/[^0-9.-]+/g, "")
-    ) || 0,
+    // G
+    mtdTarget: parseFloat(row[6]?.replace(/[^0-9.-]+/g, "")) || 0,
 
-    // Q
-    selisihNext: row[16]?.replace(/[\r"]/g, "") || "-",
+    // Q (Best Estimate)
+    selisihNext: parseFloat(row[16]?.replace(/[^0-9.-]+/g, "")) || 0,
 
-    // R
-    achPercent: parseFloat(
-        row[17]?.replace(/[^0-9.-]+/g, "")
-    ) || 0
+    // R (Achv Sales)
+    achPercent: parseFloat(row[17]?.replace(/[^0-9.-]+/g, "")) || 0
 });
         }
     }
