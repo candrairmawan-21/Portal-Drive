@@ -96,8 +96,8 @@ function parseSalesCSV(text) {
 
         if (row.length >= 8) {
             result.push({
-    // B
-    store: row[1]?.replace(/[\r"]/g, "") || "-",
+    // C
+    store: row[2]?.replace(/[\r"]/g, "") || "-",
 
     // Tidak dipakai lagi, biarkan agar tidak merusak kode lain
     targetPoint: "-",
@@ -160,15 +160,15 @@ function renderSalesTable() {
         Rp ${item.mtdTarget.toLocaleString('id-ID')}
     </td>
 
-    <td class="px-5 py-4 text-right text-sm text-amber-400 font-bold">
-        Rp ${Number(item.selisihNext).toLocaleString('id-ID')}
+    <td class="px-5 py-4 text-center text-sm font-semibold text-amber-400">
+        ${item.bestEstimate}
     </td>
 
     <td class="px-5 py-4 text-center">
         <span class="px-3 py-1 rounded-full text-[10px] font-black ${
             item.achPercent >= 100
-            ? 'bg-emerald-500/20 text-emerald-400'
-            : 'bg-rose-500/20 text-rose-400'
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : 'bg-rose-500/20 text-rose-400'
         }">
             ${item.achPercent.toFixed(2)}%
         </span>
