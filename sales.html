@@ -77,3 +77,26 @@
     <script src="sales-dashboard.js"></script>
 </body>
 </html>
+<!-- Bagian script di bawah -->
+<script>
+    lucide.createIcons();
+
+    // Perbaikan: Hapus sessionStorage.clear() karena itu menghapus status login Anda!
+    function logoutPortal() {
+        sessionStorage.removeItem('portalLoggedIn');
+        sessionStorage.removeItem('currentUser');
+        window.location.href = 'index.html'; 
+    }
+
+    // Perbaikan: Pengecekan login yang tidak menyebabkan looping
+    document.addEventListener('DOMContentLoaded', () => {
+        // Cek apakah user pernah login
+        if (!sessionStorage.getItem('portalLoggedIn')) {
+            // Jika tidak ada session, baru arahkan ke index.html
+            // Pastikan tidak looping jika sudah di index.html
+            if (window.location.pathname.indexOf('index.html') === -1) {
+                window.location.href = 'index.html';
+            }
+        }
+    });
+</script>
