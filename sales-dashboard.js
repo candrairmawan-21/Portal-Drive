@@ -39,14 +39,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Helper mengenali user login secara aman (anti-spasi/huruf besar kecil)
 function getNormalizedUser() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const loginUsername = (currentUser.username || localStorage.getItem('username') || 'guest').toLowerCase().trim();
+    // Ubah localStorage menjadi sessionStorage agar sinkron dengan login
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}'); 
+    const loginUsername = (currentUser.username || sessionStorage.getItem('portalUser') || 'guest').toLowerCase().trim();
     const cleanUsername = loginUsername.replace(/[\s_\-]/g, '');
 
     let matchedKey = null;
     Object.keys(USER_MAPPING).forEach(key => {
         if (key.toLowerCase().replace(/[\s_\-]/g, '') === cleanUsername) { matchedKey = key; }
     });
+
+    if (matchedKey) {
+        return { name: USER_MAPPING[matchedKey].namaDiSheets, role: USER_MAPPING[matchedKey].role, username: loginUsername };
+    }
+    return { name: currentUser.name || loginUsername, role: currentUser.role || 'staff', username: loginUsername };
+}
 
     if (matchedKey) {
         return { name: USER_MAPPING[matchedKey].namaDiSheets, role: USER_MAPPING[matchedKey].role, username: loginUsername };
