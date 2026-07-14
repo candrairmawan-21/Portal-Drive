@@ -1,32 +1,48 @@
-// ==========================================
-// 1. CONFIG & GLOBAL VARIABLES
-// ==========================================
-// URL CSV Khusus untuk Dashboard UPT
-const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=425930614&single=true&output=csv';
+// =====================================================================
+// 1. CONFIG & GLOBAL VARIABLES (GABUNGAN UPT & SALES)
+// =====================================================================
 
+// --- VARIABLE DARI UPT DASHBOARD ---
+const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=425930614&single=true&output=csv';
 let dashboardData = [];
 let chartInstance = null;
 
-// Jalankan inisialisasi utama setelah DOM siap
+// --- VARIABLE DARI SALES DASHBOARD ---
+const SALES_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub';
+let salesData = [];
+let salesChartInstance = null;
+const SHEET_GIDS = {
+    'Jul26': '1248782513', 'Jun26': '511605214', 'May26': '2012772985',
+    'Apr26': '544207481', 'Mar26': '90936589', 'Feb26': '472876079',
+    'Jan26': '171319040', 'Dec25': '236016326', 'Nov25': '564328385',
+    'Oct25': '0', 'Sep25': '0', 'Aug25': '0'
+};
+
+// =====================================================================
+// 2. INITIALIZATION (SAAT HALAMAN PERTAMA KALI DIMUAT)
+// =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // A. Tampilkan User Terlogin di Pojok Kanan Atas
+    // A. Init Umum / Navigasi
     renderLoggedInUser();
 
-    // B. Jalankan pemuatan data & pengecekan akses
+    // B. Init Dashboard UPT
     fetchDashboardData();
+
+    // C. Init Dashboard Sales
+    displayUpdateDate();
+    initMonthSlicer();
+    fetchSalesData();
 });
 
-// ==========================================
-// 2. FITUR TAMBAHAN: TAMPILAN USER LOGIN & PROTEKSI AKSES
-// ==========================================
+// =====================================================================
+// 3. FITUR UMUM & PROTEKSI AKSES (DARI DASHBOARD UPT)
+// =====================================================================
 
-// Fungsi menampilkan nama & role user di bagian atas (navbar/header)
 function renderLoggedInUser() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userName = currentUser.name || currentUser.username || 'Guest User';
+    const userName = currentUser.name || currentUser.username || sessionStorage.getItem('portalUser') || localStorage.getItem('portalUser') || 'Guest User';
     const userRole = (currentUser.role || 'Staff').toUpperCase();
 
-    // Mencari elemen kontainer navigasi atas yang tersedia di HTML portal Anda
     const userContainer = document.getElementById('user-profile-nav') || 
                           document.querySelector('.navbar-right') || 
                           document.querySelector('header .flex.items-center.gap-4') ||
@@ -51,33 +67,19 @@ function renderLoggedInUser() {
     }
 }
 
-// Fungsi memeriksa hak akses bertingkat
 function checkDashboardAccess(pageRestrictionValue) {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    // Default ke admin saat development agar tidak terkunci jika data localStorage kosong
     const userRole = (currentUser.role || 'admin').toLowerCase().trim();
     const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
 
-    // 1. Jika batasan kosong atau "-", semua boleh masuk
     if (pageRestriction === "" || pageRestriction === "-") return true;
-    
-    // 2. Jika Admin (Godmode), bypass dan izinkan akses penuh
     if (userRole === "admin") return true; 
-
-    // 3. Batasan khusus 'bm': Hanya BM yang boleh
-    if (pageRestriction === "bm") {
-        return userRole === "bm";
-    }
-
-    // 4. Batasan khusus 'abm': ABM dan BM boleh masuk
-    if (pageRestriction === "abm") {
-        return userRole === "abm" || userRole === "bm";
-    }
+    if (pageRestriction === "bm") return userRole === "bm";
+    if (pageRestriction === "abm") return userRole === "abm" || userRole === "bm";
 
     return false;
 }
 
-// Menampilkan view "Akses Terkunci" yang rapi jika tidak memiliki izin
 function showAccessDenied() {
     const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-content') || document.body;
     mainContent.innerHTML = `
@@ -93,11 +95,10 @@ function showAccessDenied() {
     `;
 }
 
-// ==========================================
-// 3. CORE LOGIC (DIPERTAHANKAN KEASLIANNYA)
-// ==========================================
+// =====================================================================
+// 4. CORE LOGIC: DASHBOARD UPT
+// =====================================================================
 
-// Fungsi Utama untuk Memuat Data Dashboard
 async function fetchDashboardData() {
     const container = document.getElementById('dashboard-loading');
     if (container) container.classList.remove('hidden');
@@ -107,18 +108,13 @@ async function fetchDashboardData() {
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
         
-        // --- PROSES VALIDASI HAK AKSES DI SINI ---
-        // Atur parameter di bawah ini (misal: 'abm' atau 'bm') sesuai kebutuhan halaman UPT ini
         const currentFileRestriction = "abm"; 
-
         if (!checkDashboardAccess(currentFileRestriction)) {
             showAccessDenied();
-            return; // Hentikan script, jangan render apapun
+            return; 
         }
         
-        // Inisialisasi awal slicer setelah data siap
         initSlicers();
-        // Render pertama kali dengan seluruh data
         applyDashboardFilters();
     } catch (error) {
         console.error('Error memuat data dashboard:', error);
@@ -127,7 +123,6 @@ async function fetchDashboardData() {
     }
 }
 
-// Parser CSV Sederhana untuk Dashboard UPT
 function parseDashboardCSV(text) {
     let lines = text.split('\n');
     if (lines.length === 0) return [];
@@ -135,9 +130,7 @@ function parseDashboardCSV(text) {
     let result = [];
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i]) continue;
-        let row = [];
-        let inQuotes = false;
-        let currentStr = "";
+        let row = []; let inQuotes = false; let currentStr = "";
         
         for (let char of lines[i]) {
             if (char === '"') { inQuotes = !inQuotes; } 
@@ -160,25 +153,21 @@ function parseDashboardCSV(text) {
     return result;
 }
 
-// INISIALISASI & LOGIKA RELASI SLICER
 function initSlicers() {
     const slicerKategori = document.getElementById('slicerKategori');
     const slicerSpesifik = document.getElementById('slicerSpesifik');
 
     if (!slicerKategori || !slicerSpesifik) return;
 
-    // Bersihkan event listener lama dengan mengganti elemen (clone) agar tidak double trigger
     const newSlicerKategori = slicerKategori.cloneNode(true);
     slicerKategori.parentNode.replaceChild(newSlicerKategori, slicerKategori);
 
     const newSlicerSpesifik = slicerSpesifik.cloneNode(true);
     slicerSpesifik.parentNode.replaceChild(newSlicerSpesifik, slicerSpesifik);
 
-    // Daftarkan ulang event listener pada elemen baru
     newSlicerKategori.addEventListener('change', function() {
         const kategori = this.value;
         const targetSpesifik = document.getElementById('slicerSpesifik');
-        
         targetSpesifik.innerHTML = '<option value="all">-- Semua --</option>';
         
         if (kategori === 'all') {
@@ -188,14 +177,12 @@ function initSlicers() {
             targetSpesifik.disabled = false;
             targetSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
             
-            // Ambil data unique berdasarkan kategori yang dipilih (Kolom A untuk BM, Kolom B untuk ABM)
             let uniqueItems = new Set();
             dashboardData.forEach(item => {
                 if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
                 if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
             });
 
-            // Masukkan data unique ke dalam Slicer 3
             Array.from(uniqueItems).sort().forEach(name => {
                 targetSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
             });
@@ -207,31 +194,23 @@ function initSlicers() {
     document.getElementById('slicerSpesifik')?.addEventListener('change', applyDashboardFilters);
 }
 
-// FUNGSI UNTUK MENYARING DATA BERDASARKAN PILIHAN SLICER
 function applyDashboardFilters() {
     const kategori = document.getElementById('slicerKategori')?.value || 'all';
     const spesifik = document.getElementById('slicerSpesifik')?.value || 'all';
 
     let filteredData = [...dashboardData];
 
-    // Filter Kategori & Nama Spesifik (BM / ABM)
     if (kategori === 'bm') {
-        if (spesifik !== 'all') {
-            filteredData = filteredData.filter(item => item.namaBM === spesifik);
-        }
+        if (spesifik !== 'all') filteredData = filteredData.filter(item => item.namaBM === spesifik);
     } else if (kategori === 'abm') {
-        if (spesifik !== 'all') {
-            filteredData = filteredData.filter(item => item.namaABM === spesifik);
-        }
+        if (spesifik !== 'all') filteredData = filteredData.filter(item => item.namaABM === spesifik);
     }
 
-    // Render komponen dengan data yang sudah disaring
     renderPodiumTop3(filteredData);
     renderPodiumBottom3(filteredData);
     renderChartPerforma(filteredData);
 }
 
-// 1. RENDER TOP 3 STAFF
 function renderPodiumTop3(data) {
     const container = document.getElementById('podium-top-content');
     if (!container) return;
@@ -244,12 +223,10 @@ function renderPodiumTop3(data) {
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'top');
 }
 
-// 2. RENDER BOTTOM 3 STAFF
 function renderPodiumBottom3(data) {
     const container = document.getElementById('podium-bottom-content');
     if (!container) return;
 
-    // Abaikan data yang poin UPT-nya 0 agar pencarian bottom lebih akurat
     let validData = data.filter(item => item.uptJuly > 0);
     if (validData.length === 0) validData = data;
 
@@ -261,7 +238,6 @@ function renderPodiumBottom3(data) {
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'bottom');
 }
 
-// HELPER UNTUK MEMBUAT STRUKTUR HTML PODIUM (NAMA TIDAK TERPOTONG)
 function generatePodiumHTML(p1, p2, p3, type) {
     const isTop = type === 'top';
     const colorClass = isTop 
@@ -274,7 +250,6 @@ function generatePodiumHTML(p1, p2, p3, type) {
 
     return `
         <div class="flex items-end justify-center gap-2 sm:gap-4 pt-12 pb-2 max-w-md mx-auto w-full">
-            <!-- JUARA 2 (KIRI) -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <p class="font-extrabold text-[11px] sm:text-xs text-slate-700 leading-tight min-h-[2rem] flex items-center justify-center break-words content-center">${p2.namaStaff}</p>
@@ -285,8 +260,6 @@ function generatePodiumHTML(p1, p2, p3, type) {
                     <span class="text-2xl font-black text-slate-400">2</span>
                 </div>
             </div>
-
-            <!-- JUARA 1 (TENGAH) -->
             <div class="flex flex-col items-center flex-1 transform -translate-y-4 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="flex justify-center mb-1">${iconSvg}</div>
@@ -298,8 +271,6 @@ function generatePodiumHTML(p1, p2, p3, type) {
                     <span class="text-3xl font-black text-white drop-shadow-sm">1</span>
                 </div>
             </div>
-
-            <!-- JUARA 3 (KANAN) -->
             <div class="flex flex-col items-center flex-1 w-0">
                 <div class="text-center mb-2 w-full px-0.5">
                     <div class="h-5"></div>
@@ -315,7 +286,6 @@ function generatePodiumHTML(p1, p2, p3, type) {
     `;
 }
 
-// 3. GENERATE DIAGRAM BATANG BERDASARKAN AKUMULASI DATA (CHART.JS)
 function renderChartPerforma(data) {
     const ctx = document.getElementById('bmChart');
     if (!ctx) return;
@@ -327,7 +297,7 @@ function renderChartPerforma(data) {
     data.forEach(item => {
         let key = item.namaBM; 
         if (kategoriSlicer === 'abm') key = item.namaABM;
-        if (spesifikSlicer !== 'all') key = item.namaStaff; // Breakdown ke nama staff jika nama BM/ABM dipilih
+        if (spesifikSlicer !== 'all') key = item.namaStaff; 
 
         if (key && key !== "-") {
             performanceMap[key] = (performanceMap[key] || 0) + item.uptJuly;
@@ -337,9 +307,7 @@ function renderChartPerforma(data) {
     const labels = Object.keys(performanceMap);
     const dataValues = Object.values(performanceMap).map(val => parseFloat(val.toFixed(2)));
 
-    if (chartInstance) {
-        chartInstance.destroy();
-    }
+    if (chartInstance) chartInstance.destroy();
 
     chartInstance = new Chart(ctx, {
         type: 'bar',
@@ -356,13 +324,135 @@ function renderChartPerforma(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
                 x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10, weight: '600' } } },
                 y: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8' } }
             }
         }
     });
+}
+
+// =====================================================================
+// 5. CORE LOGIC: DASHBOARD SALES
+// =====================================================================
+
+function displayUpdateDate() {
+    const dateEl = document.getElementById('update-date');
+    if (dateEl) {
+        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        dateEl.innerText = "Update Terakhir: " + today;
+    }
+}
+
+function initMonthSlicer() {
+    const slicer = document.getElementById('slicerBulanSales');
+    if (slicer) {
+        slicer.addEventListener('change', fetchSalesData);
+    }
+}
+
+async function fetchSalesData() {
+    const loader = document.getElementById('sales-loading');
+    if (loader) loader.classList.remove('hidden');
+
+    try {
+        const selectedKey = document.getElementById('slicerBulanSales').value;
+        const gid = SHEET_GIDS[selectedKey] || '0';
+        
+        const finalUrl = `${SALES_BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`;
+        const response = await fetch(finalUrl);
+        const csvText = await response.text();
+        
+        salesData = parseSalesCSV(csvText);
+        
+        renderSalesSummary();
+        renderSalesChart();
+        renderSalesTable();
+    } catch (error) { 
+        console.error('Error fetching data:', error); 
+    } finally {
+        if (loader) loader.classList.add('hidden');
+    }
+}
+
+function parseSalesCSV(text) {
+    let lines = text.split('\n');
+    let result = [];
+    for (let i = 3; i < lines.length; i++) { 
+        if (!lines[i].trim()) continue;
+        let row = [];
+        let inQuotes = false;
+        let currentStr = "";
+        for (let char of lines[i]) {
+            if (char === '"') inQuotes = !inQuotes;
+            else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; }
+            else currentStr += char;
+        }
+        row.push(currentStr.trim());
+
+        if (row.length >= 8) {
+            result.push({
+                store: row[2]?.replace(/[\r"]/g, "") || "-",
+                targetPoint: "-",
+                mtdSales: parseFloat(row[5]?.replace(/[^0-9.-]+/g, "")) || 0,
+                mtdTarget: parseFloat(row[6]?.replace(/[^0-9.-]+/g, "")) || 0,
+                bestEstimate: row[16]?.replace(/[\r"]/g, "") || "-",
+                achPercent: parseFloat(row[17]?.replace(/[^0-9.-]+/g, "")) || 0
+            });
+        }
+    }
+    return result;
+}
+
+function renderSalesSummary() {
+    let totalSales = 0, totalTarget = 0;
+    salesData.forEach(item => { totalSales += item.mtdSales; totalTarget += item.mtdTarget; });
+    const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
+    
+    const elTotalSales = document.getElementById('summary-total-sales');
+    const elAvgAch = document.getElementById('summary-avg-ach');
+    
+    if (elTotalSales) elTotalSales.innerText = "Rp " + totalSales.toLocaleString('id-ID');
+    if (elAvgAch) elAvgAch.innerText = avgAch + "%";
+}
+
+function renderSalesChart() {
+    const ctx = document.getElementById('salesTargetChart');
+    if (!ctx) return;
+    if (salesChartInstance) salesChartInstance.destroy();
+    salesChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: salesData.map(item => item.store),
+            datasets: [
+                { label: 'MTD Sales', backgroundColor: '#34d399', data: salesData.map(item => item.mtdSales) },
+                { label: 'MTD Target', backgroundColor: '#ef4444', data: salesData.map(item => item.mtdTarget) }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+function renderSalesTable() {
+    const tbody = document.getElementById('sales-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = salesData.map(item => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+            <td class="px-5 py-4 font-bold text-sm text-slate-800">${item.store}</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${item.mtdSales.toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${item.mtdTarget.toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate}</td>
+            <td class="px-5 py-4 text-center">
+                <span class="px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wider ${
+                    item.achPercent >= 100
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
+                    : 'bg-rose-50 text-rose-600 border border-rose-200/60'
+                }">
+                    ${item.achPercent.toFixed(2)}%
+                </span>
+            </td>
+        </tr>
+    `).join('');
 }
