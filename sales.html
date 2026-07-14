@@ -3,84 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Midnorth Portal - Sales Target Dashboard</title>
+    <title>Sales Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex overflow-x-hidden">
-
-    <aside id="sidebarMenu" class="w-64 bg-slate-900 h-screen fixed md:static -translate-x-full md:translate-x-0 border-r border-slate-800 z-40 p-4 transition-transform duration-300">
-        <div class="flex items-center gap-3 mb-6 px-2">
-            <img src="midnorth java (1).png" alt="Logo" class="h-10 w-auto bg-white rounded-lg p-1">
-            <h1 class="text-sm font-black text-white">Midnorth Portal</h1>
-        </div>
-        <nav class="space-y-2">
-            <button onclick="window.location.href='index.html'" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold text-sm">
-                <i data-lucide="folder-open" class="w-4 h-4"></i> File Manager
-            </button>
-            <button onclick="window.location.href='index.html'" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold text-sm">
-                <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Performa UPT
-            </button>
-            <a href="sales.html" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500 text-white font-bold text-sm">
-                <i data-lucide="trending-up" class="w-4 h-4"></i> Sales Dashboard
-            </a>
-        </nav>
-        <div class="absolute bottom-4 left-4 right-4 border-t border-slate-800 pt-4">
-            <button onclick="logoutPortal()" class="w-full flex items-center gap-3 px-4 py-3 text-rose-400 font-bold text-sm">
-                <i data-lucide="log-out" class="w-4 h-4"></i> Keluar Portal
-            </button>
-        </div>
-    </aside>
-
-    <div class="flex-1 flex flex-col h-screen overflow-y-auto">
-        <header class="h-16 flex items-center justify-between px-6 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md sticky top-0 z-30">
-            <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span class="text-xs font-semibold text-slate-400 uppercase">Live Connection</span>
-            </div>
-            <div id="user-profile-nav"></div>
-        </header>
-
-        <main class="p-6 space-y-6">
-            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 flex flex-wrap justify-between items-center gap-4">
+<body class="bg-slate-950 text-slate-100">
+    <div class="flex h-screen">
+        <aside class="w-64 bg-slate-900 p-4 border-r border-slate-800">
+            <h1 class="text-sm font-black mb-6 px-2">Midnorth Portal</h1>
+            <nav class="space-y-2">
+                <button onclick="window.location.href='index.html'" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold text-sm">File Manager</button>
+                <button onclick="window.location.href='index.html'" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold text-sm">Performa UPT</button>
+                <a href="sales.html" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500 text-white font-bold text-sm">Sales Dashboard</a>
+            </nav>
+        </aside>
+        <main class="flex-1 p-6 overflow-y-auto">
+            <div class="flex justify-between items-center bg-slate-900 p-6 rounded-2xl border border-slate-800 mb-6">
                 <div>
-                    <h1 class="text-2xl font-black">Sales & Target Dashboard</h1>
-                    <p id="update-date" class="text-[10px] text-amber-500 font-black uppercase tracking-widest mt-1"></p>
+                    <h1 class="text-2xl font-black">Sales Dashboard</h1>
+                    <p id="update-date" class="text-xs text-amber-500 font-bold"></p>
                 </div>
-                <select id="slicerBulanSales" class="bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-200">
-                    <option value="Jul26" selected>Juli 2026</option>
-                    <option value="Jun26">Juni 2026</option>
-                    <option value="May26">Mei 2026</option>
-                    <option value="Apr26">April 2026</option>
-                    <option value="Mar26">Maret 2026</option>
-                    <option value="Feb26">Februari 2026</option>
-                    <option value="Jan26">Januari 2026</option>
-                    <option value="Dec25">Desember 2025</option>
-                    <option value="Nov25">November 2025</option>
+                <select id="slicerBulanSales" class="bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm font-bold">
+                    <option value="Jul26" selected>Juli 2026</option><option value="Jun26">Juni 2026</option><option value="May26">Mei 2026</option>
+                    <option value="Apr26">April 2026</option><option value="Mar26">Maret 2026</option><option value="Feb26">Februari 2026</option>
+                    <option value="Jan26">Januari 2026</option><option value="Dec25">Desember 2025</option><option value="Nov25">November 2025</option>
                 </select>
             </div>
-            <div id="sales-loading" class="hidden text-center text-amber-500 text-sm font-bold">Memuat...</div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500">TOTAL MTD SALES</p><h3 id="summary-total-sales" class="text-2xl font-black text-emerald-400">Rp 0</h3></div>
-                <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500">AVG ACHIEVEMENT</p><h3 id="summary-avg-ach" class="text-2xl font-black text-indigo-400">0%</h3></div>
+            <div id="sales-loading" class="hidden text-amber-500 font-bold text-sm mb-4">Memuat...</div>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500">SALES</p><h3 id="summary-total-sales" class="text-xl font-black text-emerald-400">Rp 0</h3></div>
+                <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500">ACHIEVEMENT</p><h3 id="summary-avg-ach" class="text-xl font-black text-indigo-400">0%</h3></div>
             </div>
-            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 h-96"><canvas id="salesTargetChart"></canvas></div>
-            <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-                <table class="w-full text-left"><thead class="bg-slate-950/60 text-slate-500 text-[10px] uppercase border-b border-slate-800"><tr><th class="px-5 py-4">Store</th><th class="px-5 py-4">Level</th><th class="px-5 py-4 text-right">Sales</th><th class="px-5 py-4 text-right">Target</th><th class="px-5 py-4 text-center">Ach %</th></tr></thead><tbody id="sales-table-body" class="divide-y divide-slate-800"></tbody></table>
-            </div>
+            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 h-80 mb-6"><canvas id="salesTargetChart"></canvas></div>
+            <table class="w-full text-left bg-slate-900 rounded-2xl border border-slate-800"><tbody id="sales-table-body"></tbody></table>
         </main>
     </div>
-
     <script>
-        lucide.createIcons();
-        function logoutPortal() { sessionStorage.clear(); localStorage.clear(); window.location.href = 'index.html'; }
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!sessionStorage.getItem('portalLoggedIn') && !localStorage.getItem('portalLoggedIn')) {
-                if (window.location.pathname.indexOf('index.html') === -1) window.location.href = 'index.html';
-            }
-        });
+        function logoutPortal() { sessionStorage.clear(); window.location.href = 'index.html'; }
+        // Cek login HANYA jika bukan di index.html agar tidak looping redirect
+        if (!sessionStorage.getItem('portalLoggedIn') && window.location.href.indexOf('index.html') === -1) {
+            window.location.href = 'index.html';
+        }
     </script>
     <script src="sales-dashboard.js"></script>
 </body>
