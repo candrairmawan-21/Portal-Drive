@@ -151,43 +151,38 @@ function renderSalesChart() {
 }
 
 function renderSalesTable() {
-
     const tbody = document.getElementById('sales-table-body');
-
     if (!tbody) return;
 
     tbody.innerHTML = salesData.map(item => `
-
-        <tr class="border-b border-slate-800/80 hover:bg-slate-800/40">
-
-            <td class="px-5 py-4 font-bold text-sm text-slate-200">
+        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+            
+            <td class="px-5 py-4 font-bold text-sm text-slate-800">
                 ${item.store}
             </td>
-
-            <td class="px-5 py-4 text-right text-sm">
+            
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">
                 Rp ${item.mtdSales.toLocaleString('id-ID')}
             </td>
-
-            <td class="px-5 py-4 text-right text-sm">
+            
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">
                 Rp ${item.mtdTarget.toLocaleString('id-ID')}
             </td>
-
-            <td class="px-5 py-4 text-center text-sm font-semibold text-amber-400">
+            
+            <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">
                 ${item.bestEstimate}
             </td>
-
+            
             <td class="px-5 py-4 text-center">
-                <span class="px-3 py-1 rounded-full text-[10px] font-black ${
+                <span class="px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wider ${
                     item.achPercent >= 100
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-rose-500/20 text-rose-400'
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
+                    : 'bg-rose-50 text-rose-600 border border-rose-200/60'
                 }">
                     ${item.achPercent.toFixed(2)}%
                 </span>
             </td>
-
+            
         </tr>
-
     `).join('');
-
 }
