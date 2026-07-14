@@ -151,34 +151,43 @@ function renderSalesChart() {
 }
 
 function renderSalesTable() {
-    const tbody.innerHTML = salesData.map(item => `
-<tr class="border-b border-slate-800/80 hover:bg-slate-800/40">
 
-    <td class="px-5 py-4 font-bold text-sm text-slate-200">
-        ${item.store}
-    </td>
+    const tbody = document.getElementById('sales-table-body');
 
-    <td class="px-5 py-4 text-right text-sm">
-        Rp ${item.mtdSales.toLocaleString('id-ID')}
-    </td>
+    if (!tbody) return;
 
-    <td class="px-5 py-4 text-right text-sm">
-        Rp ${item.mtdTarget.toLocaleString('id-ID')}
-    </td>
+    tbody.innerHTML = salesData.map(item => `
 
-    <td class="px-5 py-4 text-center text-sm font-semibold text-amber-400">
-        ${item.bestEstimate}
-    </td>
+        <tr class="border-b border-slate-800/80 hover:bg-slate-800/40">
 
-    <td class="px-5 py-4 text-center">
-        <span class="px-3 py-1 rounded-full text-[10px] font-black ${
-            item.achPercent >= 100
-                ? 'bg-emerald-500/20 text-emerald-400'
-                : 'bg-rose-500/20 text-rose-400'
-        }">
-            ${item.achPercent.toFixed(2)}%
-        </span>
-    </td>
+            <td class="px-5 py-4 font-bold text-sm text-slate-200">
+                ${item.store}
+            </td>
 
-</tr>
-`).join('');
+            <td class="px-5 py-4 text-right text-sm">
+                Rp ${item.mtdSales.toLocaleString('id-ID')}
+            </td>
+
+            <td class="px-5 py-4 text-right text-sm">
+                Rp ${item.mtdTarget.toLocaleString('id-ID')}
+            </td>
+
+            <td class="px-5 py-4 text-center text-sm font-semibold text-amber-400">
+                ${item.bestEstimate}
+            </td>
+
+            <td class="px-5 py-4 text-center">
+                <span class="px-3 py-1 rounded-full text-[10px] font-black ${
+                    item.achPercent >= 100
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'bg-rose-500/20 text-rose-400'
+                }">
+                    ${item.achPercent.toFixed(2)}%
+                </span>
+            </td>
+
+        </tr>
+
+    `).join('');
+
+}
