@@ -19,13 +19,13 @@
             <h1 class="text-sm font-black text-white">Midnorth Portal</h1>
         </div>
         <nav class="space-y-2">
-            <button onclick="window.location.href='index.html'" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold text-sm">
+            <button onclick="window.location.href='index.html'" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold text-sm transition-all">
                 <i data-lucide="folder-open" class="w-4 h-4"></i> File Manager
             </button>
-            <button onclick="window.location.href='index.html'" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold text-sm">
+            <button onclick="window.location.href='index.html'" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold text-sm transition-all">
                 <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Performa UPT
             </button>
-            <a href="sales.html" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500 text-white font-bold text-sm">
+            <a href="sales.html" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500 text-white font-bold text-sm transition-all">
                 <i data-lucide="trending-up" class="w-4 h-4"></i> Sales Dashboard
             </a>
         </nav>
@@ -55,6 +55,9 @@
                     <option value="Oct">Oktober</option><option value="Nov">November</option><option value="Dec">Desember</option>
                 </select>
             </div>
+            
+            <div id="sales-loading" class="hidden text-center py-4 text-amber-500 font-bold text-sm">Memuat data...</div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500 uppercase tracking-wider">TOTAL MTD SALES</p><h3 id="summary-total-sales" class="text-2xl font-black text-emerald-400">Rp 0</h3></div>
                 <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500 uppercase tracking-wider">AVG ACHIEVEMENT</p><h3 id="summary-avg-ach" class="text-2xl font-black text-indigo-400">0%</h3></div>
@@ -73,11 +76,14 @@
         lucide.createIcons();
         function logoutPortal() { sessionStorage.clear(); window.location.href = 'index.html'; }
         
-        // Pengecekan Login yang aman
+        // Pengecekan aman
         document.addEventListener('DOMContentLoaded', () => {
-            if (!sessionStorage.getItem('portalLoggedIn')) {
-                // Hanya redirect jika kita yakin user tidak login
-                window.location.href = 'index.html';
+            const isLoggedIn = sessionStorage.getItem('portalLoggedIn');
+            if (!isLoggedIn) {
+                // Hanya redirect ke index.html jika kita belum di index.html
+                if (window.location.href.indexOf('index.html') === -1) {
+                    window.location.href = 'index.html';
+                }
             }
         });
     </script>
