@@ -38,7 +38,29 @@
                 <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-500">ACHIEVEMENT</p><h3 id="summary-avg-ach" class="text-xl font-black text-indigo-400">0%</h3></div>
             </div>
             <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 h-80 mb-6"><canvas id="salesTargetChart"></canvas></div>
-            <table class="w-full text-left bg-slate-900 rounded-2xl border border-slate-800"><tbody id="sales-table-body"></tbody></table>
+            <table class="w-full bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+
+    <thead class="bg-slate-800 text-slate-200">
+
+        <tr>
+
+            <th class="px-5 py-3 text-left text-xs font-bold">STORE</th>
+
+            <th class="px-5 py-3 text-right text-xs font-bold">MTD SALES</th>
+
+            <th class="px-5 py-3 text-right text-xs font-bold">MTD TARGET</th>
+
+            <th class="px-5 py-3 text-right text-xs font-bold">BEST ESTIMATE</th>
+
+            <th class="px-5 py-3 text-center text-xs font-bold">ACHV SALES</th>
+
+        </tr>
+
+    </thead>
+
+    <tbody id="sales-table-body"></tbody>
+
+</table>
         </main>
     </div>
     <script>
