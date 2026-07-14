@@ -79,184 +79,47 @@ async function fetchSalesData() {
 }
 
 function parseSalesCSV(text) {
-
-    const lines = text.trim().split(/\r?\n/);
-
-    // ============================
-    // Ambil Header
-    // ============================
-
-    const idxStore        = findHeader(headers, "Store");
-    const idxTargetPoint  = findHeader(headers, "Target Point");
-    const idxSales        = findHeader(headers, "MTD Sales");
-    const idxTarget       = findHeader(headers, "MTD Target");
-    const idxAch          = findHeader(headers, "Achv Sales");
-    const idxBestEstimate = findHeader(headers, "Best Estimate");
-// ==========================================
-// Validasi Header
-// ==========================================
-
-const requiredHeaders = {
-    "Store": idxStore,
-    "Target Point": idxTargetPoint,
-    "MTD Sales": idxSales,
-    "MTD Target": idxTarget,
-    "Achv Sales": idxAch,
-    "Best Estimate": idxBestEstimate
-};
-
-const missingHeaders = Object.entries(requiredHeaders)
-    .filter(([name, index]) => index === -1)
-    .map(([name]) => name);
-
-if (missingHeaders.length > 0) {
-
-    console.error(
-        "Header berikut tidak ditemukan:",
-        missingHeaders.join(", ")
-    );
-
-    alert(
-        "Header berikut tidak ditemukan pada Spreadsheet:\n\n" +
-        missingHeaders.join("\n")
-    );
-
-    return [];
-}
-    const result = [];
-
-    // ==========================================
-// Cari baris header secara otomatis
-// ==========================================
-
-let headerRow = -1;
-let headers = [];
-
-for (let i = headerRow + 1; i < lines.length; i++) {
-
-    const cols = parseCSVRow(lines[i]);
-
-    const text = cols.join("|").toLowerCase();
-
-    if (
-        text.includes("store") &&
-        text.includes("mtd sales") &&
-        text.includes("mtd target")
-    ) {
-        headerRow = i;
-        headers = cols;
-        break;
-    }
-
-}
-
-if (headerRow === -1) {
-
-    console.error("Header tidak ditemukan.");
-
-    return [];
-
-}
-
+    let lines = text.split('\n');
+    let result = [];
+    // Parsing baris data (indeks 3 adalah baris data pertama)
+    for (let i = 3; i < lines.length; i++) { 
         if (!lines[i].trim()) continue;
+        let row = [];
+        let inQuotes = false;
+        let currentStr = "";
+        for (let char of lines[i]) {
+            if (char === '"') inQuotes = !inQuotes;
+            else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; }
+            else currentStr += char;
+        }
+        row.push(currentStr.trim());
 
-        const row = parseCSVRow(lines[i]);
+        if (row.length >= 8) {
+            result.push({
+    store: row[2]?.replace(/[\r"]/g, "") || "-",          // C
+    targetPoint: row[3]?.replace(/[\r"]/g, "") || "-",    // D
 
-        result.push({
+    // F
+    mtdSales: parseFloat(
+        row[5]?.replace(/[^0-9.-]+/g, "")
+    ) || 0,
 
-            store: row[idxStore] || "-",
+    // H
+    mtdTarget: parseFloat(
+        row[7]?.replace(/[^0-9.-]+/g, "")
+    ) || 0,
 
-            targetPoint: row[idxTargetPoint] || "-",
+    // Q
+    selisihNext: row[16]?.replace(/[\r"]/g, "") || "-",
 
-            mtdSales: toNumber(row[idxSales]),
-
-            mtdTarget: toNumber(row[idxTarget]),
-
-            achPercent: toNumber(row[idxAch]),
-
-            bestEstimate: toNumber(row[idxBestEstimate])
-
-        });
-
+    // R
+    achPercent: parseFloat(
+        row[17]?.replace(/[^0-9.-]+/g, "")
+    ) || 0
+});
+        }
     }
     return result;
-
-}
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-
-// Parsing 1 baris CSV (mendukung tanda kutip)
-function parseCSVRow(line) {
-
-    const row = [];
-
-    let current = "";
-
-    let inQuotes = false;
-
-    for (const char of line) {
-
-        if (char === '"') {
-
-            inQuotes = !inQuotes;
-
-        } else if (char === "," && !inQuotes) {
-
-            row.push(current.trim().replace(/"/g, ""));
-
-            current = "";
-
-        } else {
-
-            current += char;
-
-        }
-
-    }
-
-    row.push(current.trim().replace(/"/g, ""));
-
-    return row;
-
-}
-
-
-// Cari posisi header berdasarkan nama
-function findHeader(headers, keyword) {
-
-    keyword = keyword
-        .toLowerCase()
-        .replace(/\s+/g, " ")
-        .trim();
-
-    return headers.findIndex(header => {
-
-        const cleanHeader = header
-            .toLowerCase()
-            .replace(/\s+/g, " ")
-            .trim();
-
-        return cleanHeader.includes(keyword);
-
-    });
-
-}
-// Ubah string menjadi angka
-function toNumber(value) {
-
-    if (!value) return 0;
-
-    return parseFloat(
-
-        String(value)
-
-            .replace(/,/g, "")
-
-            .replace(/[^0-9.-]/g, "")
-
-    ) || 0;
-
 }
 
 function renderSalesSummary() {
