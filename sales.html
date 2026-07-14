@@ -227,12 +227,12 @@
         }
 
         // Pastikan User Tidak Bisa Bypass Halaman ini Tanpa Login
-        document.addEventListener('DOMContentLoaded', () => {
-            const sessionUser = localStorage.getItem('username');
-            if (!sessionUser) {
-                window.location.href = 'index.html';
-            }
-        });
+document.addEventListener('DOMContentLoaded', () => {
+    const isLoggedIn = sessionStorage.getItem('portalLoggedIn'); // Cek status login
+    if (!isLoggedIn) {
+        window.location.href = 'index.html';
+    }
+});
     </script>
 
     <!-- HUBUNGKAN KE SCRIPT DASHBOARD SALES TARGET ANDA -->
