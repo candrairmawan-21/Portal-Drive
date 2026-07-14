@@ -7,15 +7,10 @@ let salesChartInstance = null;
 
 // PEMETAAN GID SESUAI DATA ANDA
 const SHEET_GIDS = {
-    'Jul26': '1248782513',
-    'Jun26': '511605214',
-    'May26': '2012772985',
-    'Apr26': '544207481',
-    'Mar26': '90936589',
-    'Feb26': '472876079',
-    'Jan26': '171319040',
-    'Dec25': '236016326',
-    'Nov25': '564328385'
+    'Jul26': '1248782513', 'Jun26': '511605214', 'May26': '2012772985',
+    'Apr26': '544207481', 'Mar26': '90936589', 'Feb26': '472876079',
+    'Jan26': '171319040', 'Dec25': '236016326', 'Nov25': '564328385',
+    'Oct25': '0', 'Sep25': '0', 'Aug25': '0'
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -36,14 +31,12 @@ function displayUpdateDate() {
 function initMonthSlicer() {
     const slicer = document.getElementById('slicerBulanSales');
     if (slicer) {
-        slicer.addEventListener('change', function() {
-            fetchSalesData();
-        });
+        slicer.addEventListener('change', fetchSalesData);
     }
 }
 
 function getNormalizedUser() {
-    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || localStorage.getItem('currentUser') || '{}');
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
     const loginUsername = (currentUser.username || sessionStorage.getItem('portalUser') || 'guest').toLowerCase().trim();
     return { name: currentUser.name || loginUsername, role: currentUser.role || 'staff' };
 }
@@ -68,6 +61,7 @@ async function fetchSalesData() {
         const selectedKey = document.getElementById('slicerBulanSales').value;
         const gid = SHEET_GIDS[selectedKey] || '0';
         
+        // Menambahkan timestamp agar browser tidak mengambil cache lama
         const finalUrl = `${BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`;
         const response = await fetch(finalUrl);
         const csvText = await response.text();
@@ -87,6 +81,7 @@ async function fetchSalesData() {
 function parseSalesCSV(text) {
     let lines = text.split('\n');
     let result = [];
+    // Parsing baris data (indeks 3 adalah baris data pertama)
     for (let i = 3; i < lines.length; i++) { 
         if (!lines[i].trim()) continue;
         let row = [];
@@ -101,11 +96,11 @@ function parseSalesCSV(text) {
 
         if (row.length >= 8) {
             result.push({
-                store: row[2] ? row[2].replace(/[\r"]/g, "") : "-",
-                targetPoint: row[3] ? row[3].replace(/[\r"]/g, "") : "-",
+                store: row[2]?.replace(/[\r"]/g, "") || "-",
+                targetPoint: row[3]?.replace(/[\r"]/g, "") || "-",
                 mtdSales: parseFloat(row[7]?.replace(/[^0-9.-]+/g,"")) || 0,
                 mtdTarget: parseFloat(row[9]?.replace(/[^0-9.-]+/g,"")) || 0,
-                selisihNext: row[11] ? row[11].replace(/[\r"]/g, "") : "-",
+                selisihNext: row[11]?.replace(/[\r"]/g, "") || "-",
                 achPercent: parseFloat(row[22]?.replace(/[^0-9.-]+/g,"")) || 0
             });
         }
@@ -117,10 +112,8 @@ function renderSalesSummary() {
     let totalSales = 0, totalTarget = 0;
     salesData.forEach(item => { totalSales += item.mtdSales; totalTarget += item.mtdTarget; });
     const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
-    const sEl = document.getElementById('summary-total-sales');
-    const aEl = document.getElementById('summary-avg-ach');
-    if(sEl) sEl.innerText = "Rp " + totalSales.toLocaleString('id-ID');
-    if(aEl) aEl.innerText = avgAch + "%";
+    document.getElementById('summary-total-sales').innerText = "Rp " + totalSales.toLocaleString('id-ID');
+    document.getElementById('summary-avg-ach').innerText = avgAch + "%";
 }
 
 function renderSalesChart() {
