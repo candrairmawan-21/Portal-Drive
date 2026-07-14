@@ -109,20 +109,8 @@ async function fetchSalesData() {
         const csvText = await response.text();
         const allData = parseSalesCSV(csvText);
 
-        // Ambil info user yang login untuk melakukan filtering data otomatis
-        const user = getNormalizedUser();
-        const targetName = user.name.toLowerCase().trim();
-        const role = user.role.toLowerCase().trim();
+                salesData = allData;
 
-        if (role === 'admin') {
-            salesData = allData;
-        } else if (role === 'bm') {
-            salesData = allData.filter(item => item.bm.toLowerCase().trim() === targetName);
-        } else if (role === 'abm') {
-            salesData = allData.filter(item => item.abm.toLowerCase().trim() === targetName);
-        } else {
-            salesData = []; // Batasi akses jika role tidak memenuhi syarat
-        }
 
         // Render hasil pemrosesan data ke UI komponen masing-masing
         renderSalesSummary();
