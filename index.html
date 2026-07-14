@@ -18,6 +18,7 @@
         @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .hover-lift { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease; }
         .hover-lift:hover { transform: translateY(-4px); }
+        /* Animasi transisi lebar sidebar desktop */
         .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
@@ -405,30 +406,28 @@
 
         function navigateToFolder(name) { currentPath.push(name); history.pushState({ pathDepth: currentPath.length }, ""); renderPortal(); }
         function jumpToBreadcrumb(index) { currentPath = currentPath.slice(0, index + 1); history.pushState({ pathDepth: currentPath.length }, ""); renderPortal(); }
-        
-        document.getElementById('searchInput').addEventListener('input', renderPortal);
 
-        // FUNGSI LOGOUT AMAN
+        document.getElementById('searchInput').addEventListener('input', renderPortal);
+        fetchData();
+
+        // FUNGSI LOGOUT
         function logoutPortal() {
             sessionStorage.clear();
             localStorage.clear();
             window.location.href = 'index.html';
         }
 
-        // CEK LOGIN SAAT HALAMAN DIMUAT (Mencegah Bypass)
+        // CEK LOGIN TANPA REDIRECT (AMAN)
         document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('loginOverlay');
             const isLoggedIn = sessionStorage.getItem('portalLoggedIn') || localStorage.getItem('portalLoggedIn');
-            
+
             if (!isLoggedIn) {
-                // Tampilkan overlay jika belum login
                 if (overlay) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
             } else {
-                // Jika sudah login, eksekusi pengambilan data & sembunyikan login
-                fetchData();
+                if (overlay) overlay.classList.add('hidden', 'opacity-0', 'pointer-events-none');
             }
         });
-
     </script>
     <script src="dashboard.js"></script>
 </body>
