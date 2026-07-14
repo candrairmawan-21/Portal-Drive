@@ -1,9 +1,22 @@
 // ==========================================
 // CONFIG & GLOBAL VARIABLES
 // ==========================================
-const BASE_PUBLISH_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?output=csv';
+const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub';
 let salesData = [];
 let salesChartInstance = null;
+
+// PEMETAAN GID SESUAI DATA ANDA
+const SHEET_GIDS = {
+    'Jul26': '1248782513',
+    'Jun26': '511605214',
+    'May26': '2012772985',
+    'Apr26': '544207481',
+    'Mar26': '90936589',
+    'Feb26': '472876079',
+    'Jan26': '171319040',
+    'Dec25': '236016326',
+    'Nov25': '564328385'
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     renderLoggedInUser();
@@ -23,7 +36,6 @@ function displayUpdateDate() {
 function initMonthSlicer() {
     const slicer = document.getElementById('slicerBulanSales');
     if (slicer) {
-        // Gunakan event change dengan pemicu fetch
         slicer.addEventListener('change', function() {
             fetchSalesData();
         });
@@ -31,7 +43,7 @@ function initMonthSlicer() {
 }
 
 function getNormalizedUser() {
-    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || localStorage.getItem('currentUser') || '{}');
     const loginUsername = (currentUser.username || sessionStorage.getItem('portalUser') || 'guest').toLowerCase().trim();
     return { name: currentUser.name || loginUsername, role: currentUser.role || 'staff' };
 }
@@ -41,11 +53,9 @@ function renderLoggedInUser() {
     const userContainer = document.getElementById('user-profile-nav');
     if (userContainer) {
         userContainer.innerHTML = `
-            <div class="flex items-center gap-3 bg-slate-800/40 px-4 py-1.5 rounded-xl border border-slate-700">
+            <div class="flex items-center gap-3 bg-slate-800/40 px-4 py-1.5 rounded-xl border border-slate-700 shadow-sm">
                 <p class="text-xs font-bold text-white">${user.name}</p>
-                <div class="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center text-xs font-black text-white uppercase">
-                    ${user.name.charAt(0)}
-                </div>
+                <div class="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center text-xs font-black text-white uppercase">${user.name.charAt(0)}</div>
             </div>`;
     }
 }
@@ -55,11 +65,11 @@ async function fetchSalesData() {
     if (loader) loader.classList.remove('hidden');
 
     try {
-        const selectedMonth = document.getElementById('slicerBulanSales').value;
-        // Tambahkan &t=${Date.now()} untuk menghindari cache
-        const url = `${BASE_PUBLISH_URL}&sheet=${selectedMonth}&t=${Date.now()}`;
+        const selectedKey = document.getElementById('slicerBulanSales').value;
+        const gid = SHEET_GIDS[selectedKey] || '0';
         
-        const response = await fetch(url);
+        const finalUrl = `${BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`;
+        const response = await fetch(finalUrl);
         const csvText = await response.text();
         
         salesData = parseSalesCSV(csvText);
@@ -77,17 +87,25 @@ async function fetchSalesData() {
 function parseSalesCSV(text) {
     let lines = text.split('\n');
     let result = [];
-    // Data mulai dari baris ke-4 (indeks 3)
     for (let i = 3; i < lines.length; i++) { 
         if (!lines[i].trim()) continue;
-        let row = lines[i].split(',');
-        if (row.length > 5) {
+        let row = [];
+        let inQuotes = false;
+        let currentStr = "";
+        for (let char of lines[i]) {
+            if (char === '"') inQuotes = !inQuotes;
+            else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; }
+            else currentStr += char;
+        }
+        row.push(currentStr.trim());
+
+        if (row.length >= 8) {
             result.push({
-                store: row[2] ? row[2].replace(/[\r"]/g, "") : "Unknown",
+                store: row[2] ? row[2].replace(/[\r"]/g, "") : "-",
                 targetPoint: row[3] ? row[3].replace(/[\r"]/g, "") : "-",
                 mtdSales: parseFloat(row[7]?.replace(/[^0-9.-]+/g,"")) || 0,
                 mtdTarget: parseFloat(row[9]?.replace(/[^0-9.-]+/g,"")) || 0,
-                selisihNext: row[11] ? row[11].replace(/[\r"]/g, "") : "0",
+                selisihNext: row[11] ? row[11].replace(/[\r"]/g, "") : "-",
                 achPercent: parseFloat(row[22]?.replace(/[^0-9.-]+/g,"")) || 0
             });
         }
@@ -126,16 +144,12 @@ function renderSalesTable() {
     const tbody = document.getElementById('sales-table-body');
     if (!tbody) return;
     tbody.innerHTML = salesData.map(item => `
-        <tr class="border-b border-slate-800 hover:bg-slate-800/30">
-            <td class="px-5 py-4 font-bold text-sm">${item.store}</td>
-            <td class="px-5 py-4 text-slate-400 text-xs">${item.targetPoint}</td>
+        <tr class="border-b border-slate-800/80 hover:bg-slate-800/40">
+            <td class="px-5 py-4 font-bold text-sm text-slate-200">${item.store}</td>
+            <td class="px-5 py-4 text-slate-400 text-[10px] font-black uppercase">${item.targetPoint}</td>
             <td class="px-5 py-4 text-right text-sm">Rp ${item.mtdSales.toLocaleString('id-ID')}</td>
             <td class="px-5 py-4 text-right text-sm">Rp ${item.mtdTarget.toLocaleString('id-ID')}</td>
-            <td class="px-5 py-4 text-center">
-                <span class="px-3 py-1 rounded-full text-[10px] font-black ${item.achPercent >= 100 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
-                    ${item.achPercent.toFixed(1)}%
-                </span>
-            </td>
+            <td class="px-5 py-4 text-center"><span class="px-3 py-1 rounded-full text-[10px] font-black ${item.achPercent >= 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">${item.achPercent.toFixed(1)}%</span></td>
         </tr>
     `).join('');
 }
