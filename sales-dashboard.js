@@ -108,3 +108,53 @@ function renderSalesTable() {
         </tr>
     `).join('');
 }
+// ... (Bagian atas file tetap sama) ...
+
+async function fetchSalesData() {
+    const loader = document.getElementById('sales-loading');
+    if (loader) loader.classList.remove('hidden');
+
+    try {
+        const selectedMonth = document.getElementById('slicerBulanSales').value;
+        const response = await fetch(`${BASE_PUBLISH_URL}&sheet=${selectedMonth}`);
+        const csvText = await response.text();
+        
+        // DEBUG: Buka Browser Console (F12) untuk melihat apakah data masuk
+        console.log("Raw CSV Data:", csvText.substring(0, 100)); 
+        
+        salesData = parseSalesCSV(csvText);
+        
+        console.log("Parsed Data count:", salesData.length);
+        renderSalesSummary();
+        renderSalesChart();
+        renderSalesTable();
+    } catch (error) { 
+        console.error('Error fetching data:', error); 
+    } finally {
+        if (loader) loader.classList.add('hidden');
+    }
+}
+
+function parseSalesCSV(text) {
+    let lines = text.split('\n');
+    let result = [];
+    // Kita mulai dari i = 1 (baris ke-2), lalu kita coba deteksi kolom secara fleksibel
+    for (let i = 1; i < lines.length; i++) { 
+        if (!lines[i]) continue;
+        let row = lines[i].split(',');
+        
+        // Cek jika data ada isinya
+        if (row.length > 5) {
+            result.push({
+                store: row[2] ? row[2].replace(/[\r"]/g, "") : "Unknown",
+                targetPoint: row[3] ? row[3].replace(/[\r"]/g, "") : "-",
+                mtdSales: parseFloat(row[5]?.replace(/[^0-9.-]+/g,"")) || 0, // Coba kolom 5 (index F)
+                mtdTarget: parseFloat(row[7]?.replace(/[^0-9.-]+/g,"")) || 0, // Coba kolom 7 (index H)
+                selisihNext: row[11] ? row[11].replace(/[\r"]/g, "") : "0",
+                achPercent: parseFloat(row[22]?.replace(/[^0-9.-]+/g,"")) || 0
+            });
+        }
+    }
+    return result;
+}
+
