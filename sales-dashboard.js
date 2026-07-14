@@ -96,23 +96,29 @@ function parseSalesCSV(text) {
 
         if (row.length >= 8) {
             result.push({
-    // C
+    // Kolom C
     store: row[2]?.replace(/[\r"]/g, "") || "-",
 
-    // Tidak dipakai lagi, biarkan agar tidak merusak kode lain
+    // Tidak digunakan lagi
     targetPoint: "-",
 
-    // F
-    mtdSales: parseFloat(row[5]?.replace(/[^0-9.-]+/g, "")) || 0,
+    // Kolom F
+    mtdSales: parseFloat(
+        row[5]?.replace(/[^0-9.-]+/g, "")
+    ) || 0,
 
-    // G
-    mtdTarget: parseFloat(row[6]?.replace(/[^0-9.-]+/g, "")) || 0,
+    // Kolom G
+    mtdTarget: parseFloat(
+        row[6]?.replace(/[^0-9.-]+/g, "")
+    ) || 0,
 
-    // Q (Best Estimate)
-    selisihNext: parseFloat(row[16]?.replace(/[^0-9.-]+/g, "")) || 0,
+    // Kolom Q
+    bestEstimate: row[16]?.replace(/[\r"]/g, "") || "-",
 
-    // R (Achv Sales)
-    achPercent: parseFloat(row[17]?.replace(/[^0-9.-]+/g, "")) || 0
+    // Kolom R
+    achPercent: parseFloat(
+        row[17]?.replace(/[^0-9.-]+/g, "")
+    ) || 0
 });
         }
     }
