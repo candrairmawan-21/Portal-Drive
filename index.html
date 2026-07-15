@@ -439,21 +439,28 @@
         }
 
         document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const inputUser = document.getElementById('usernameInput').value.trim().toLowerCase();
-            const errorText = document.getElementById('loginError');
-            if (manualDatabase.includes(inputUser)) {
-                errorText.classList.add('hidden');
-                sessionStorage.setItem('portalLoggedIn', 'true');
-                sessionStorage.setItem('portalUser', inputUser);
-                
-                document.getElementById('loginOverlay').remove();
-                document.getElementById('mainBody').classList.remove('overflow-hidden');
-                
-                fetchData();
-                switchView('files');
-            } else { errorText.classList.remove('hidden'); }
-        });
+    e.preventDefault();
+    const inputUser = document.getElementById('usernameInput').value.trim().toLowerCase();
+    const errorText = document.getElementById('loginError');
+    
+    // Cek apakah username ada di userDatabase
+    if (userDatabase.hasOwnProperty(inputUser)) {
+        errorText.classList.add('hidden');
+        
+        sessionStorage.setItem('portalLoggedIn', 'true');
+        sessionStorage.setItem('portalUser', inputUser);
+        sessionStorage.setItem('portalRole', userDatabase[inputUser]); // Menyimpan Role dari object
+        
+        document.getElementById('loginOverlay').remove();
+        document.getElementById('mainBody').classList.remove('overflow-hidden');
+        
+        fetchData();
+        switchView('files');
+    } else { 
+        errorText.classList.remove('hidden'); 
+    }
+});
+
 
         function renderPortal() {
             const grid = document.getElementById('portalGrid');
