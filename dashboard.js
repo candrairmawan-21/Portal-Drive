@@ -35,13 +35,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =====================================================================
-// 3. FITUR UMUM PROFIL USER
+// 3. FITUR UMUM & PROTEKSI AKSES (DARI DASHBOARD UPT)
 // =====================================================================
 
 function renderLoggedInUser() {
-    // Ambil data Username dan Role dari sessionStorage yang dikirim saat login
-    const userName = sessionStorage.getItem('portalUser') || 'Guest';
-    const userRole = sessionStorage.getItem('portalRole') || 'Staff';
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const userName = currentUser.name || currentUser.username || sessionStorage.getItem('portalUser') || localStorage.getItem('portalUser') || 'Guest User';
+    const userRole = (currentUser.role || 'Staff').toUpperCase();
 
     const userContainer = document.getElementById('user-profile-nav') || 
                           document.querySelector('.navbar-right') || 
@@ -52,20 +52,47 @@ function renderLoggedInUser() {
         const existingBadge = document.getElementById('dynamic-user-badge');
         if (existingBadge) existingBadge.remove();
 
-        // Desain profil disesuaikan dengan tema Light Mode
         const badgeHTML = `
-            <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-1.5 rounded-2xl ml-auto shadow-sm">
+            <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-800/40 border border-slate-700/60 px-4 py-1.5 rounded-xl backdrop-blur-sm ml-auto">
                 <div class="text-right hidden sm:block">
-                    <p class="text-xs font-semibold text-slate-500">Hi <span class="font-black text-slate-800 capitalize">${userName}</span>,</p>
-                    <p class="text-[10px] text-slate-400 font-medium tracking-wide mt-0.5">your role is <span class="font-bold text-amber-500 uppercase">${userRole}</span></p>
+                    <p class="text-xs font-black text-white leading-none">${userName}</p>
+                    <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${userRole}</p>
                 </div>
-                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-sm shadow-md uppercase">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-xs shadow-sm uppercase">
                     ${userName.charAt(0)}
                 </div>
             </div>
         `;
         userContainer.insertAdjacentHTML('beforeend', badgeHTML);
     }
+}
+
+function checkDashboardAccess(pageRestrictionValue) {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const userRole = (currentUser.role || 'admin').toLowerCase().trim();
+    const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
+
+    if (pageRestriction === "" || pageRestriction === "-") return true;
+    if (userRole === "admin") return true; 
+    if (pageRestriction === "bm") return userRole === "bm";
+    if (pageRestriction === "abm") return userRole === "abm" || userRole === "bm";
+
+    return false;
+}
+
+function showAccessDenied() {
+    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-content') || document.body;
+    mainContent.innerHTML = `
+        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 w-full grid col-span-full">
+            <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
+                </svg>
+                <h2 class="text-xl font-black text-slate-800 mb-1">Akses Terkunci</h2>
+                <p class="text-sm text-slate-500">Maaf, file atau halaman ini dikunci berdasarkan regulasi hak akses jabatan Anda.</p>
+            </div>
+        </div>
+    `;
 }
 
 // =====================================================================
@@ -81,7 +108,12 @@ async function fetchDashboardData() {
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
         
-        // Panggil fungsi tanpa perlu pengecekan hak akses halaman
+        const currentFileRestriction = "abm"; 
+        if (!checkDashboardAccess(currentFileRestriction)) {
+            showAccessDenied();
+            return; 
+        }
+        
         initSlicers();
         applyDashboardFilters();
     } catch (error) {
