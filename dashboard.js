@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =====================================================================
-// 3. FITUR UMUM & PROTEKSI AKSES (DARI DASHBOARD UPT)
+// 3. FITUR UMUM PROFIL USER
 // =====================================================================
 
 function renderLoggedInUser() {
@@ -52,7 +52,7 @@ function renderLoggedInUser() {
         const existingBadge = document.getElementById('dynamic-user-badge');
         if (existingBadge) existingBadge.remove();
 
-        // Desain profil disesuaikan dengan tema Light Mode index.html
+        // Desain profil disesuaikan dengan tema Light Mode
         const badgeHTML = `
             <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-1.5 rounded-2xl ml-auto shadow-sm">
                 <div class="text-right hidden sm:block">
@@ -68,26 +68,6 @@ function renderLoggedInUser() {
     }
 }
 
-async function fetchDashboardData() {
-    const container = document.getElementById('dashboard-loading');
-    if (container) container.classList.remove('hidden');
-
-    try {
-        const response = await fetch(DASHBOARD_API_URL);
-        const csvText = await response.text();
-        dashboardData = parseDashboardCSV(csvText);
-        
-        // Langsung tampilkan data tanpa perlu cek hak akses halaman
-        initSlicers();
-        applyDashboardFilters();
-    } catch (error) {
-        console.error('Error memuat data dashboard:', error);
-    } finally {
-        if (container) container.classList.add('hidden');
-    }
-}
-
-
 // =====================================================================
 // 4. CORE LOGIC: DASHBOARD UPT
 // =====================================================================
@@ -101,12 +81,7 @@ async function fetchDashboardData() {
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
         
-        const currentFileRestriction = "abm"; 
-        if (!checkDashboardAccess(currentFileRestriction)) {
-            showAccessDenied();
-            return; 
-        }
-        
+        // Panggil fungsi tanpa perlu pengecekan hak akses halaman
         initSlicers();
         applyDashboardFilters();
     } catch (error) {
