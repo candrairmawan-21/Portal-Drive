@@ -255,7 +255,47 @@
     <script>
         const API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=119812050&single=true&output=csv';
         let allFiles = []; let accessibleFiles = []; let currentPath = []; let currentViewLayout = 'grid'; let isSidebarCollapsed = false;
-        const manualDatabase = ['admin', 'midnorth', 'candra', 'mrdiy', 'jc2017', 'jc8001', 'jc2021', 'jc1029', 'jc1020', 'jc3001', 'jc2001', 'jc2008', 'jc5005', 'jc6003', 'jc2012', 'jc1014', 'jc2018', 'jc4006', 'jc8005', 'jc3003', 'jc1005', 'jc5002', 'jc1012', 'jc21002', 'jc5003', 'jc8006', 'jc2016', 'jc1027', 'jc8004', 'bm agus', 'bm didi', 'bm gali', 'abm an', 'abm ba', 'abm ika', 'abm ad', 'abm ri'];
+        const userDatabase = {
+    'admin': 'admin',
+    'bm agus': 'BM',
+    'bm didik': 'BM',
+    'bm galih': 'BM',
+    'abm anas': 'ABM',
+    'abm bayu': 'ABM',
+    'abm ika': 'ABM',
+    'abm adinda': 'ABM',
+    'abm ridho': 'ABM',
+    'abm fachri': 'ABM',
+    'abm gading': 'ABM',
+    'abm wildan': 'ABM',
+    'abm satria': 'ABM',
+    'jc2017': 'staff',
+    'jc8001': 'staff',
+    'jc2021': 'staff',
+    'jc1029': 'staff',
+    'jc1020': 'staff',
+    'jc3001': 'staff',
+    'jc2001': 'staff',
+    'jc2008': 'staff',
+    'jc5005': 'staff',
+    'jc6003': 'staff',
+    'jc2012': 'staff',
+    'jc1014': 'staff',
+    'jc2018': 'staff',
+    'jc4006': 'staff',
+    'jc8005': 'staff',
+    'jc3003': 'staff',
+    'jc1005': 'staff',
+    'jc5002': 'staff',
+    'jc1012': 'staff',
+    'jc1002': 'staff',
+    'jc5003': 'staff',
+    'jc8006': 'staff',
+    'jc2016': 'staff',
+    'jc1027': 'staff',
+    'jc8004': 'staff'
+};
+
 
         function toggleSidebarCollapse() {
             const sidebar = document.getElementById('sidebarMenu');
