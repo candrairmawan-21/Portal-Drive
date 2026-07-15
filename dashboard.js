@@ -68,34 +68,25 @@ function renderLoggedInUser() {
     }
 }
 
-function checkDashboardAccess(pageRestrictionValue) {
-    // Membaca role langsung dari role yang sudah diset di manual database
-    const userRole = (sessionStorage.getItem('portalRole') || 'staff').toLowerCase().trim();
-    const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
+async function fetchDashboardData() {
+    const container = document.getElementById('dashboard-loading');
+    if (container) container.classList.remove('hidden');
 
-    if (pageRestriction === "" || pageRestriction === "-") return true;
-    if (userRole === "admin") return true; 
-    if (pageRestriction === "bm") return userRole === "bm";
-    if (pageRestriction === "abm") return userRole === "abm" || userRole === "bm";
-
-    return false;
+    try {
+        const response = await fetch(DASHBOARD_API_URL);
+        const csvText = await response.text();
+        dashboardData = parseDashboardCSV(csvText);
+        
+        // Langsung tampilkan data tanpa perlu cek hak akses halaman
+        initSlicers();
+        applyDashboardFilters();
+    } catch (error) {
+        console.error('Error memuat data dashboard:', error);
+    } finally {
+        if (container) container.classList.add('hidden');
+    }
 }
 
-
-function showAccessDenied() {
-    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-content') || document.body;
-    mainContent.innerHTML = `
-        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 w-full grid col-span-full">
-            <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto flex flex-col items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
-                </svg>
-                <h2 class="text-xl font-black text-slate-800 mb-1">Akses Terkunci</h2>
-                <p class="text-sm text-slate-500">Maaf, file atau halaman ini dikunci berdasarkan regulasi hak akses jabatan Anda.</p>
-            </div>
-        </div>
-    `;
-}
 
 // =====================================================================
 // 4. CORE LOGIC: DASHBOARD UPT
