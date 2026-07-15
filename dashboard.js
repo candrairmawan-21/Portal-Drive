@@ -39,9 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // =====================================================================
 
 function renderLoggedInUser() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userName = currentUser.name || currentUser.username || sessionStorage.getItem('portalUser') || localStorage.getItem('portalUser') || 'Guest User';
-    const userRole = (currentUser.role || 'Staff').toUpperCase();
+    // Ambil data Username dan Role dari sessionStorage yang dikirim saat login
+    const userName = sessionStorage.getItem('portalUser') || 'Guest';
+    const userRole = sessionStorage.getItem('portalRole') || 'Staff';
 
     const userContainer = document.getElementById('user-profile-nav') || 
                           document.querySelector('.navbar-right') || 
@@ -52,13 +52,14 @@ function renderLoggedInUser() {
         const existingBadge = document.getElementById('dynamic-user-badge');
         if (existingBadge) existingBadge.remove();
 
+        // Desain profil disesuaikan dengan tema Light Mode index.html
         const badgeHTML = `
-            <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-800/40 border border-slate-700/60 px-4 py-1.5 rounded-xl backdrop-blur-sm ml-auto">
+            <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-1.5 rounded-2xl ml-auto shadow-sm">
                 <div class="text-right hidden sm:block">
-                    <p class="text-xs font-black text-white leading-none">${userName}</p>
-                    <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${userRole}</p>
+                    <p class="text-xs font-semibold text-slate-500">Hi <span class="font-black text-slate-800 capitalize">${userName}</span>,</p>
+                    <p class="text-[10px] text-slate-400 font-medium tracking-wide mt-0.5">your role is <span class="font-bold text-amber-500 uppercase">${userRole}</span></p>
                 </div>
-                <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-xs shadow-sm uppercase">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-sm shadow-md uppercase">
                     ${userName.charAt(0)}
                 </div>
             </div>
@@ -68,8 +69,8 @@ function renderLoggedInUser() {
 }
 
 function checkDashboardAccess(pageRestrictionValue) {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userRole = (currentUser.role || 'admin').toLowerCase().trim();
+    // Membaca role langsung dari role yang sudah diset di manual database
+    const userRole = (sessionStorage.getItem('portalRole') || 'staff').toLowerCase().trim();
     const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
 
     if (pageRestriction === "" || pageRestriction === "-") return true;
@@ -79,6 +80,7 @@ function checkDashboardAccess(pageRestrictionValue) {
 
     return false;
 }
+
 
 function showAccessDenied() {
     const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-content') || document.body;
