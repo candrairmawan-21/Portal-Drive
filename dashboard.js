@@ -21,35 +21,12 @@ const SHEET_GIDS = {
 // =====================================================================
 // 2. INITIALIZATION (SAAT HALAMAN PERTAMA KALI DIMUAT)
 // =====================================================================
-document.addEventListener('DOMContentLoaded', async () => {
-    // A. Init Umum / Navigasi
+document.addEventListener('DOMContentLoaded', () => {
     renderLoggedInUser();
-
-    // B. Jalankan penarikan data secara berurutan dan tunggu hingga selesai
-    await fetchDashboardData();
+    fetchDashboardData();
     displayUpdateDate();
-    initSalesSlicers(); 
-    await fetchSalesData();
-
-    // C. KODE OTOMATIS INGAT HALAMAN (Aman dijalankan setelah data siap)
-    const lastActiveSection = localStorage.getItem('activeSection');
-    if (lastActiveSection) {
-        if (typeof showSection === 'function') {
-            showSection(lastActiveSection);
-        }
-    }
-
-    // D. Deteksi otomatis klik pada sidebar untuk menyimpan halaman terakhir
-    document.querySelectorAll('aside button, aside a, [onclick*="showSection"]').forEach(element => {
-        element.addEventListener('click', function() {
-            const onclickText = this.getAttribute('onclick') || '';
-            // Ekstrak ID halaman dari showSection('nama-halaman')
-            const match = onclickText.match(/showSection\(['"]([^'"]+)['"]\)/);
-            if (match && match[1]) {
-                localStorage.setItem('activeSection', match[1]);
-            }
-        });
-    });
+    initSalesSlicers();
+    fetchSalesData();
 });
 
 // =====================================================================
