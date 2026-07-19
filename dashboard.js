@@ -39,30 +39,34 @@ document.addEventListener('DOMContentLoaded', () => {
 // =====================================================================
 
 function renderLoggedInUser() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userName = currentUser.name || currentUser.username || sessionStorage.getItem('portalUser') || localStorage.getItem('portalUser') || 'Guest User';
-    const userRole = (currentUser.role || 'Staff').toUpperCase();
+    // 1. Ambil data dari sessionStorage yang sudah diset saat login di index.html
+    const userName = sessionStorage.getItem('portalUser') || 'Guest User';
+    const userRole = sessionStorage.getItem('portalRole') || 'Staff';
 
-    const userContainer = document.getElementById('user-profile-nav') || 
-                          document.querySelector('.navbar-right') || 
-                          document.querySelector('header .flex.items-center.gap-4') ||
-                          document.querySelector('nav .flex.items-center');
+    // 2. Cari container yang pas di header
+    const userContainer = document.getElementById('fileTools') || 
+                          document.querySelector('header .container > div:last-child') ||
+                          document.querySelector('header .flex.items-center.gap-4');
 
     if (userContainer) {
         const existingBadge = document.getElementById('dynamic-user-badge');
         if (existingBadge) existingBadge.remove();
 
+        // 3. Render HTML dengan format: "Hi <username> role anda <role>"
+        // Desain disesuaikan agar cocok dengan header light mode Anda
         const badgeHTML = `
-            <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-800/40 border border-slate-700/60 px-4 py-1.5 rounded-xl backdrop-blur-sm ml-auto">
+            <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-800 px-4 py-2 rounded-xl shadow-sm ml-2">
                 <div class="text-right hidden sm:block">
-                    <p class="text-xs font-black text-white leading-none">${userName}</p>
-                    <p class="text-[9px] text-amber-400 font-bold tracking-wider uppercase mt-0.5">${userRole}</p>
+                    <p class="text-xs font-bold text-white leading-none capitalize">Hi ${userName}</p>
+                    <p class="text-[10px] text-slate-300 font-medium tracking-wide mt-1">role anda <span class="text-amber-400 font-bold uppercase">${userRole}</span></p>
                 </div>
-                <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-xs shadow-sm uppercase">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white font-black text-sm shadow-sm uppercase flex-shrink-0">
                     ${userName.charAt(0)}
                 </div>
             </div>
         `;
+        
+        // Memasukkan badge ke dalam elemen container
         userContainer.insertAdjacentHTML('beforeend', badgeHTML);
     }
 }
