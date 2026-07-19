@@ -21,50 +21,39 @@ const SHEET_GIDS = {
 // =====================================================================
 // 2. INITIALIZATION (SAAT HALAMAN PERTAMA KALI DIMUAT)
 // =====================================================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // A. Init Umum / Navigasi
     renderLoggedInUser();
 
-    // B. Init Dashboard UPT
-    fetchDashboardData();
-
-    // C. Init Dashboard Sales
+    // B. Jalankan penarikan data secara berurutan dan tunggu hingga selesai
+    await fetchDashboardData();
     displayUpdateDate();
     initSalesSlicers(); 
-    fetchSalesData();
+    await fetchSalesData();
 
-    // D. KODE AUTOMATIS INGAT HALAMAN (RESTORE SETELAH REFRESH)
-    // 1. Cek apakah ada halaman terakhir yang tersimpan di memori browser
+    // C. KODE OTOMATIS INGAT HALAMAN (Aman dijalankan setelah data siap)
     const lastActiveSection = localStorage.getItem('activeSection');
-    
     if (lastActiveSection) {
-        // Jalankan fungsi bawaan showSection untuk berpindah ke halaman terakhir
         if (typeof showSection === 'function') {
             showSection(lastActiveSection);
         }
     }
 
-    // 2. Pasang pendengar (listener) otomatis ke setiap tombol menu sidebar
-    // Agar setiap kali tombol diklik, posisinya langsung dicatat di memori browser
-    document.querySelectorAll('aside button, aside a, [onclick*="showSection"]').forEach(element => {
-        element.addEventListener('click', function() {
-            // Ambil nama section dari atribut onclick (misal: showSection('section-sales') -> diambil 'section-sales')
-            const onclickText = this.getAttribute('onclick') || '';
-            const match = onclickText.match(/showSection\(['"]([^'"]+)['"]\)/);
-            if (match && match[1]) {
-                localStorage.setItem('activeSection', match[1]);
-            }
-        });
-    });
-});
-        
-        // Cari tombol sidebar yang memicu seksi ini dan beri warna aktif kembali
-        const activeBtn = document.querySelector(`[data-target="${activeSection}"]`) || 
-                          document.querySelector(`[href="#${activeSection}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('bg-amber-500', 'text-white');
+    // D. Daftarkan event pencatat halaman ke tombol menu secara manual agar tidak bentrok
+    const menuButtons = [
+        { id: 'btn-file-manager', section: 'section-files' },
+        { id: 'btn-performa-upt', section: 'section-upt' },
+        { id: 'btn-sales-target', section: 'section-sales' }
+    ];
+
+    menuButtons.forEach(menu => {
+        const btn = document.getElementById(menu.id) || document.querySelector(`[onclick*="${menu.section}"]`);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                localStorage.setItem('activeSection', menu.section);
+            });
         }
-    }
+    });
 });
 
 // =====================================================================
