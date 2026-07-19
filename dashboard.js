@@ -356,7 +356,7 @@ function initSalesSlicers() {
 
     if (!slicerKategori || !slicerSpesifik) return;
 
-    // A. Event saat Slicer Kategori Berubah
+    // A. Ketika Kategori (All / BM / ABM) diganti
     slicerKategori.addEventListener('change', function() {
         const kategori = this.value;
         slicerSpesifik.innerHTML = '<option value="all">-- Semua --</option>';
@@ -369,11 +369,13 @@ function initSalesSlicers() {
             slicerSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
             
             let uniqueItems = new Set();
-            // Mengambil daftar nama unik BM/ABM dari data referensi UPT
-            dashboardData.forEach(item => {
-                if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
-                if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
-            });
+            // dashboardData diambil dari data UPT yang berisi mapping namaStore, namaBM, namaABM
+            if (typeof dashboardData !== 'undefined' && dashboardData.length > 0) {
+                dashboardData.forEach(item => {
+                    if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
+                    if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
+                });
+            }
 
             Array.from(uniqueItems).sort().forEach(name => {
                 slicerSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
@@ -382,7 +384,7 @@ function initSalesSlicers() {
         applySalesFilters();
     });
 
-    // B. Event saat Slicer Nama & Bulan Berubah
+    // B. Ketika Nama Spesifik atau Bulan diganti
     slicerSpesifik.addEventListener('change', applySalesFilters);
     slicerBulan.addEventListener('change', fetchSalesData); 
 }
@@ -468,24 +470,117 @@ function renderSalesChart() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 }
+function applySalesFilters() {
+    const kategori = document.getElementById('slicerKategoriSales')?.value || 'all';
+    const spesifik = document.getElementById('slicerSpesifikSales')?.value || 'all';
 
-function renderSalesTable() {
+    let filteredSales = [...salesData]; // salesData diambil dari array master sales Anda
+
+    if (kategori !== 'all' && spesifik !== 'all') {
+        const allowedStores = new Set();
+        
+        // dashboardData diambil dari data UPT yang berisi mapping namaStore, namaBM, namaABM
+        if (typeof dashboardData !== 'undefined') {
+            dashboardData.forEach(item => {
+                if (kategori === 'bm' && item.namaBM === spesifik) {
+                    allowedStores.add(item.namaStore.toLowerCase().trim());
+                } else if (kategori === 'abm' && item.namaABM === spesifik) {
+                    allowedStores.add(item.namaStore.toLowerCase().trim());
+                }
+            });
+        }
+
+        // Filter salesData hanya untuk store yang cocok
+        filteredSales = salesData.filter(item => {
+            return allowedStores.has(item.store.toLowerCase().trim());
+        });
+    }
+
+    // Panggil fungsi render visual dengan data yang sudah terfilter
+    renderSalesSummaryFiltered(filteredSales);
+    renderSalesChartFiltered(filteredSales);
+    renderSalesTableFiltered(filteredSales);
+}
+
+function renderSalesSummaryFiltered(data) {
+    let totalSales = 0, totalTarget = 0;
+    data.forEach(item => {
+        totalSales += item.mtdSales || 0;
+        totalTarget += item.mtdTarget || 0;
+    });
+    
+    const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
+    
+    const elTotalSales = document.getElementById('summary-total-sales');
+    const elAvgAch = document.getElementById('summary-avg-ach');
+    
+    if (elTotalSales) elTotalSales.innerText = "Rp " + totalSales.toLocaleString('id-ID');
+    if (elAvgAch) elAvgAch.innerText = avgAch + "%";
+}
+
+function renderSalesChartFiltered(data) {
+    const ctx = document.getElementById('salesTargetChart');
+    if (!ctx) return;
+    
+    if (salesChartInstance) salesChartInstance.destroy();
+    
+    salesChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(item => item.store),
+            datasets: [
+                {
+                    label: 'MTD Sales',
+                    backgroundColor: '#F49E00', // Oranye Khas MR. DIY
+                    borderColor: '#E08B00',
+                    borderWidth: 1,
+                    data: data.map(item => item.mtdSales)
+                },
+                {
+                    label: 'MTD Target',
+                    backgroundColor: '#6B4423', // Cokelat Khas MR. DIY
+                    borderColor: '#54351B',
+                    borderWidth: 1,
+                    data: data.map(item => item.mtdTarget)
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                x: { grid: { display: false } }
+            },
+            plugins: {
+                legend: { position: 'top', labels: { font: { weight: 'bold' } } }
+            }
+        }
+    });
+}
+
+function renderSalesTableFiltered(data) {
     const tbody = document.getElementById('sales-table-body');
     if (!tbody) return;
 
-    tbody.innerHTML = salesData.map(item => `
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = data.map(item => `
         <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
             <td class="px-5 py-4 font-bold text-sm text-slate-800">${item.store}</td>
-            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${item.mtdSales.toLocaleString('id-ID')}</td>
-            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${item.mtdTarget.toLocaleString('id-ID')}</td>
-            <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate}</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdSales || 0).toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdTarget || 0).toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate || '-'}</td>
             <td class="px-5 py-4 text-center">
                 <span class="px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wider ${
-                    item.achPercent >= 100
+                    (item.achPercent || 0) >= 100
                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
                     : 'bg-rose-50 text-rose-600 border border-rose-200/60'
                 }">
-                    ${item.achPercent.toFixed(2)}%
+                    ${(item.achPercent || 0).toFixed(2)}%
                 </span>
             </td>
         </tr>
