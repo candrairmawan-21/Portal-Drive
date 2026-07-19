@@ -349,11 +349,42 @@ function displayUpdateDate() {
     }
 }
 
-function initMonthSlicer() {
-    const slicer = document.getElementById('slicerBulanSales');
-    if (slicer) {
-        slicer.addEventListener('change', fetchSalesData);
-    }
+function initSalesSlicers() {
+    const slicerBulan = document.getElementById('slicerBulanSales');
+    const slicerKategori = document.getElementById('slicerKategoriSales');
+    const slicerSpesifik = document.getElementById('slicerSpesifikSales');
+
+    if (!slicerKategori || !slicerSpesifik) return;
+
+    // A. Event saat Slicer Kategori Berubah
+    slicerKategori.addEventListener('change', function() {
+        const kategori = this.value;
+        slicerSpesifik.innerHTML = '<option value="all">-- Semua --</option>';
+        
+        if (kategori === 'all') {
+            slicerSpesifik.disabled = true;
+            slicerSpesifik.classList.add('bg-slate-100', 'cursor-not-allowed');
+        } else {
+            slicerSpesifik.disabled = false;
+            slicerSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
+            
+            let uniqueItems = new Set();
+            // Mengambil daftar nama unik BM/ABM dari data referensi UPT
+            dashboardData.forEach(item => {
+                if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
+                if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
+            });
+
+            Array.from(uniqueItems).sort().forEach(name => {
+                slicerSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
+        applySalesFilters();
+    });
+
+    // B. Event saat Slicer Nama & Bulan Berubah
+    slicerSpesifik.addEventListener('change', applySalesFilters);
+    slicerBulan.addEventListener('change', fetchSalesData); 
 }
 
 async function fetchSalesData() {
