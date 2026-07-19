@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // C. Init Dashboard Sales
     displayUpdateDate();
-    initMonthSlicer();
+    initSalesSlicers(); // <--- Ini sudah diubah agar mengaktifkan slicer bertingkat
     fetchSalesData();
 });
 
@@ -403,9 +403,8 @@ async function fetchSalesData() {
         
         salesData = parseSalesCSV(csvText);
         
-        renderSalesSummary();
-        renderSalesChart();
-        renderSalesTable();
+        // Panggil fungsi filter dinamis, bukan fungsi render statis lama
+        applySalesFilters();
     } catch (error) { 
         console.error('Error fetching data:', error); 
     } finally {
