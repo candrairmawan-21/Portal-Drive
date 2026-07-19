@@ -30,8 +30,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // C. Init Dashboard Sales
     displayUpdateDate();
-    initSalesSlicers(); // <--- Ini sudah diubah agar mengaktifkan slicer bertingkat
+    initSalesSlicers(); 
     fetchSalesData();
+
+    // D. KODE AUTOMATIS INGAT HALAMAN (RESTORE SETELAH REFRESH)
+    // 1. Cek apakah ada halaman terakhir yang tersimpan di memori browser
+    const lastActiveSection = localStorage.getItem('activeSection');
+    
+    if (lastActiveSection) {
+        // Jalankan fungsi bawaan showSection untuk berpindah ke halaman terakhir
+        if (typeof showSection === 'function') {
+            showSection(lastActiveSection);
+        }
+    }
+
+    // 2. Pasang pendengar (listener) otomatis ke setiap tombol menu sidebar
+    // Agar setiap kali tombol diklik, posisinya langsung dicatat di memori browser
+    document.querySelectorAll('aside button, aside a, [onclick*="showSection"]').forEach(element => {
+        element.addEventListener('click', function() {
+            // Ambil nama section dari atribut onclick (misal: showSection('section-sales') -> diambil 'section-sales')
+            const onclickText = this.getAttribute('onclick') || '';
+            const match = onclickText.match(/showSection\(['"]([^'"]+)['"]\)/);
+            if (match && match[1]) {
+                localStorage.setItem('activeSection', match[1]);
+            }
+        });
+    });
+});
+        
+        // Cari tombol sidebar yang memicu seksi ini dan beri warna aktif kembali
+        const activeBtn = document.querySelector(`[data-target="${activeSection}"]`) || 
+                          document.querySelector(`[href="#${activeSection}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('bg-amber-500', 'text-white');
+        }
+    }
 });
 
 // =====================================================================
