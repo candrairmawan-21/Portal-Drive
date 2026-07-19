@@ -39,20 +39,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // D. Daftarkan event pencatat halaman ke tombol menu secara manual agar tidak bentrok
-    const menuButtons = [
-        { id: 'btn-file-manager', section: 'section-files' },
-        { id: 'btn-performa-upt', section: 'section-upt' },
-        { id: 'btn-sales-target', section: 'section-sales' }
-    ];
-
-    menuButtons.forEach(menu => {
-        const btn = document.getElementById(menu.id) || document.querySelector(`[onclick*="${menu.section}"]`);
-        if (btn) {
-            btn.addEventListener('click', () => {
-                localStorage.setItem('activeSection', menu.section);
-            });
-        }
+    // D. Deteksi otomatis klik pada sidebar untuk menyimpan halaman terakhir
+    document.querySelectorAll('aside button, aside a, [onclick*="showSection"]').forEach(element => {
+        element.addEventListener('click', function() {
+            const onclickText = this.getAttribute('onclick') || '';
+            // Ekstrak ID halaman dari showSection('nama-halaman')
+            const match = onclickText.match(/showSection\(['"]([^'"]+)['"]\)/);
+            if (match && match[1]) {
+                localStorage.setItem('activeSection', match[1]);
+            }
+        });
     });
 });
 
