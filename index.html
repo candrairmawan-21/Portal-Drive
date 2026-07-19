@@ -343,14 +343,17 @@
             lucide.createIcons();
         }
 
-        // FUNGSI NAVIGASI YANG DIPERBARUI
+       // FUNGSI NAVIGASI YANG DIPERBARUI
         function switchView(view) {
+            // --- TAMBAHKAN BARIS INI UNTUK MENYIMPAN HALAMAN TERAKHIR ---
+            sessionStorage.setItem('lastActiveView', view); 
+
             // Sembunyikan semua halaman
             ['files', 'dashboard', 'sales'].forEach(id => {
                 const el = document.getElementById('section-' + id);
                 if(el) el.classList.add('hidden');
             });
-            
+                      
             // Reset semua style menu ke default
             ['files', 'dashboard', 'sales'].forEach(id => {
                 const btn = document.getElementById('menu-' + id);
@@ -571,30 +574,24 @@
             window.location.href = 'index.html';
         }
 
-        // CEK LOGIN DAN ROUTING URL INSTAN
+       // CEK LOGIN DAN ROUTING URL INSTAN
         document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('loginOverlay');
             const mainBody = document.getElementById('mainBody');
-            const isLoggedIn = sessionStorage.getItem('portalLoggedIn') || localStorage.getItem('portalLoggedIn');
+            const isLoggedIn = sessionStorage.getItem('portalLoggedIn');
 
             if (isLoggedIn) {
                 if (overlay) overlay.remove(); 
                 if (mainBody) mainBody.classList.remove('overflow-hidden');
                 
-                // Ambil data untuk file manager
+                if (typeof renderLoggedInUser === "function") renderLoggedInUser();
                 fetchData();
 
-                // Cek URL: Buka halaman UPT atau Sales jika di-request, jika tidak default ke Files
+                // --- LOGIKA BARU: BACA URL ATAU BACA MEMORI HALAMAN TERAKHIR ---
                 const urlParams = new URLSearchParams(window.location.search);
-                const requestedView = urlParams.get('view');
+                const requestedView = urlParams.get('view') || sessionStorage.getItem('lastActiveView') || 'files';
                 
-                if (requestedView === 'dashboard') {
-                    switchView('dashboard');
-                } else if (requestedView === 'sales') {
-                    switchView('sales');
-                } else {
-                    switchView('files');
-                }
+                switchView(requestedView);
             } else {
                 if (overlay) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
             }
