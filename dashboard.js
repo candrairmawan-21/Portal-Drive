@@ -535,15 +535,16 @@ function renderSalesChartFiltered(data) {
             labels: data.map(item => item.store),
             datasets: [
                 {
-                    // 1. GRAFIK POLYGON (AREA PERSENTASE)
+                    // 1. GRAFIK GARIS (ACHIEVEMENT PERSENTASE)
                     type: 'line',
                     label: 'Achievement (%)',
                     data: data.map(item => item.achPercent || 0),
-                    backgroundColor: 'rgba(16, 185, 129, 0.15)', // Hijau transparan
-                    borderColor: '#10b981', // Hijau solid
+                    backgroundColor: '#ef4444', // Warna titik merah
+                    borderColor: '#ef4444', // Warna garis merah
                     borderWidth: 2,
-                    fill: true, // Berubah menjadi polygon
-                    tension: 0.4, // Melengkung halus
+                    pointRadius: 4, // Memperjelas titik potong
+                    fill: false, // Menghilangkan tirai/blocking warna
+                    tension: 0.4, // Garis melengkung halus
                     yAxisID: 'y1' // Menggunakan sumbu Y di kanan
                 },
                 {
@@ -570,6 +571,11 @@ function renderSalesChartFiltered(data) {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
+            layout: {
+                padding: {
+                    top: 25 // Beri jarak atas agar teks persentase tertinggi tidak terpotong
+                }
+            },
             scales: {
                 x: { grid: { display: false } },
                 // Sumbu Kiri (Rupiah)
@@ -578,11 +584,12 @@ function renderSalesChartFiltered(data) {
                     grid: { color: '#f1f5f9' },
                     ticks: { callback: function(value) { if (value >= 1000000) return 'Rp ' + (value / 1000000) + ' Jt'; return value; } }
                 },
-                // Sumbu Kanan (Persen)
+                // Sumbu Kanan (Persen) - DIHILANGKAN KETERANGANNYA
                 y1: {
-                    type: 'linear', display: true, position: 'right', beginAtZero: true,
-                    grid: { display: false },
-                    ticks: { callback: function(value) { return value + '%'; }, color: '#10b981', font: { weight: 'bold' } }
+                    type: 'linear', 
+                    display: false, // Menyembunyikan seluruh sumbu & tulisan di sebelah kanan
+                    position: 'right', 
+                    beginAtZero: true
                 }
             },
             plugins: {
@@ -592,7 +599,7 @@ function renderSalesChartFiltered(data) {
                         label: function(context) {
                             let label = context.dataset.label || '';
                             if (label) label += ': ';
-                            if (context.dataset.yAxisID === 'y1') {
+                            if (context.dataset.type === 'line') {
                                 label += context.parsed.y.toFixed(1) + '%';
                             } else {
                                 label += 'Rp ' + context.parsed.y.toLocaleString('id-ID');
@@ -602,7 +609,33 @@ function renderSalesChartFiltered(data) {
                     }
                 }
             }
-        }
+        },
+        // PLUGIN KHUSUS: Untuk mencetak angka persen persis di atas titik garis
+        plugins: [{
+            id: 'customDataLabels',
+            afterDatasetsDraw: (chart) => {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    // Hanya cetak label untuk grafik garis (Achievement)
+                    if (dataset.type === 'line') { 
+                        const meta = chart.getDatasetMeta(i);
+                        if (!meta.hidden) {
+                            meta.data.forEach((element, index) => {
+                                ctx.fillStyle = '#ef4444'; // Warna teks sama dengan garis (merah)
+                                ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                
+                                const dataString = dataset.data[index].toFixed(1) + '%';
+                                
+                                // Cetak teks dengan posisi 8 pixel tepat di atas titik kordinat (element.x, element.y)
+                                ctx.fillText(dataString, element.x, element.y - 8); 
+                            });
+                        }
+                    }
+                });
+            }
+        }]
     });
 }
 
