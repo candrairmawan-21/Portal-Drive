@@ -454,13 +454,21 @@
         document.getElementById('loginOverlay').remove();
         document.getElementById('mainBody').classList.remove('overflow-hidden');
         
+        // ==========================================
+        // TAMBAHKAN BARIS INI:
+        // Panggil fungsi render user secara instan agar 
+        // nama tidak berstatus 'Guest User' saat pertama kali masuk
+        // ==========================================
+        if (typeof renderLoggedInUser === "function") {
+            renderLoggedInUser();
+        }
+        
         fetchData();
         switchView('files');
     } else { 
         errorText.classList.remove('hidden'); 
     }
 });
-
 
         function renderPortal() {
             const grid = document.getElementById('portalGrid');
