@@ -553,30 +553,109 @@ function renderSalesChartFiltered(data) {
     });
 }
 
-function renderSalesTableFiltered(data) {
-    const tbody = document.getElementById('sales-table-body');
-    if (!tbody) return;
-
-    if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = data.map(item => `
-        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="px-5 py-4 font-bold text-sm text-slate-800">${item.store}</td>
-            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdSales || 0).toLocaleString('id-ID')}</td>
-            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdTarget || 0).toLocaleString('id-ID')}</td>
-            <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate || '-'}</td>
-            <td class="px-5 py-4 text-center">
-                <span class="px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wider ${
-                    (item.achPercent || 0) >= 100
-                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
-                    : 'bg-rose-50 text-rose-600 border border-rose-200/60'
-                }">
-                    ${(item.achPercent || 0).toFixed(2)}%
-                </span>
-            </td>
-        </tr>
-    `).join('');
+function renderSalesChartFiltered(data) {
+    const ctx = document.getElementById('salesTargetChart');
+    if (!ctx) return;
+    
+    if (salesChartInstance) salesChartInstance.destroy();
+    
+    salesChartInstance = new Chart(ctx, {
+        type: 'bar', // Tipe dasar grafik
+        data: {
+            labels: data.map(item => item.store),
+            datasets: [
+                {
+                    // 1. DATASET PERSENTASE (DIAGRAM POLYGON / AREA)
+                    type: 'line',
+                    label: 'Achievement (%)',
+                    data: data.map(item => item.achPercent || 0),
+                    backgroundColor: 'rgba(16, 185, 129, 0.15)', // Hijau transparan untuk area polygon
+                    borderColor: '#10b981', // Hijau solid untuk garis
+                    borderWidth: 2,
+                    fill: true, // Mengubah garis biasa menjadi diagram polygon/area
+                    tension: 0.4, // Membuat sudut polygon halus (melengkung)
+                    yAxisID: 'y1' // Menggunakan sumbu Y di sebelah kanan
+                },
+                {
+                    // 2. DATASET TARGET
+                    type: 'bar',
+                    label: 'MTD Target',
+                    backgroundColor: '#6B4423',
+                    borderColor: '#54351B',
+                    borderWidth: 1,
+                    data: data.map(item => item.mtdTarget || 0),
+                    yAxisID: 'y' // Menggunakan sumbu Y standar di kiri
+                },
+                {
+                    // 3. DATASET SALES
+                    type: 'bar',
+                    label: 'MTD Sales',
+                    backgroundColor: '#F49E00',
+                    borderColor: '#E08B00',
+                    borderWidth: 1,
+                    data: data.map(item => item.mtdSales || 0),
+                    yAxisID: 'y' // Menggunakan sumbu Y standar di kiri
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: { 
+                    grid: { display: false } 
+                },
+                // Sumbu Y Kiri (Untuk Nilai Rupiah)
+                y: { 
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true, 
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        callback: function(value) {
+                            if (value >= 1000000) return 'Rp ' + (value / 1000000) + ' Jt';
+                            return value;
+                        }
+                    }
+                },
+                // Sumbu Y Kanan (Khusus Untuk Persentase Polygon)
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { display: false },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        },
+                        color: '#10b981',
+                        font: { weight: 'bold' }
+                    }
+                }
+            },
+            plugins: {
+                legend: { position: 'top', labels: { font: { weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" } } },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.dataset.yAxisID === 'y1') {
+                                label += context.parsed.y.toFixed(1) + '%';
+                            } else {
+                                label += 'Rp ' + context.parsed.y.toLocaleString('id-ID');
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
