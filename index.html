@@ -190,37 +190,50 @@
         </main>
 
         <!-- SEKSI 3: DASHBOARD SALES (Desain disesuaikan ke Light Mode) -->
-        <!-- Slicer Kontainer Baru untuk Sales Dashboard -->
-<div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
-    <div>
-        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
-        <select id="slicerBulanSales" class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
-            <option value="Jul26" selected>Juli 2026</option>
-            <option value="Jun26">Juni 2026</option>
-            <option value="May26">Mei 2026</option>
-            <option value="Apr26">April 2026</option>
-            <option value="Mar26">Maret 2026</option>
-            <option value="Feb26">Februari 2026</option>
-            <option value="Jan26">Januari 2026</option>
-            <option value="Dec25">Desember 2025</option>
-            <option value="Nov25">November 2025</option>
-        </select>
-    </div>
-    <div>
-        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 2: Kategori Grup</label>
-        <select id="slicerKategoriSales" class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
-            <option value="all">All Data (Semua)</option>
-            <option value="bm">Branch Manager (BM)</option>
-            <option value="abm">Asst. Branch Manager (ABM)</option>
-        </select>
-    </div>
-    <div>
-        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 3: Pilih Nama</label>
-        <select id="slicerSpesifikSales" disabled class="block w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl font-semibold text-sm text-slate-700 focus:outline-none focus:border-amber-500 cursor-not-allowed">
-            <option value="all">-- Semua --</option>
-        </select>
-    </div>
-</div>
+        <main id="section-sales" class="container mx-auto px-6 py-8 flex-1 hidden">
+            <!-- Header Sales Title -->
+            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm mb-6 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">Sales Dashboard</h1>
+                    <p id="update-date" class="text-[10px] text-amber-500 font-bold uppercase tracking-widest mt-1"></p>
+                </div>
+            </div>
+
+            <!-- Slicer Kontainer Baru untuk Sales Dashboard (Ada di dalam tag main) -->
+            <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
+                    <select id="slicerBulanSales" class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
+                        <option value="Jul26" selected>Juli 2026</option>
+                        <option value="Jun26">Juni 2026</option>
+                        <option value="May26">Mei 2026</option>
+                        <option value="Apr26">April 2026</option>
+                        <option value="Mar26">Maret 2026</option>
+                        <option value="Feb26">Februari 2026</option>
+                        <option value="Jan26">Januari 2026</option>
+                        <option value="Dec25">Desember 2025</option>
+                        <option value="Nov25">November 2025</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 2: Kategori Grup</label>
+                    <select id="slicerKategoriSales" class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
+                        <option value="all">All Data (Semua)</option>
+                        <option value="bm">Branch Manager (BM)</option>
+                        <option value="abm">Asst. Branch Manager (ABM)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 3: Pilih Nama</label>
+                    <select id="slicerSpesifikSales" disabled class="block w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl font-semibold text-sm text-slate-700 focus:outline-none focus:border-amber-500 cursor-not-allowed">
+                        <option value="all">-- Semua --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="sales-loading" class="hidden text-center py-8 skeleton rounded-3xl mb-6">
+                <p class="text-sm font-bold text-slate-500">Memuat data sales...</p>
+            </div>
 
             <div id="sales-loading" class="hidden text-center py-8 skeleton rounded-3xl mb-6">
                 <p class="text-sm font-bold text-slate-500">Memuat data sales...</p>
