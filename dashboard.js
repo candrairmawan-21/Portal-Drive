@@ -410,11 +410,13 @@ async function fetchSalesData() {
 function parseSalesCSV(text) {
     let lines = text.split('\n');
     let result = [];
+    
     for (let i = 3; i < lines.length; i++) { 
         if (!lines[i].trim()) continue;
         let row = [];
         let inQuotes = false;
         let currentStr = "";
+        
         for (let char of lines[i]) {
             if (char === '"') inQuotes = !inQuotes;
             else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; }
@@ -423,8 +425,17 @@ function parseSalesCSV(text) {
         row.push(currentStr.trim());
 
         if (row.length >= 8) {
+            // 1. Ambil nama store dan bersihkan spasinya
+            let storeName = row[2]?.replace(/[\r"]/g, "").trim();
+            
+            // 2. LOGIKA FILTER: Jika nama store kosong atau hanya berisi "-", LEWATI BARIS INI
+            if (!storeName || storeName === "" || storeName === "-") {
+                continue; // Skip, jangan dimasukkan ke data dashboard
+            }
+
+            // 3. Masukkan ke hasil hanya jika nama store ada
             result.push({
-                store: row[2]?.replace(/[\r"]/g, "") || "-",
+                store: storeName,
                 targetPoint: "-",
                 mtdSales: parseFloat(row[5]?.replace(/[^0-9.-]+/g, "")) || 0,
                 mtdTarget: parseFloat(row[6]?.replace(/[^0-9.-]+/g, "")) || 0,
@@ -468,12 +479,12 @@ function applySalesFilters() {
     const kategori = document.getElementById('slicerKategoriSales')?.value || 'all';
     const spesifik = document.getElementById('slicerSpesifikSales')?.value || 'all';
 
-    let filteredSales = [...salesData]; // salesData diambil dari array master sales Anda
+    let filteredSales = [...salesData]; // salesData diambil dari array master sales
 
     if (kategori !== 'all' && spesifik !== 'all') {
         const allowedStores = new Set();
         
-        // dashboardData diambil dari data UPT yang berisi mapping namaStore, namaBM, namaABM
+        // Membaca relasi dari data UPT
         if (typeof dashboardData !== 'undefined') {
             dashboardData.forEach(item => {
                 if (kategori === 'bm' && item.namaBM === spesifik) {
@@ -484,16 +495,16 @@ function applySalesFilters() {
             });
         }
 
-        // Filter salesData hanya untuk store yang cocok
+        // Menyaring data tabel & grafik
         filteredSales = salesData.filter(item => {
             return allowedStores.has(item.store.toLowerCase().trim());
         });
     }
 
-    // Panggil fungsi render visual dengan data yang sudah terfilter
+    // Panggil 3 fungsi render visual secara berurutan
     renderSalesSummaryFiltered(filteredSales);
     renderSalesChartFiltered(filteredSales);
-    renderSalesTableFiltered(filteredSales);
+    renderSalesTableFiltered(filteredSales); // <-- INI FUNGSI YANG HILANG
 }
 
 function renderSalesSummaryFiltered(data) {
@@ -524,119 +535,54 @@ function renderSalesChartFiltered(data) {
             labels: data.map(item => item.store),
             datasets: [
                 {
-                    label: 'MTD Sales',
-                    backgroundColor: '#F49E00', // Oranye Khas MR. DIY
-                    borderColor: '#E08B00',
-                    borderWidth: 1,
-                    data: data.map(item => item.mtdSales)
-                },
-                {
-                    label: 'MTD Target',
-                    backgroundColor: '#6B4423', // Cokelat Khas MR. DIY
-                    borderColor: '#54351B',
-                    borderWidth: 1,
-                    data: data.map(item => item.mtdTarget)
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
-                x: { grid: { display: false } }
-            },
-            plugins: {
-                legend: { position: 'top', labels: { font: { weight: 'bold' } } }
-            }
-        }
-    });
-}
-
-function renderSalesChartFiltered(data) {
-    const ctx = document.getElementById('salesTargetChart');
-    if (!ctx) return;
-    
-    if (salesChartInstance) salesChartInstance.destroy();
-    
-    salesChartInstance = new Chart(ctx, {
-        type: 'bar', // Tipe dasar grafik
-        data: {
-            labels: data.map(item => item.store),
-            datasets: [
-                {
-                    // 1. DATASET PERSENTASE (DIAGRAM POLYGON / AREA)
+                    // 1. GRAFIK POLYGON (AREA PERSENTASE)
                     type: 'line',
                     label: 'Achievement (%)',
                     data: data.map(item => item.achPercent || 0),
-                    backgroundColor: 'rgba(16, 185, 129, 0.15)', // Hijau transparan untuk area polygon
-                    borderColor: '#10b981', // Hijau solid untuk garis
+                    backgroundColor: 'rgba(16, 185, 129, 0.15)', // Hijau transparan
+                    borderColor: '#10b981', // Hijau solid
                     borderWidth: 2,
-                    fill: true, // Mengubah garis biasa menjadi diagram polygon/area
-                    tension: 0.4, // Membuat sudut polygon halus (melengkung)
-                    yAxisID: 'y1' // Menggunakan sumbu Y di sebelah kanan
+                    fill: true, // Berubah menjadi polygon
+                    tension: 0.4, // Melengkung halus
+                    yAxisID: 'y1' // Menggunakan sumbu Y di kanan
                 },
                 {
-                    // 2. DATASET TARGET
                     type: 'bar',
                     label: 'MTD Target',
                     backgroundColor: '#6B4423',
                     borderColor: '#54351B',
                     borderWidth: 1,
                     data: data.map(item => item.mtdTarget || 0),
-                    yAxisID: 'y' // Menggunakan sumbu Y standar di kiri
+                    yAxisID: 'y'
                 },
                 {
-                    // 3. DATASET SALES
                     type: 'bar',
                     label: 'MTD Sales',
                     backgroundColor: '#F49E00',
                     borderColor: '#E08B00',
                     borderWidth: 1,
                     data: data.map(item => item.mtdSales || 0),
-                    yAxisID: 'y' // Menggunakan sumbu Y standar di kiri
+                    yAxisID: 'y'
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
+            interaction: { mode: 'index', intersect: false },
             scales: {
-                x: { 
-                    grid: { display: false } 
-                },
-                // Sumbu Y Kiri (Untuk Nilai Rupiah)
+                x: { grid: { display: false } },
+                // Sumbu Kiri (Rupiah)
                 y: { 
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    beginAtZero: true, 
+                    type: 'linear', display: true, position: 'left', beginAtZero: true, 
                     grid: { color: '#f1f5f9' },
-                    ticks: {
-                        callback: function(value) {
-                            if (value >= 1000000) return 'Rp ' + (value / 1000000) + ' Jt';
-                            return value;
-                        }
-                    }
+                    ticks: { callback: function(value) { if (value >= 1000000) return 'Rp ' + (value / 1000000) + ' Jt'; return value; } }
                 },
-                // Sumbu Y Kanan (Khusus Untuk Persentase Polygon)
+                // Sumbu Kanan (Persen)
                 y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    beginAtZero: true,
+                    type: 'linear', display: true, position: 'right', beginAtZero: true,
                     grid: { display: false },
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
-                        },
-                        color: '#10b981',
-                        font: { weight: 'bold' }
-                    }
+                    ticks: { callback: function(value) { return value + '%'; }, color: '#10b981', font: { weight: 'bold' } }
                 }
             },
             plugins: {
@@ -658,4 +604,34 @@ function renderSalesChartFiltered(data) {
             }
         }
     });
+}
+
+function renderSalesTableFiltered(data) {
+    const tbody = document.getElementById('sales-table-body');
+    if (!tbody) return;
+
+    // Jika data kosong
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;
+        return;
+    }
+
+    // Menggambar baris tabel
+    tbody.innerHTML = data.map(item => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+            <td class="px-5 py-4 font-bold text-sm text-slate-800">${item.store}</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdSales || 0).toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdTarget || 0).toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate || '-'}</td>
+            <td class="px-5 py-4 text-center">
+                <span class="px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wider ${
+                    (item.achPercent || 0) >= 100
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
+                    : 'bg-rose-50 text-rose-600 border border-rose-200/60'
+                }">
+                    ${(item.achPercent || 0).toFixed(2)}%
+                </span>
+            </td>
+        </tr>
+    `).join('');
 }
