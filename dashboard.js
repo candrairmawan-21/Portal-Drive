@@ -70,6 +70,7 @@ async function fetchDashboardData() {
     if (container) container.classList.remove('hidden');
 
     try {
+        // Ambil data UPT lama untuk podium
         const response = await fetch(DASHBOARD_API_URL);
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
@@ -77,7 +78,7 @@ async function fetchDashboardData() {
         initSlicers();
         applyDashboardFilters();
         
-        // Panggil tabel UPT agar otomatis terisi data
+        // Tarik data sales untuk mengisi tabel & grafik bar chart UPT vs Target
         fetchAndRenderUptSalesTable();
     } catch (error) {
         console.error('Error memuat data dashboard:', error);
@@ -142,8 +143,9 @@ function initSlicers() {
             
             let uniqueItems = new Set();
             dashboardData.forEach(item => {
-                if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
-                if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
+                // Simpan nama asli agar tampil rapi di dropdown
+                if (kategori === 'bm' && item.namaBM && item.namaBM !== "-") uniqueItems.add(item.namaBM.trim());
+                if (kategori === 'abm' && item.namaABM && item.namaABM !== "-") uniqueItems.add(item.namaABM.trim());
             });
 
             Array.from(uniqueItems).sort().forEach(name => {
@@ -151,14 +153,44 @@ function initSlicers() {
             });
         }
         applyDashboardFilters();
-        fetchAndRenderUptSalesTable(); // Update tabel UPT saat slicer kategori berubah
+        fetchAndRenderUptSalesTable();
     });
 
-    document.getElementById('slicerBulan')?.addEventListener('change', applyDashboardFilters);
+    document.getElementById('slicerBulan')?.addEventListener('change', () => {
+        applyDashboardFilters();
+        fetchAndRenderUptSalesTable();
+    });
+    
     document.getElementById('slicerSpesifik')?.addEventListener('change', () => {
         applyDashboardFilters();
-        fetchAndRenderUptSalesTable(); // Update tabel UPT saat nama spesifik dipilih
+        fetchAndRenderUptSalesTable();
     });
+}
+
+function applyDashboardFilters() {
+    const kategori = document.getElementById('slicerKategori')?.value || 'all';
+    const spesifik = document.getElementById('slicerSpesifik')?.value || 'all';
+
+    let filteredData = [...dashboardData];
+
+    // Pencocokan menggunakan toLowerCase() dan trim() agar aman dari perbedaan huruf besar/kecil
+    if (kategori === 'bm') {
+        if (spesifik !== 'all') {
+            filteredData = filteredData.filter(item => 
+                item.namaBM && item.namaBM.toLowerCase().trim() === spesifik.toLowerCase().trim()
+            );
+        }
+    } else if (kategori === 'abm') {
+        if (spesifik !== 'all') {
+            filteredData = filteredData.filter(item => 
+                item.namaABM && item.namaABM.toLowerCase().trim() === spesifik.toLowerCase().trim()
+            );
+        }
+    }
+
+    renderPodiumTop3(filteredData);
+    renderPodiumBottom3(filteredData);
+    renderChartPerforma(filteredData);
 }
 
 function applyDashboardFilters() {
@@ -253,45 +285,42 @@ function generatePodiumHTML(p1, p2, p3, type) {
     `;
 }
 
-function renderChartPerforma(data) {
+function renderChartPerforma(chartData) {
     const ctx = document.getElementById('bmChart');
     if (!ctx) return;
-
-    let performanceMap = {};
-    const kategoriSlicer = document.getElementById('slicerKategori')?.value || 'all';
-    const spesifikSlicer = document.getElementById('slicerSpesifik')?.value || 'all';
-
-    data.forEach(item => {
-        let key = item.namaBM; 
-        if (kategoriSlicer === 'abm') key = item.namaABM;
-        if (spesifikSlicer !== 'all') key = item.namaStaff; 
-
-        if (key && key !== "-") {
-            performanceMap[key] = (performanceMap[key] || 0) + item.uptJuly;
-        }
-    });
-
-    const labels = Object.keys(performanceMap);
-    const dataValues = Object.values(performanceMap).map(val => parseFloat(val.toFixed(2)));
 
     if (chartInstance) chartInstance.destroy();
 
     chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
-            datasets: [{
-                label: 'Total Poin UPT',
-                data: dataValues,
-                backgroundColor: 'rgba(245, 158, 11, 0.85)',
-                borderRadius: 8,
-                borderSkipped: false
-            }]
+            labels: chartData.map(item => item.store),
+            datasets: [
+                {
+                    label: 'MTD UPT',
+                    data: chartData.map(item => parseFloat(item.mtdUpt) || 0),
+                    backgroundColor: 'rgba(99, 102, 241, 0.85)',
+                    borderRadius: 6,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Target UPT Lv 1',
+                    data: chartData.map(item => parseFloat(item.targetUpt) || 0),
+                    backgroundColor: 'rgba(203, 213, 225, 0.85)',
+                    borderRadius: 6,
+                    borderSkipped: false
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { 
+                legend: { 
+                    position: 'top', 
+                    labels: { boxWidth: 12, font: { weight: '700', family: "'Plus Jakarta Sans', sans-serif" } } 
+                } 
+            },
             scales: {
                 x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10, weight: '600' } } },
                 y: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8' } }
@@ -812,10 +841,8 @@ async function fetchAndRenderUptSalesTable() {
             let namaABM = row[1] ? row[1].replace(/[\r"]/g, "").trim() : "-";
             let namaStore = row[2] ? row[2].replace(/[\r"]/g, "").trim() : "-";
 
-            // Sembunyikan baris jika nama store kosong atau "-"
             if (!namaStore || namaStore === "" || namaStore === "-") continue;
 
-            // Filter Berdasarkan Slicer BM / ABM
             if (kategoriSlicer === 'bm' && spesifikSlicer !== 'all' && namaBM !== spesifikSlicer) continue;
             if (kategoriSlicer === 'abm' && spesifikSlicer !== 'all' && namaABM !== spesifikSlicer) continue;
 
@@ -833,8 +860,11 @@ async function fetchAndRenderUptSalesTable() {
             });
         }
 
-        // --- URUTKAN BERDASARKAN ACHIEVE % TERTINGGI KE TERENDAH ---
+        // Urutkan berdasarkan achievement terbesar ke terkecil
         rawRows.sort((a, b) => b.achNum - a.achNum);
+
+        // Render Grafik Bar Chart MTD UPT vs Target UPT Lv 1
+        renderChartPerforma(rawRows);
 
         let tableRowsHTML = '';
         
@@ -842,15 +872,11 @@ async function fetchAndRenderUptSalesTable() {
             let ach = item.achNum;
             let badgeHTML = '';
 
-            // --- LOGIKA ICON BERDASARKAN KRITERIA ---
             if (ach >= 100) {
-                // >= 100%: ICON TROPHY
                 badgeHTML = `<span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> ${item.achFormatted}</span>`;
             } else if (ach > 90 && ach < 100) {
-                // < 100% dan > 90%: ICON FLASH
                 badgeHTML = `<span class="inline-flex items-center gap-1.5 bg-sky-50 text-sky-600 border border-sky-200/60 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ${item.achFormatted}</span>`;
             } else {
-                // <= 90%: ICON WARNING
                 badgeHTML = `<span class="inline-flex items-center gap-1.5 bg-rose-50 text-rose-600 border border-rose-200/60 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> ${item.achFormatted}</span>`;
             }
 
