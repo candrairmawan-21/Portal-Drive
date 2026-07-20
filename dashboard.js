@@ -549,18 +549,57 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
 
 function renderSalesSummaryFiltered(data) {
     let totalSales = 0, totalTarget = 0;
+    
+    // Siapkan wadah kosong untuk mencari siapa juaranya
+    let topSalesStore = { name: '-', val: 0 };
+    let topAchStore = { name: '-', val: 0 };
+
     data.forEach(item => {
-        totalSales += item.mtdSales || 0;
-        totalTarget += item.mtdTarget || 0;
+        let s = item.mtdSales || 0;
+        let t = item.mtdTarget || 0;
+        let ach = item.achPercent || 0;
+
+        // Hitung total keseluruhan
+        totalSales += s;
+        totalTarget += t;
+
+        // Cek siapa yang sales-nya paling tinggi
+        if (s > topSalesStore.val) {
+            topSalesStore.val = s;
+            topSalesStore.name = item.store;
+        }
+        
+        // Cek siapa yang persentase achievement-nya paling tinggi
+        if (ach > topAchStore.val) {
+            topAchStore.val = ach;
+            topAchStore.name = item.store;
+        }
     });
     
     const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
     
+    // Hubungkan dengan HTML
     const elTotalSales = document.getElementById('summary-total-sales');
     const elAvgAch = document.getElementById('summary-avg-ach');
+    const elTopSalesStore = document.getElementById('summary-top-sales-store');
+    const elTopSalesVal = document.getElementById('summary-top-sales-val');
+    const elTopAchStore = document.getElementById('summary-top-ach-store');
+    const elTopAchVal = document.getElementById('summary-top-ach-val');
     
+    // Lempar nilainya ke layar
     if (elTotalSales) elTotalSales.innerText = "Rp " + totalSales.toLocaleString('id-ID');
     if (elAvgAch) elAvgAch.innerText = avgAch + "%";
+    
+    if (elTopSalesStore) elTopSalesStore.innerText = topSalesStore.name;
+    if (elTopSalesVal) elTopSalesVal.innerText = "Rp " + topSalesStore.val.toLocaleString('id-ID');
+    
+    if (elTopAchStore) elTopAchStore.innerText = topAchStore.name;
+    if (elTopAchVal) elTopAchVal.innerText = topAchStore.val.toFixed(2) + "%";
+
+    // Panggil ulang render icon Lucide karena kita menambahkan icon baru di HTML
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 }
 
 function renderSalesChartFiltered(data) {
