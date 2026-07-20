@@ -790,3 +790,80 @@ function renderSalesTableFiltered(data) {
         `;
     }).join('');
 }
+// --- FUNGSI UNTUK MEMBACA TABEL UPT DARI KOLOM CSV SALES ---
+async function fetchAndRenderUptSalesTable() {
+    const tbody = document.getElementById('upt-sales-table-body');
+    if (!tbody) return;
+
+    try {
+        const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Jul26';
+        const gid = SHEET_GIDS[selectedKey] || '1248782513';
+        
+        const finalUrl = `${SALES_BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`;
+        const response = await fetch(finalUrl);
+        const csvText = await response.text();
+        const lines = csvText.split('\n');
+
+        const kategoriSlicer = document.getElementById('slicerKategori')?.value || 'all';
+        const spesifikSlicer = document.getElementById('slicerSpesifik')?.value || 'all';
+
+        let tableRowsHTML = '';
+        let validRowsCount = 0;
+
+        for (let i = 3; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            let row = parseCSVRow(lines[i]);
+
+            let namaBM = row[0] ? row[0].replace(/[\r"]/g, "").trim() : "-";
+            let namaABM = row[1] ? row[1].replace(/[\r"]/g, "").trim() : "-";
+            let namaStore = row[2] ? row[2].replace(/[\r"]/g, "").trim() : "-";
+
+            // Sembunyikan jika store kosong atau "-"
+            if (!namaStore || namaStore === "" || namaStore === "-") continue;
+
+            // Filter Berdasarkan Slicer BM / ABM
+            if (kategoriSlicer === 'bm' && spesifikSlicer !== 'all' && namaBM !== spesifikSlicer) continue;
+            if (kategoriSlicer === 'abm' && spesifikSlicer !== 'all' && namaABM !== spesifikSlicer) continue;
+
+            let mtdUpt = row[13] ? row[13].replace(/[\r"]/g, "").trim() : "0";
+            let targetUpt = row[14] ? row[14].replace(/[\r"]/g, "").trim() : "0";
+            let achUpt = row[15] ? row[15].replace(/[\r"]/g, "").trim() : "0";
+
+            let rowBgClass = validRowsCount % 2 === 0 ? 'bg-white' : 'bg-slate-50/65';
+
+            tableRowsHTML += `
+                <tr class="${rowBgClass} hover:bg-amber-50/30 transition-colors">
+                    <td class="px-5 py-4 text-center font-bold text-xs text-slate-400">${validRowsCount + 1}</td>
+                    <td class="px-5 py-4 font-bold text-sm text-slate-800">${namaStore}</td>
+                    <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${mtdUpt}</td>
+                    <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${targetUpt}</td>
+                    <td class="px-5 py-4 text-center text-sm font-extrabold text-emerald-600">${achUpt}</td>
+                </tr>
+            `;
+            validRowsCount++;
+        }
+
+        if (validRowsCount === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data UPT ditemukan untuk filter ini</td></tr>`;
+        } else {
+            tbody.innerHTML = tableRowsHTML;
+        }
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } catch (error) {
+        console.error('Gagal memuat tabel UPT Sales:', error);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-rose-400">Gagal memuat data dari CSV Sales</td></tr>`;
+    }
+}
+
+// Fungsi bantu pemecah baris CSV dengan kutipan koma
+function parseCSVRow(textLine) {
+    let row = []; let inQuotes = false; let currentStr = "";
+    for (let char of textLine) {
+        if (char === '"') inQuotes = !inQuotes;
+        else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; }
+        else currentStr += char;
+    }
+    row.push(currentStr.trim());
+    return row;
+}
