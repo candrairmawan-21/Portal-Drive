@@ -698,15 +698,16 @@ function renderSalesTableFiltered(data) {
         let ach = item.achPercent || 0;
         let badgeHTML = '';
         
-        // LOGIKA GAMIFICATION BADGE
+        // LOGIKA GAMIFICATION BADGE (UPDATE BARU)
         if (ach >= 100) {
+            // ELITE (EMAS) - >= 100%
             badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-amber-100 text-amber-600 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-amber-200 shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> ELITE</div>`;
         } else if (ach >= 90) {
-            badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-indigo-100"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> PRO</div>`;
-        } else if (ach < 80) {
-            badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-rose-50 text-rose-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-rose-100"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> WARNING</div>`;
+            // PENYEMANGAT (BIRU CERAH) - 90% s/d 99.9%
+            badgeHTML = `<div class="mt-1 inline-flex items-center gap-1.5 bg-sky-50 text-sky-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-sky-100"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> DIKIT LAGI!</div>`;
         } else {
-            badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-slate-50 text-slate-400 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border border-slate-100"> GOOD</div>`;
+            // WARNING (MERAH) - Di Bawah 90%
+            badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-rose-50 text-rose-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-rose-100"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> WARNING</div>`;
         }
 
         return `
@@ -730,4 +731,4 @@ function renderSalesTableFiltered(data) {
         </tr>
         `;
     }).join('');
-}    
+} 
