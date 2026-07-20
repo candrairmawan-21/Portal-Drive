@@ -367,6 +367,10 @@ async function fetchSalesData() {
 
 function parseSalesCSV(text) {
     let lines = text.split('\n');
+    if (lines.length < 3) return [];
+    
+    // Ambil header dari baris ke-3 (atau baris indikator tabel Google Sheet Anda)
+    let headers = lines[2].split(',').map(h => h.replace(/["\r]/g, "").trim());
     let result = [];
     
     for (let i = 3; i < lines.length; i++) { 
@@ -386,6 +390,17 @@ function parseSalesCSV(text) {
             let storeName = row[2]?.replace(/[\r"]/g, "").trim();
             if (!storeName || storeName === "" || storeName === "-") continue; 
 
+            // Fungsi pembantu untuk mengambil nilai berdasarkan nama header atau posisi fallback
+            let getVal = (headerNames, fallbackIndex) => {
+                for (let hName of headerNames) {
+                    let idx = headers.indexOf(hName);
+                    if (idx !== -1 && row[idx] !== undefined) {
+                        return parseFloat(row[idx].replace(/[^0-9.-]+/g, "")) || 0;
+                    }
+                }
+                return parseFloat(row[fallbackIndex]?.replace(/[^0-9.-]+/g, "")) || 0;
+            };
+
             result.push({
                 store: storeName,
                 targetPoint: "-",
@@ -394,11 +409,10 @@ function parseSalesCSV(text) {
                 bestEstimate: row[16]?.replace(/[\r"]/g, "") || "-",
                 achPercent: parseFloat(row[17]?.replace(/[^0-9.-]+/g, "")) || 0,
                 
-                // === DATA BARU ===
-                // Ubah angka 8, 9, 10 di bawah dengan nomor kolom yang benar di Google Sheet Anda!
-                salesLY: parseFloat(row[18]?.replace(/[^0-9.-]+/g, "")) || 0,
-                sssg: parseFloat(row[20]?.replace(/[^0-9.-]+/g, "")) || 0,
-                projSssg: parseFloat(row[21]?.replace(/[^0-9.-]+/g, "")) || 0
+                // Membaca otomatis berdasarkan nama header di CSV Anda
+                salesLY: getVal(['Sales LY', 'LY Sales', 'LY'], 18),
+                sssg: getVal(['SSSG', 'Ach SSSG'], 20),
+                projSssg: getVal(['Projection SSSG', 'Proj SSSG', 'Projection'], 21)
             });
         }
     }
@@ -551,41 +565,45 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
 }
 
 function renderSalesSummaryFiltered(data) {
-    let totalTarget = 0, totalLY = 0;
+    let totalSales = 0, totalTarget = 0, totalLY = 0;
     let totalSSSG = 0, totalProjSSSG = 0;
     let count = 0;
 
     data.forEach(item => {
+        totalSales += item.mtdSales || 0;
         totalTarget += item.mtdTarget || 0;
         totalLY += item.salesLY || 0;
         
-        // Akumulasi persentase SSSG untuk dicari rata-ratanya
         totalSSSG += item.sssg || 0;
         totalProjSSSG += item.projSssg || 0;
         count++;
     });
     
-    // Hitung rata-rata SSSG dari toko yang terpilih oleh filter
+    // Kalkulasi Persentase Global
+    const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
     const avgSSSG = count > 0 ? (totalSSSG / count) : 0;
     const avgProjSSSG = count > 0 ? (totalProjSSSG / count) : 0;
     
-    // Sambungkan ke HTML
+    // Hubungkan dengan ID Kartu di HTML
+    const elTotalSales = document.getElementById('summary-total-sales');
     const elTarget = document.getElementById('summary-total-target');
+    const elAvgAch = document.getElementById('summary-avg-ach');
     const elLY = document.getElementById('summary-total-ly');
     const elSSSG = document.getElementById('summary-sssg');
     const elProjSSSG = document.getElementById('summary-proj-sssg');
     
+    if (elTotalSales) elTotalSales.innerText = "Rp " + totalSales.toLocaleString('id-ID');
     if (elTarget) elTarget.innerText = "Rp " + totalTarget.toLocaleString('id-ID');
+    if (elAvgAch) elAvgAch.innerText = avgAch + "%";
     if (elLY) elLY.innerText = "Rp " + totalLY.toLocaleString('id-ID');
     
-    // Logika warna cerdas: Hijau jika plus/positif, Merah jika minus
     if (elSSSG) {
         elSSSG.innerText = avgSSSG.toFixed(2) + "%";
-        elSSSG.className = avgSSSG >= 0 ? "text-2xl font-black text-emerald-500" : "text-2xl font-black text-rose-500";
+        elSSSG.className = avgSSSG >= 0 ? "text-xl font-black text-emerald-500" : "text-xl font-black text-rose-500";
     }
     if (elProjSSSG) {
         elProjSSSG.innerText = avgProjSSSG.toFixed(2) + "%";
-        elProjSSSG.className = avgProjSSSG >= 0 ? "text-2xl font-black text-emerald-500" : "text-2xl font-black text-rose-500";
+        elProjSSSG.className = avgProjSSSG >= 0 ? "text-xl font-black text-amber-500" : "text-xl font-black text-rose-500";
     }
 }
 
