@@ -221,6 +221,7 @@
                         <option value="all">All Data (Semua)</option>
                         <option value="bm">Branch Manager (BM)</option>
                         <option value="abm">Asst. Branch Manager (ABM)</option>
+                        <option value="store">Spesifik Store (Toko)</option>
                     </select>
                 </div>
                 <div>
@@ -251,9 +252,19 @@
                 </div>
             </div>
 
-            <!-- Chart -->
-            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm mb-6 h-80 relative">
-                <canvas id="salesTargetChart"></canvas>
+            <!-- Chart & Toggle Mode -->
+            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm mb-6">
+                <!-- Tombol Toggle (Saklar Mode) -->
+                <div class="flex justify-center mb-6">
+                    <div class="bg-slate-100 p-1 rounded-xl inline-flex relative shadow-inner">
+                        <button id="btnModeMtd" onclick="setSalesChartMode('mtd')" class="px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all">MTD vs Target</button>
+                        <button id="btnModeTrend" onclick="setSalesChartMode('trend')" class="px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all">Tren 6 Bulan</button>
+                    </div>
+                </div>
+                <!-- Area Canvas Grafik -->
+                <div class="h-72 w-full relative">
+                    <canvas id="salesTargetChart"></canvas>
+                </div>
             </div>
 
             <!-- Table -->
