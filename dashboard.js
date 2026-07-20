@@ -783,7 +783,7 @@ function renderSalesTableFiltered(data) {
 }
 
 // =====================================================================
-// 6. FUNGSI TABEL UPT BARU (MENGAMBIL DARI KOLOM C, N, O, P CSV SALES)
+// 6. RANGKUMAN TABEL UPT DARI KOLOM CSV SALES (DENGAN ICON & SORTING)
 // =====================================================================
 
 async function fetchAndRenderUptSalesTable() {
@@ -802,8 +802,7 @@ async function fetchAndRenderUptSalesTable() {
         const kategoriSlicer = document.getElementById('slicerKategori')?.value || 'all';
         const spesifikSlicer = document.getElementById('slicerSpesifik')?.value || 'all';
 
-        let tableRowsHTML = '';
-        let validRowsCount = 0;
+        let rawRows = [];
 
         for (let i = 3; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
@@ -822,23 +821,53 @@ async function fetchAndRenderUptSalesTable() {
 
             let mtdUpt = row[13] ? row[13].replace(/[\r"]/g, "").trim() : "0";
             let targetUpt = row[14] ? row[14].replace(/[\r"]/g, "").trim() : "0";
-            let achUpt = row[15] ? row[15].replace(/[\r"]/g, "").trim() : "0";
+            let achUptStr = row[15] ? row[15].replace(/[\r"%]/g, "").trim() : "0";
+            let achUptNum = parseFloat(achUptStr) || 0;
 
-            let rowBgClass = validRowsCount % 2 === 0 ? 'bg-white' : 'bg-slate-50/65';
+            rawRows.push({
+                store: namaStore,
+                mtdUpt: mtdUpt,
+                targetUpt: targetUpt,
+                achNum: achUptNum,
+                achFormatted: row[15] ? row[15].replace(/[\r"]/g, "").trim() : "0%"
+            });
+        }
+
+        // --- URUTKAN BERDASARKAN ACHIEVE % TERTINGGI KE TERENDAH ---
+        rawRows.sort((a, b) => b.achNum - a.achNum);
+
+        let tableRowsHTML = '';
+        
+        rawRows.forEach((item, index) => {
+            let ach = item.achNum;
+            let badgeHTML = '';
+
+            // --- LOGIKA ICON BERDASARKAN KRITERIA ---
+            if (ach >= 100) {
+                // >= 100%: ICON TROPHY
+                badgeHTML = `<span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> ${item.achFormatted}</span>`;
+            } else if (ach > 90 && ach < 100) {
+                // < 100% dan > 90%: ICON FLASH
+                badgeHTML = `<span class="inline-flex items-center gap-1.5 bg-sky-50 text-sky-600 border border-sky-200/60 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ${item.achFormatted}</span>`;
+            } else {
+                // <= 90%: ICON WARNING
+                badgeHTML = `<span class="inline-flex items-center gap-1.5 bg-rose-50 text-rose-600 border border-rose-200/60 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> ${item.achFormatted}</span>`;
+            }
+
+            let rowBgClass = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/65';
 
             tableRowsHTML += `
                 <tr class="${rowBgClass} hover:bg-amber-50/30 transition-colors">
-                    <td class="px-5 py-4 text-center font-bold text-xs text-slate-400">${validRowsCount + 1}</td>
-                    <td class="px-5 py-4 font-bold text-sm text-slate-800">${namaStore}</td>
-                    <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${mtdUpt}</td>
-                    <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${targetUpt}</td>
-                    <td class="px-5 py-4 text-center text-sm font-extrabold text-emerald-600">${achUpt}</td>
+                    <td class="px-5 py-4 text-center font-bold text-xs text-slate-400">${index + 1}</td>
+                    <td class="px-5 py-4 font-bold text-sm text-slate-800">${item.store}</td>
+                    <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${item.mtdUpt}</td>
+                    <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${item.targetUpt}</td>
+                    <td class="px-5 py-4 text-center">${badgeHTML}</td>
                 </tr>
             `;
-            validRowsCount++;
-        }
+        });
 
-        if (validRowsCount === 0) {
+        if (rawRows.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data UPT ditemukan untuk filter ini</td></tr>`;
         } else {
             tbody.innerHTML = tableRowsHTML;
