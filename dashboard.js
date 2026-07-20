@@ -11,6 +11,7 @@ let chartInstance = null;
 const SALES_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub';
 let salesData = [];
 let salesChartInstance = null;
+let currentSalesChartMode = 'mtd'; // <-- TAMBAHKAN BARIS INI
 const SHEET_GIDS = {
     'Jul26': '1248782513', 'Jun26': '511605214', 'May26': '2012772985',
     'Apr26': '544207481', 'Mar26': '90936589', 'Feb26': '472876079',
@@ -351,7 +352,6 @@ function initSalesSlicers() {
 
     if (!slicerKategori || !slicerSpesifik) return;
 
-    // A. Ketika Kategori (All / BM / ABM) diganti
     slicerKategori.addEventListener('change', function() {
         const kategori = this.value;
         slicerSpesifik.innerHTML = '<option value="all">-- Semua --</option>';
@@ -364,11 +364,11 @@ function initSalesSlicers() {
             slicerSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
             
             let uniqueItems = new Set();
-            // dashboardData diambil dari data UPT yang berisi mapping namaStore, namaBM, namaABM
             if (typeof dashboardData !== 'undefined' && dashboardData.length > 0) {
                 dashboardData.forEach(item => {
                     if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
                     if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
+                    if (kategori === 'store' && item.namaStore) uniqueItems.add(item.namaStore);
                 });
             }
 
@@ -378,6 +378,10 @@ function initSalesSlicers() {
         }
         applySalesFilters();
     });
+
+    slicerSpesifik.addEventListener('change', applySalesFilters);
+    slicerBulan.addEventListener('change', fetchSalesData); 
+}
 
     // B. Ketika Nama Spesifik atau Bulan diganti
     slicerSpesifik.addEventListener('change', applySalesFilters);
@@ -479,27 +483,33 @@ function applySalesFilters() {
     const kategori = document.getElementById('slicerKategoriSales')?.value || 'all';
     const spesifik = document.getElementById('slicerSpesifikSales')?.value || 'all';
 
-    let filteredSales = [...salesData]; // salesData diambil dari array master sales
+    let filteredSales = [...salesData]; 
 
     if (kategori !== 'all' && spesifik !== 'all') {
         const allowedStores = new Set();
         
-        // Membaca relasi dari data UPT
         if (typeof dashboardData !== 'undefined') {
             dashboardData.forEach(item => {
-                if (kategori === 'bm' && item.namaBM === spesifik) {
-                    allowedStores.add(item.namaStore.toLowerCase().trim());
-                } else if (kategori === 'abm' && item.namaABM === spesifik) {
-                    allowedStores.add(item.namaStore.toLowerCase().trim());
-                }
+                if (kategori === 'bm' && item.namaBM === spesifik) allowedStores.add(item.namaStore.toLowerCase().trim());
+                else if (kategori === 'abm' && item.namaABM === spesifik) allowedStores.add(item.namaStore.toLowerCase().trim());
+                else if (kategori === 'store' && item.namaStore === spesifik) allowedStores.add(item.namaStore.toLowerCase().trim());
             });
         }
 
-        // Menyaring data tabel & grafik
-        filteredSales = salesData.filter(item => {
-            return allowedStores.has(item.store.toLowerCase().trim());
-        });
+        filteredSales = salesData.filter(item => allowedStores.has(item.store.toLowerCase().trim()));
     }
+
+    // Render Tabel dan Summary (selalu muncul)
+    renderSalesSummaryFiltered(filteredSales);
+    renderSalesTableFiltered(filteredSales);
+
+    // Render Grafik Berdasarkan Mode yang Dipilih
+    if (currentSalesChartMode === 'mtd') {
+        renderSalesChartFiltered(filteredSales);
+    } else {
+        fetchAndRenderTrendChart(kategori, spesifik);
+    }
+}
 
     // Panggil 3 fungsi render visual secara berurutan
     renderSalesSummaryFiltered(filteredSales);
@@ -507,6 +517,127 @@ function applySalesFilters() {
     renderSalesTableFiltered(filteredSales); // <-- INI FUNGSI YANG HILANG
 }
 
+// --- 1. Fungsi Tombol Saklar Mode Grafik ---
+function setSalesChartMode(mode) {
+    currentSalesChartMode = mode;
+    
+    const btnMtd = document.getElementById('btnModeMtd');
+    const btnTrend = document.getElementById('btnModeTrend');
+    
+    // Ubah warna tombol agar ketahuan mana yang aktif
+    if (mode === 'mtd') {
+        btnMtd.className = "px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all";
+        btnTrend.className = "px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all";
+    } else {
+        btnTrend.className = "px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all";
+        btnMtd.className = "px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all";
+    }
+    
+    applySalesFilters();
+}
+
+// --- 2. Fungsi Menarik Data 6 Bulan & Menggambar Grafik Garis ---
+async function fetchAndRenderTrendChart(kategori, spesifik) {
+    const loader = document.getElementById('sales-loading');
+    if (loader) loader.classList.remove('hidden');
+
+    // Kosongkan grafik sementara data loading
+    const ctx = document.getElementById('salesTargetChart');
+    if (salesChartInstance) salesChartInstance.destroy();
+
+    try {
+        const currentMonthKey = document.getElementById('slicerBulanSales').value;
+        const monthKeys = ['Jul26', 'Jun26', 'May26', 'Apr26', 'Mar26', 'Feb26', 'Jan26', 'Dec25', 'Nov25'];
+        
+        let currentIndex = monthKeys.indexOf(currentMonthKey);
+        if (currentIndex === -1) currentIndex = 0;
+        let targetMonths = monthKeys.slice(currentIndex, currentIndex + 6).reverse(); // Urut dari bulan lama ke baru
+        
+        let promises = targetMonths.map(async (mKey) => {
+            const gid = SHEET_GIDS[mKey];
+            if (!gid || gid === '0') return null;
+            try {
+                const res = await fetch(`${SALES_BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`);
+                const csv = await res.text();
+                const parsed = parseSalesCSV(csv);
+                
+                // Cari store yang diizinkan sesuai filter
+                const allowedStores = new Set();
+                if (kategori !== 'all' && spesifik !== 'all') {
+                    if (typeof dashboardData !== 'undefined') {
+                        dashboardData.forEach(item => {
+                            if (kategori === 'bm' && item.namaBM === spesifik) allowedStores.add(item.namaStore.toLowerCase().trim());
+                            else if (kategori === 'abm' && item.namaABM === spesifik) allowedStores.add(item.namaStore.toLowerCase().trim());
+                            else if (kategori === 'store' && item.namaStore === spesifik) allowedStores.add(item.namaStore.toLowerCase().trim());
+                        });
+                    }
+                }
+
+                // Kalkulasi data yang tersisa
+                let filtered = (kategori !== 'all' && spesifik !== 'all') ? parsed.filter(item => allowedStores.has(item.store.toLowerCase().trim())) : parsed;
+                let totalS = 0, totalT = 0;
+                filtered.forEach(i => { totalS += i.mtdSales; totalT += i.mtdTarget; });
+                let avgAch = totalT > 0 ? (totalS / totalT) * 100 : 0;
+                
+                return { month: mKey, achPercent: avgAch };
+            } catch (e) { return null; }
+        });
+
+        let results = await Promise.all(promises);
+        let validData = results.filter(item => item !== null);
+
+        // GAMBAR GRAFIK GARIS TREN WAKTU
+        salesChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: validData.map(item => item.month),
+                datasets: [{
+                    label: 'Trend Achievement (%)',
+                    data: validData.map(item => item.achPercent),
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)', // Indigo transparan
+                    borderColor: '#6366f1', // Indigo solid
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#6366f1',
+                    pointBorderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 25 } },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { 
+                        display: true, 
+                        ticks: { callback: function(val) { return val + '%'; }, font: { weight: 'bold' } }
+                    }
+                },
+                plugins: { legend: { display: false } } // Sembunyikan legenda agar lebih bersih
+            },
+            plugins: [{
+                id: 'trendLabels',
+                afterDatasetsDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta.hidden) {
+                        meta.data.forEach((element, index) => {
+                            ctx.fillStyle = '#4f46e5';
+                            ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+                            ctx.textAlign = 'center';
+                            const val = chart.data.datasets[0].data[index].toFixed(1) + '%';
+                            ctx.fillText(val, element.x, element.y - 12);
+                        });
+                    }
+                }
+            }]
+        });
+
+    } catch (error) { console.error(error); } 
+    finally { if (loader) loader.classList.add('hidden'); }
+}
 function renderSalesSummaryFiltered(data) {
     let totalSales = 0, totalTarget = 0;
     data.forEach(item => {
