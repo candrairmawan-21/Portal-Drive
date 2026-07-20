@@ -841,10 +841,17 @@ async function fetchAndRenderUptSalesTable() {
             let namaABM = row[1] ? row[1].replace(/[\r"]/g, "").trim() : "-";
             let namaStore = row[2] ? row[2].replace(/[\r"]/g, "").trim() : "-";
 
+            // Sembunyikan baris jika nama store kosong atau "-"
             if (!namaStore || namaStore === "" || namaStore === "-") continue;
 
-            if (kategoriSlicer === 'bm' && spesifikSlicer !== 'all' && namaBM !== spesifikSlicer) continue;
-            if (kategoriSlicer === 'abm' && spesifikSlicer !== 'all' && namaABM !== spesifikSlicer) continue;
+            // --- FILTER BERDASARKAN SLICER (DIUBAH AMAN DARI HURUF BESAR/KECIL) ---
+            if (kategoriSlicer !== 'all' && spesifikSlicer !== 'all') {
+                let matchBm = namaBM.toLowerCase().trim() === spesifikSlicer.toLowerCase().trim();
+                let matchAbm = namaABM.toLowerCase().trim() === spesifikSlicer.toLowerCase().trim();
+
+                if (kategoriSlicer === 'bm' && !matchBm) continue;
+                if (kategoriSlicer === 'abm' && !matchAbm) continue;
+            }
 
             let mtdUpt = row[13] ? row[13].replace(/[\r"]/g, "").trim() : "0";
             let targetUpt = row[14] ? row[14].replace(/[\r"]/g, "").trim() : "0";
