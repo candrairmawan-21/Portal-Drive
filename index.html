@@ -134,6 +134,7 @@
 
         <!-- SEKSI 2: DASHBOARD UPT -->
         <main id="section-dashboard" class="container mx-auto px-6 py-8 flex-1 hidden">
+            <!-- Slicers -->
             <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
@@ -161,7 +162,9 @@
                 <p class="text-sm font-bold text-slate-500">Mengkalkulasi matriks & grafik...</p>
             </div>
             
+            <!-- BAGIAN ATAS: PODIUM & GRAFIK (Berjajar 3 Kolom) -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- 1. Top 3 Podium -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
                     <div>
                         <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="trophy" class="w-4 h-4 text-amber-500"></i> Top 3 Performa Staff</h3>
@@ -170,7 +173,28 @@
                     <div id="podium-top-content"></div>
                 </div>
 
-                <!-- Tabel Tambahan UPT dari Data Sales -->
+                <!-- 2. Bottom 3 Podium -->
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500"></i> Bottom 3 Performa Staff</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">3 Nilai terendah evaluasi pencapaian UPT.</p>
+                    </div>
+                    <div id="podium-bottom-content"></div>
+                </div>
+
+                <!-- 3. Grafik Bar Chart -->
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="bar-chart-4" class="w-4 h-4 text-amber-500"></i> Grafik Bar Chart Evaluasi</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Akumulasi total poin nilai berdasarkan filter.</p>
+                    </div>
+                    <div class="h-56 w-full mt-4 relative">
+                        <canvas id="bmChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BAGIAN BAWAH: TABEL UPT (Melebar Penuh) -->
             <div class="bg-white border border-slate-200/60 rounded-3xl shadow-sm overflow-hidden mb-6">
                 <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                     <div>
@@ -193,24 +217,6 @@
                             <tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Memuat data UPT...</td></tr>
                         </tbody>
                     </table>
-                </div>
-            </div>
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-                    <div>
-                        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500"></i> Bottom 3 Performa Staff</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">3 Nilai terendah evaluasi pencapaian UPT.</p>
-                    </div>
-                    <div id="podium-bottom-content"></div>
-                </div>
-
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-                    <div>
-                        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="bar-chart-4" class="w-4 h-4 text-amber-500"></i> Grafik Bar Chart Evaluasi</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Akumulasi total poin nilai berdasarkan filter.</p>
-                    </div>
-                    <div class="h-56 w-full mt-4 relative">
-                        <canvas id="bmChart"></canvas>
-                    </div>
                 </div>
             </div>
         </main>
