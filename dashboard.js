@@ -11,7 +11,7 @@ let chartInstance = null;
 const SALES_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub';
 let salesData = [];
 let salesChartInstance = null;
-let currentSalesChartMode = 'mtd'; // <-- TAMBAHKAN BARIS INI
+let currentSalesChartMode = 'mtd'; // Mode default saat halaman dibuka
 const SHEET_GIDS = {
     'Jul26': '1248782513', 'Jun26': '511605214', 'May26': '2012772985',
     'Apr26': '544207481', 'Mar26': '90936589', 'Feb26': '472876079',
@@ -31,15 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =====================================================================
-// 3. FITUR UMUM & PROTEKSI AKSES (DARI DASHBOARD UPT)
+// 3. FITUR UMUM PROFIL USER
 // =====================================================================
 
 function renderLoggedInUser() {
-    // 1. Ambil data dari sessionStorage yang sudah diset saat login di index.html
     const userName = sessionStorage.getItem('portalUser') || 'Guest User';
     const userRole = sessionStorage.getItem('portalRole') || 'Staff';
 
-    // 2. Cari container yang pas di header
     const userContainer = document.getElementById('fileTools') || 
                           document.querySelector('header .container > div:last-child') ||
                           document.querySelector('header .flex.items-center.gap-4');
@@ -48,8 +46,6 @@ function renderLoggedInUser() {
         const existingBadge = document.getElementById('dynamic-user-badge');
         if (existingBadge) existingBadge.remove();
 
-        // 3. Render HTML dengan format: "Hi <username> role anda <role>"
-        // Desain disesuaikan agar cocok dengan header light mode Anda
         const badgeHTML = `
             <div id="dynamic-user-badge" class="flex items-center gap-3 bg-slate-800 px-4 py-2 rounded-xl shadow-sm ml-2">
                 <div class="text-right hidden sm:block">
@@ -61,38 +57,8 @@ function renderLoggedInUser() {
                 </div>
             </div>
         `;
-        
-        // Memasukkan badge ke dalam elemen container
         userContainer.insertAdjacentHTML('beforeend', badgeHTML);
     }
-}
-
-function checkDashboardAccess(pageRestrictionValue) {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const userRole = (currentUser.role || 'admin').toLowerCase().trim();
-    const pageRestriction = pageRestrictionValue ? pageRestrictionValue.toLowerCase().trim() : "";
-
-    if (pageRestriction === "" || pageRestriction === "-") return true;
-    if (userRole === "admin") return true; 
-    if (pageRestriction === "bm") return userRole === "bm";
-    if (pageRestriction === "abm") return userRole === "abm" || userRole === "bm";
-
-    return false;
-}
-
-function showAccessDenied() {
-    const mainContent = document.getElementById('main-content') || document.getElementById('dashboard-content') || document.body;
-    mainContent.innerHTML = `
-        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 w-full grid col-span-full">
-            <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto flex flex-col items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-rose-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-8v4m-9 5h18c1.1 0 1.99-.89 1.99-1.99L23 7c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2z" />
-                </svg>
-                <h2 class="text-xl font-black text-slate-800 mb-1">Akses Terkunci</h2>
-                <p class="text-sm text-slate-500">Maaf, file atau halaman ini dikunci berdasarkan regulasi hak akses jabatan Anda.</p>
-            </div>
-        </div>
-    `;
 }
 
 // =====================================================================
@@ -107,12 +73,6 @@ async function fetchDashboardData() {
         const response = await fetch(DASHBOARD_API_URL);
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
-        
-        const currentFileRestriction = "abm"; 
-        if (!checkDashboardAccess(currentFileRestriction)) {
-            showAccessDenied();
-            return; 
-        }
         
         initSlicers();
         applyDashboardFilters();
@@ -383,11 +343,6 @@ function initSalesSlicers() {
     slicerBulan.addEventListener('change', fetchSalesData); 
 }
 
-    // B. Ketika Nama Spesifik atau Bulan diganti
-    slicerSpesifik.addEventListener('change', applySalesFilters);
-    slicerBulan.addEventListener('change', fetchSalesData); 
-}
-
 async function fetchSalesData() {
     const loader = document.getElementById('sales-loading');
     if (loader) loader.classList.remove('hidden');
@@ -402,7 +357,6 @@ async function fetchSalesData() {
         
         salesData = parseSalesCSV(csvText);
         
-        // Panggil fungsi filter dinamis, bukan fungsi render statis lama
         applySalesFilters();
     } catch (error) { 
         console.error('Error fetching data:', error); 
@@ -429,15 +383,12 @@ function parseSalesCSV(text) {
         row.push(currentStr.trim());
 
         if (row.length >= 8) {
-            // 1. Ambil nama store dan bersihkan spasinya
             let storeName = row[2]?.replace(/[\r"]/g, "").trim();
             
-            // 2. LOGIKA FILTER: Jika nama store kosong atau hanya berisi "-", LEWATI BARIS INI
             if (!storeName || storeName === "" || storeName === "-") {
-                continue; // Skip, jangan dimasukkan ke data dashboard
+                continue; 
             }
 
-            // 3. Masukkan ke hasil hanya jika nama store ada
             result.push({
                 store: storeName,
                 targetPoint: "-",
@@ -451,34 +402,6 @@ function parseSalesCSV(text) {
     return result;
 }
 
-function renderSalesSummary() {
-    let totalSales = 0, totalTarget = 0;
-    salesData.forEach(item => { totalSales += item.mtdSales; totalTarget += item.mtdTarget; });
-    const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
-    
-    const elTotalSales = document.getElementById('summary-total-sales');
-    const elAvgAch = document.getElementById('summary-avg-ach');
-    
-    if (elTotalSales) elTotalSales.innerText = "Rp " + totalSales.toLocaleString('id-ID');
-    if (elAvgAch) elAvgAch.innerText = avgAch + "%";
-}
-
-function renderSalesChart() {
-    const ctx = document.getElementById('salesTargetChart');
-    if (!ctx) return;
-    if (salesChartInstance) salesChartInstance.destroy();
-    salesChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: salesData.map(item => item.store),
-            datasets: [
-                { label: 'MTD Sales', backgroundColor: '#34d399', data: salesData.map(item => item.mtdSales) },
-                { label: 'MTD Target', backgroundColor: '#ef4444', data: salesData.map(item => item.mtdTarget) }
-            ]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-}
 function applySalesFilters() {
     const kategori = document.getElementById('slicerKategoriSales')?.value || 'all';
     const spesifik = document.getElementById('slicerSpesifikSales')?.value || 'all';
@@ -499,11 +422,9 @@ function applySalesFilters() {
         filteredSales = salesData.filter(item => allowedStores.has(item.store.toLowerCase().trim()));
     }
 
-    // Render Tabel dan Summary (selalu muncul)
     renderSalesSummaryFiltered(filteredSales);
     renderSalesTableFiltered(filteredSales);
 
-    // Render Grafik Berdasarkan Mode yang Dipilih
     if (currentSalesChartMode === 'mtd') {
         renderSalesChartFiltered(filteredSales);
     } else {
@@ -511,20 +432,12 @@ function applySalesFilters() {
     }
 }
 
-    // Panggil 3 fungsi render visual secara berurutan
-    renderSalesSummaryFiltered(filteredSales);
-    renderSalesChartFiltered(filteredSales);
-    renderSalesTableFiltered(filteredSales); // <-- INI FUNGSI YANG HILANG
-}
-
-// --- 1. Fungsi Tombol Saklar Mode Grafik ---
 function setSalesChartMode(mode) {
     currentSalesChartMode = mode;
     
     const btnMtd = document.getElementById('btnModeMtd');
     const btnTrend = document.getElementById('btnModeTrend');
     
-    // Ubah warna tombol agar ketahuan mana yang aktif
     if (mode === 'mtd') {
         btnMtd.className = "px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all";
         btnTrend.className = "px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all";
@@ -536,12 +449,10 @@ function setSalesChartMode(mode) {
     applySalesFilters();
 }
 
-// --- 2. Fungsi Menarik Data 6 Bulan & Menggambar Grafik Garis ---
 async function fetchAndRenderTrendChart(kategori, spesifik) {
     const loader = document.getElementById('sales-loading');
     if (loader) loader.classList.remove('hidden');
 
-    // Kosongkan grafik sementara data loading
     const ctx = document.getElementById('salesTargetChart');
     if (salesChartInstance) salesChartInstance.destroy();
 
@@ -551,7 +462,7 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
         
         let currentIndex = monthKeys.indexOf(currentMonthKey);
         if (currentIndex === -1) currentIndex = 0;
-        let targetMonths = monthKeys.slice(currentIndex, currentIndex + 6).reverse(); // Urut dari bulan lama ke baru
+        let targetMonths = monthKeys.slice(currentIndex, currentIndex + 6).reverse(); 
         
         let promises = targetMonths.map(async (mKey) => {
             const gid = SHEET_GIDS[mKey];
@@ -561,7 +472,6 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
                 const csv = await res.text();
                 const parsed = parseSalesCSV(csv);
                 
-                // Cari store yang diizinkan sesuai filter
                 const allowedStores = new Set();
                 if (kategori !== 'all' && spesifik !== 'all') {
                     if (typeof dashboardData !== 'undefined') {
@@ -573,7 +483,6 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
                     }
                 }
 
-                // Kalkulasi data yang tersisa
                 let filtered = (kategori !== 'all' && spesifik !== 'all') ? parsed.filter(item => allowedStores.has(item.store.toLowerCase().trim())) : parsed;
                 let totalS = 0, totalT = 0;
                 filtered.forEach(i => { totalS += i.mtdSales; totalT += i.mtdTarget; });
@@ -586,7 +495,6 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
         let results = await Promise.all(promises);
         let validData = results.filter(item => item !== null);
 
-        // GAMBAR GRAFIK GARIS TREN WAKTU
         salesChartInstance = new Chart(ctx, {
             type: 'line',
             data: {
@@ -594,8 +502,8 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
                 datasets: [{
                     label: 'Trend Achievement (%)',
                     data: validData.map(item => item.achPercent),
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)', // Indigo transparan
-                    borderColor: '#6366f1', // Indigo solid
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)', 
+                    borderColor: '#6366f1', 
                     borderWidth: 3,
                     pointRadius: 5,
                     pointBackgroundColor: '#ffffff',
@@ -615,7 +523,7 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
                         ticks: { callback: function(val) { return val + '%'; }, font: { weight: 'bold' } }
                     }
                 },
-                plugins: { legend: { display: false } } // Sembunyikan legenda agar lebih bersih
+                plugins: { legend: { display: false } } 
             },
             plugins: [{
                 id: 'trendLabels',
@@ -638,6 +546,7 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
     } catch (error) { console.error(error); } 
     finally { if (loader) loader.classList.add('hidden'); }
 }
+
 function renderSalesSummaryFiltered(data) {
     let totalSales = 0, totalTarget = 0;
     data.forEach(item => {
@@ -666,7 +575,6 @@ function renderSalesChartFiltered(data) {
             labels: data.map(item => item.store),
             datasets: [
                 {
-                    // 1. GARIS ACHIEVEMENT (PALET WARNA BARU: ROSE/MERAH ELEGAN)
                     type: 'line',
                     label: 'Achievement (%)',
                     data: data.map(item => item.achPercent || 0),
@@ -681,10 +589,9 @@ function renderSalesChartFiltered(data) {
                     yAxisID: 'y1' 
                 },
                 {
-                    // 2. TARGET (PALET WARNA BARU: SLATE/ABU-ABU PROFESIONAL)
                     type: 'bar',
                     label: 'MTD Target',
-                    backgroundColor: '#cbd5e1', // Slate-300 yang lembut
+                    backgroundColor: '#cbd5e1', 
                     borderColor: '#94a3b8',
                     borderWidth: 1,
                     borderRadius: 6,
@@ -692,10 +599,9 @@ function renderSalesChartFiltered(data) {
                     yAxisID: 'y'
                 },
                 {
-                    // 3. SALES AKTUAL (PALET WARNA BARU: INDIGO/BIRU KELAS ATAS)
                     type: 'bar',
                     label: 'MTD Sales',
-                    backgroundColor: '#6366f1', // Indigo-500 modern SaaS style
+                    backgroundColor: '#6366f1', 
                     borderColor: '#4f46e5',
                     borderWidth: 1,
                     borderRadius: 6,
@@ -709,14 +615,13 @@ function renderSalesChartFiltered(data) {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             layout: {
-                padding: { top: 30 } // Ruang ekstra untuk label persentase di atas
+                padding: { top: 30 } 
             },
             scales: {
                 x: { 
                     grid: { display: false },
                     ticks: { font: { weight: '600', family: "'Plus Jakarta Sans', sans-serif" } }
                 },
-                // Sumbu Kiri (Rupiah)
                 y: { 
                     type: 'linear', display: true, position: 'left', beginAtZero: true, 
                     grid: { color: '#f8fafc' },
@@ -725,7 +630,6 @@ function renderSalesChartFiltered(data) {
                         font: { family: "'Plus Jakarta Sans', sans-serif" }
                     }
                 },
-                // Sumbu Kanan (Persen) - Disembunyikan karena sudah ada label teks langsung
                 y1: {
                     type: 'linear', display: false, position: 'right', beginAtZero: true
                 }
@@ -756,7 +660,6 @@ function renderSalesChartFiltered(data) {
                 }
             }
         },
-        // PLUGIN: Mencetak teks persentase tepat di atas titik garis merah
         plugins: [{
             id: 'customDataLabelsSales',
             afterDatasetsDraw: (chart) => {
@@ -766,7 +669,7 @@ function renderSalesChartFiltered(data) {
                         const meta = chart.getDatasetMeta(i);
                         if (!meta.hidden) {
                             meta.data.forEach((element, index) => {
-                                ctx.fillStyle = '#e11d48'; // Merah gelap yang kontras
+                                ctx.fillStyle = '#e11d48'; 
                                 ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'bottom';
@@ -786,13 +689,11 @@ function renderSalesTableFiltered(data) {
     const tbody = document.getElementById('sales-table-body');
     if (!tbody) return;
 
-    // Jika data kosong
     if (data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;
         return;
     }
 
-    // Menggambar baris tabel
     tbody.innerHTML = data.map(item => `
         <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
             <td class="px-5 py-4 font-bold text-sm text-slate-800">${item.store}</td>
