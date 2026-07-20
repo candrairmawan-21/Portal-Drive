@@ -439,12 +439,14 @@ function applySalesFilters() {
         filteredSales = salesData.filter(item => allowedStores.has(item.store.toLowerCase().trim()));
     }
 
+    // Render Tabel, Summary, dan Grafik MTD (Langsung tampil instan)
     renderSalesSummaryFiltered(filteredSales);
     renderSalesTableFiltered(filteredSales);
 
     if (currentSalesChartMode === 'mtd') {
         renderSalesChartFiltered(filteredSales);
     } else {
+        // Tren 6 bulan hanya ditarik jika mode tren sedang aktif
         fetchAndRenderTrendChart(kategori, spesifik);
     }
 }
@@ -466,12 +468,13 @@ function setSalesChartMode(mode) {
     applySalesFilters();
 }
 
+// --- Fungsi Menarik Data 6 Bulan (Dioptimalkan Hanya Saat Mode Tren Aktif) ---
 async function fetchAndRenderTrendChart(kategori, spesifik) {
     const loader = document.getElementById('sales-loading');
     if (loader) loader.classList.remove('hidden');
 
     const ctx = document.getElementById('salesTargetChart');
-    if (salesChartInstance) salesChartInstance.destroy();
+    if (!ctx) return;
 
     try {
         const currentMonthKey = document.getElementById('slicerBulanSales').value;
@@ -511,6 +514,8 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
 
         let results = await Promise.all(promises);
         let validData = results.filter(item => item !== null);
+
+        if (salesChartInstance) salesChartInstance.destroy();
 
         salesChartInstance = new Chart(ctx, {
             type: 'line',
