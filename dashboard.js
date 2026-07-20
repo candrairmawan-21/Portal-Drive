@@ -694,21 +694,40 @@ function renderSalesTableFiltered(data) {
         return;
     }
 
-    tbody.innerHTML = data.map(item => `
+    tbody.innerHTML = data.map(item => {
+        let ach = item.achPercent || 0;
+        let badgeHTML = '';
+        
+        // LOGIKA GAMIFICATION BADGE
+        if (ach >= 100) {
+            badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-amber-100 text-amber-600 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-amber-200 shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> ELITE</div>`;
+        } else if (ach >= 90) {
+            badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-indigo-100"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> PRO</div>`;
+        } else if (ach < 80) {
+            badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-rose-50 text-rose-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-rose-100"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> WARNING</div>`;
+        } else {
+            badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-slate-50 text-slate-400 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border border-slate-100"> GOOD</div>`;
+        }
+
+        return `
         <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="px-5 py-4 font-bold text-sm text-slate-800">${item.store}</td>
+            <td class="px-5 py-4">
+                <p class="font-bold text-sm text-slate-800">${item.store}</p>
+                ${badgeHTML}
+            </td>
             <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdSales || 0).toLocaleString('id-ID')}</td>
             <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdTarget || 0).toLocaleString('id-ID')}</td>
             <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate || '-'}</td>
             <td class="px-5 py-4 text-center">
-                <span class="px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wider ${
-                    (item.achPercent || 0) >= 100
+                <span class="px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider ${
+                    ach >= 100
                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
                     : 'bg-rose-50 text-rose-600 border border-rose-200/60'
                 }">
-                    ${(item.achPercent || 0).toFixed(2)}%
+                    ${ach.toFixed(2)}%
                 </span>
             </td>
         </tr>
-    `).join('');
-}
+        `;
+    }).join('');
+}    
