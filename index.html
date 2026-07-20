@@ -240,27 +240,37 @@
                 <p class="text-sm font-bold text-slate-500">Memuat data sales...</p>
             </div>
 
-            <!-- Summary Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <!-- Kartu 1: Total MTD Target -->
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm hover-lift transition-all">
+            <!-- Summary Cards (6 Kolom Sesuai Permintaan) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+                <!-- 1. Total MTD Sales -->
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">TOTAL MTD SALES</p>
+                    <h3 id="summary-total-sales" class="text-xl font-black text-emerald-500">Rp 0</h3>
+                </div>
+                <!-- 2. Total MTD Target -->
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">TOTAL MTD TARGET</p>
-                    <h3 id="summary-total-target" class="text-2xl font-black text-slate-700">Rp 0</h3>
+                    <h3 id="summary-total-target" class="text-xl font-black text-slate-700">Rp 0</h3>
                 </div>
-                <!-- Kartu 2: Total Sales LY -->
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm hover-lift transition-all">
+                <!-- 3. % Achievement -->
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">% ACHIEVEMENT</p>
+                    <h3 id="summary-avg-ach" class="text-xl font-black text-indigo-500">0%</h3>
+                </div>
+                <!-- 4. Total Sales LY -->
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">TOTAL SALES LY</p>
-                    <h3 id="summary-total-ly" class="text-2xl font-black text-slate-700">Rp 0</h3>
+                    <h3 id="summary-total-ly" class="text-xl font-black text-slate-700">Rp 0</h3>
                 </div>
-                <!-- Kartu 3: Persentase SSSG -->
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm hover-lift transition-all">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">ACHIEVEMENT SSSG</p>
-                    <h3 id="summary-sssg" class="text-2xl font-black text-indigo-500">0%</h3>
+                <!-- 5. % Ach SSSG -->
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">% ACH SSSG</p>
+                    <h3 id="summary-sssg" class="text-xl font-black text-emerald-500">0%</h3>
                 </div>
-                <!-- Kartu 4: Projection SSSG -->
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm hover-lift transition-all">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">PROJECTION SSSG</p>
-                    <h3 id="summary-proj-sssg" class="text-2xl font-black text-amber-500">0%</h3>
+                <!-- 6. % Projection SSSG -->
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">% PROJ SSSG</p>
+                    <h3 id="summary-proj-sssg" class="text-xl font-black text-amber-500">0%</h3>
                 </div>
             </div>
 
