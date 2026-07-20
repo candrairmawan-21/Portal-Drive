@@ -76,6 +76,9 @@ async function fetchDashboardData() {
         
         initSlicers();
         applyDashboardFilters();
+        
+        // Panggil tabel UPT agar otomatis terisi data
+        fetchAndRenderUptSalesTable();
     } catch (error) {
         console.error('Error memuat data dashboard:', error);
     } finally {
@@ -148,10 +151,14 @@ function initSlicers() {
             });
         }
         applyDashboardFilters();
+        fetchAndRenderUptSalesTable(); // Update tabel UPT saat slicer kategori berubah
     });
 
     document.getElementById('slicerBulan')?.addEventListener('change', applyDashboardFilters);
-    document.getElementById('slicerSpesifik')?.addEventListener('change', applyDashboardFilters);
+    document.getElementById('slicerSpesifik')?.addEventListener('change', () => {
+        applyDashboardFilters();
+        fetchAndRenderUptSalesTable(); // Update tabel UPT saat nama spesifik dipilih
+    });
 }
 
 function applyDashboardFilters() {
@@ -340,7 +347,10 @@ function initSalesSlicers() {
     });
 
     slicerSpesifik.addEventListener('change', applySalesFilters);
-    slicerBulan.addEventListener('change', fetchSalesData); 
+    slicerBulan.addEventListener('change', () => {
+        fetchSalesData();
+        fetchAndRenderUptSalesTable(); // Update tabel UPT saat bulan sales diubah
+    }); 
 }
 
 async function fetchSalesData() {
@@ -369,7 +379,6 @@ function parseSalesCSV(text) {
     let lines = text.split('\n');
     if (lines.length < 3) return [];
     
-    // Ambil header dari baris ke-3 (atau baris indikator tabel Google Sheet Anda)
     let headers = lines[2].split(',').map(h => h.replace(/["\r]/g, "").trim());
     let result = [];
     
@@ -390,7 +399,6 @@ function parseSalesCSV(text) {
             let storeName = row[2]?.replace(/[\r"]/g, "").trim();
             if (!storeName || storeName === "" || storeName === "-") continue; 
 
-            // Fungsi pembantu untuk mengambil nilai berdasarkan nama header atau posisi fallback
             let getVal = (headerNames, fallbackIndex) => {
                 for (let hName of headerNames) {
                     let idx = headers.indexOf(hName);
@@ -409,7 +417,6 @@ function parseSalesCSV(text) {
                 bestEstimate: row[16]?.replace(/[\r"]/g, "") || "-",
                 achPercent: parseFloat(row[17]?.replace(/[^0-9.-]+/g, "")) || 0,
                 
-                // Membaca otomatis berdasarkan nama header di CSV Anda
                 salesLY: getVal(['Sales LY', 'LY Sales', 'LY'], 18),
                 sssg: getVal(['SSSG', 'Ach SSSG'], 20),
                 projSssg: getVal(['Projection SSSG', 'Proj SSSG', 'Projection'], 21)
@@ -439,14 +446,12 @@ function applySalesFilters() {
         filteredSales = salesData.filter(item => allowedStores.has(item.store.toLowerCase().trim()));
     }
 
-    // Render Tabel, Summary, dan Grafik MTD (Langsung tampil instan)
     renderSalesSummaryFiltered(filteredSales);
     renderSalesTableFiltered(filteredSales);
 
     if (currentSalesChartMode === 'mtd') {
         renderSalesChartFiltered(filteredSales);
     } else {
-        // Tren 6 bulan hanya ditarik jika mode tren sedang aktif
         fetchAndRenderTrendChart(kategori, spesifik);
     }
 }
@@ -468,7 +473,6 @@ function setSalesChartMode(mode) {
     applySalesFilters();
 }
 
-// --- Fungsi Menarik Data 6 Bulan (Dioptimalkan Hanya Saat Mode Tren Aktif) ---
 async function fetchAndRenderTrendChart(kategori, spesifik) {
     const loader = document.getElementById('sales-loading');
     if (loader) loader.classList.remove('hidden');
@@ -584,12 +588,10 @@ function renderSalesSummaryFiltered(data) {
         count++;
     });
     
-    // Kalkulasi Persentase Global
     const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
     const avgSSSG = count > 0 ? (totalSSSG / count) : 0;
     const avgProjSSSG = count > 0 ? (totalProjSSSG / count) : 0;
     
-    // Hubungkan dengan ID Kartu di HTML
     const elTotalSales = document.getElementById('summary-total-sales');
     const elTarget = document.getElementById('summary-total-target');
     const elAvgAch = document.getElementById('summary-avg-ach');
@@ -663,9 +665,7 @@ function renderSalesChartFiltered(data) {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
-            layout: {
-                padding: { top: 30 } 
-            },
+            layout: { padding: { top: 30 } },
             scales: {
                 x: { 
                     grid: { display: false },
@@ -679,9 +679,7 @@ function renderSalesChartFiltered(data) {
                         font: { family: "'Plus Jakarta Sans', sans-serif" }
                     }
                 },
-                y1: {
-                    type: 'linear', display: false, position: 'right', beginAtZero: true
-                }
+                y1: { type: 'linear', display: false, position: 'right', beginAtZero: true }
             },
             plugins: {
                 legend: { 
@@ -722,7 +720,6 @@ function renderSalesChartFiltered(data) {
                                 ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'bottom';
-                                
                                 const dataString = dataset.data[index].toFixed(1) + '%';
                                 ctx.fillText(dataString, element.x, element.y - 8); 
                             });
@@ -743,25 +740,19 @@ function renderSalesTableFiltered(data) {
         return;
     }
 
-    // Urutkan data berdasarkan achievement tertinggi
     let sortedData = [...data].sort((a, b) => (b.achPercent || 0) - (a.achPercent || 0));
 
     tbody.innerHTML = sortedData.map((item, index) => {
         let ach = item.achPercent || 0;
         let badgeHTML = '';
         
-        // --- LOGIKA RANGE BADGE BARU ---
         if (ach > 110) {
-            // DI ATAS 110% -> ELITE (EMAS)
             badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-amber-100 text-amber-600 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-amber-200 shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> ELITE</div>`;
         } else if (ach > 100.1) {
-            // DI ATAS 100.1% -> PRO (INDIGO)
             badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-indigo-100"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> PRO</div>`;
         } else if (ach >= 95.1) {
-            // 95.1% - 100% -> DIKIT LAGI! (BIRU CERAH)
             badgeHTML = `<div class="mt-1 inline-flex items-center gap-1.5 bg-sky-50 text-sky-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-sky-100"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> DIKIT LAGI!</div>`;
         } else {
-            // DI BAWAH 95% -> FAILURE (MERAH)
             badgeHTML = `<div class="mt-1 inline-flex items-center gap-1 bg-rose-50 text-rose-500 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-rose-100"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> FAILURE</div>`;
         }
 
@@ -790,7 +781,11 @@ function renderSalesTableFiltered(data) {
         `;
     }).join('');
 }
-// --- FUNGSI UNTUK MEMBACA TABEL UPT DARI KOLOM CSV SALES ---
+
+// =====================================================================
+// 6. FUNGSI TABEL UPT BARU (MENGAMBIL DARI KOLOM C, N, O, P CSV SALES)
+// =====================================================================
+
 async function fetchAndRenderUptSalesTable() {
     const tbody = document.getElementById('upt-sales-table-body');
     if (!tbody) return;
@@ -812,13 +807,13 @@ async function fetchAndRenderUptSalesTable() {
 
         for (let i = 3; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
-            let row = parseCSVRow(lines[i]);
+            let row = parseCSVRowForUpt(lines[i]);
 
             let namaBM = row[0] ? row[0].replace(/[\r"]/g, "").trim() : "-";
             let namaABM = row[1] ? row[1].replace(/[\r"]/g, "").trim() : "-";
             let namaStore = row[2] ? row[2].replace(/[\r"]/g, "").trim() : "-";
 
-            // Sembunyikan jika store kosong atau "-"
+            // Sembunyikan baris jika nama store kosong atau "-"
             if (!namaStore || namaStore === "" || namaStore === "-") continue;
 
             // Filter Berdasarkan Slicer BM / ABM
@@ -856,8 +851,7 @@ async function fetchAndRenderUptSalesTable() {
     }
 }
 
-// Fungsi bantu pemecah baris CSV dengan kutipan koma
-function parseCSVRow(textLine) {
+function parseCSVRowForUpt(textLine) {
     let row = []; let inQuotes = false; let currentStr = "";
     for (let char of textLine) {
         if (char === '"') inQuotes = !inQuotes;
