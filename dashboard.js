@@ -564,9 +564,6 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
     finally { if (loader) loader.classList.add('hidden'); }
 }
 
-let sssgChartInstance = null;
-let projSssgChartInstance = null;
-
 function renderSalesSummaryFiltered(data) {
     let totalSales = 0, totalTarget = 0, totalLY = 0;
     let totalSSSG = 0, totalProjSSSG = 0;
@@ -582,11 +579,12 @@ function renderSalesSummaryFiltered(data) {
         count++;
     });
     
+    // Kalkulasi Persentase Global
     const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
     const avgSSSG = count > 0 ? (totalSSSG / count) : 0;
     const avgProjSSSG = count > 0 ? (totalProjSSSG / count) : 0;
     
-    // Hubungkan teks ke HTML
+    // Hubungkan dengan ID Kartu di HTML
     const elTotalSales = document.getElementById('summary-total-sales');
     const elTarget = document.getElementById('summary-total-target');
     const elAvgAch = document.getElementById('summary-avg-ach');
@@ -607,44 +605,6 @@ function renderSalesSummaryFiltered(data) {
         elProjSSSG.innerText = avgProjSSSG.toFixed(2) + "%";
         elProjSSSG.className = avgProjSSSG >= 0 ? "text-xl font-black text-amber-500" : "text-xl font-black text-rose-500";
     }
-
-    // --- GAMBAR MINI DONUT CHART UNTUK SSSG ---
-    renderMiniDonut('gaugeSssg', avgSSSG, avgSSSG >= 0 ? '#10b981' : '#f43f5e', sssgChartInstance, (instance) => { sssgChartInstance = instance; });
-    renderMiniDonut('gaugeProjSssg', avgProjSSSG, avgProjSSSG >= 0 ? '#f59e0b' : '#f43f5e', projSssgChartInstance, (instance) => { projSssgChartInstance = instance; });
-}
-
-// Fungsi pembantu untuk membuat donut chart mini
-function renderMiniDonut(canvasId, value, colorHex, oldInstance, setInstanceCallback) {
-    const ctx = document.getElementById(canvasId);
-    if (!ctx) return;
-    
-    if (oldInstance) oldInstance.destroy();
-
-    // Batasi persentase visual agar donut tidak lewat dari 100% penuh
-    let absVal = Math.min(Math.abs(value), 100);
-    let remainder = Math.max(100 - absVal, 0);
-
-    let newInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            datasets: [{
-                data: [absVal, remainder],
-                backgroundColor: [colorHex, '#f1f5f9'], // Warna dinamis & background abu lembut
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '75%', // Membuat lubang donut di tengah menjadi besar dan elegan
-            plugins: {
-                tooltip: { enabled: false },
-                legend: { display: false }
-            }
-        }
-    });
-
-    setInstanceCallback(newInstance);
 }
 
 function renderSalesChartFiltered(data) {
