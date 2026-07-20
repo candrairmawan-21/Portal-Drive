@@ -384,10 +384,7 @@ function parseSalesCSV(text) {
 
         if (row.length >= 8) {
             let storeName = row[2]?.replace(/[\r"]/g, "").trim();
-            
-            if (!storeName || storeName === "" || storeName === "-") {
-                continue; 
-            }
+            if (!storeName || storeName === "" || storeName === "-") continue; 
 
             result.push({
                 store: storeName,
@@ -395,7 +392,13 @@ function parseSalesCSV(text) {
                 mtdSales: parseFloat(row[5]?.replace(/[^0-9.-]+/g, "")) || 0,
                 mtdTarget: parseFloat(row[6]?.replace(/[^0-9.-]+/g, "")) || 0,
                 bestEstimate: row[16]?.replace(/[\r"]/g, "") || "-",
-                achPercent: parseFloat(row[17]?.replace(/[^0-9.-]+/g, "")) || 0
+                achPercent: parseFloat(row[17]?.replace(/[^0-9.-]+/g, "")) || 0,
+                
+                // === DATA BARU ===
+                // Ubah angka 8, 9, 10 di bawah dengan nomor kolom yang benar di Google Sheet Anda!
+                salesLY: parseFloat(row[18]?.replace(/[^0-9.-]+/g, "")) || 0,
+                sssg: parseFloat(row[20]?.replace(/[^0-9.-]+/g, "")) || 0,
+                projSssg: parseFloat(row[21]?.replace(/[^0-9.-]+/g, "")) || 0
             });
         }
     }
@@ -548,57 +551,41 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
 }
 
 function renderSalesSummaryFiltered(data) {
-    let totalSales = 0, totalTarget = 0;
-    
-    // Siapkan wadah kosong untuk mencari siapa juaranya
-    let topSalesStore = { name: '-', val: 0 };
-    let topAchStore = { name: '-', val: 0 };
+    let totalTarget = 0, totalLY = 0;
+    let totalSSSG = 0, totalProjSSSG = 0;
+    let count = 0;
 
     data.forEach(item => {
-        let s = item.mtdSales || 0;
-        let t = item.mtdTarget || 0;
-        let ach = item.achPercent || 0;
-
-        // Hitung total keseluruhan
-        totalSales += s;
-        totalTarget += t;
-
-        // Cek siapa yang sales-nya paling tinggi
-        if (s > topSalesStore.val) {
-            topSalesStore.val = s;
-            topSalesStore.name = item.store;
-        }
+        totalTarget += item.mtdTarget || 0;
+        totalLY += item.salesLY || 0;
         
-        // Cek siapa yang persentase achievement-nya paling tinggi
-        if (ach > topAchStore.val) {
-            topAchStore.val = ach;
-            topAchStore.name = item.store;
-        }
+        // Akumulasi persentase SSSG untuk dicari rata-ratanya
+        totalSSSG += item.sssg || 0;
+        totalProjSSSG += item.projSssg || 0;
+        count++;
     });
     
-    const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
+    // Hitung rata-rata SSSG dari toko yang terpilih oleh filter
+    const avgSSSG = count > 0 ? (totalSSSG / count) : 0;
+    const avgProjSSSG = count > 0 ? (totalProjSSSG / count) : 0;
     
-    // Hubungkan dengan HTML
-    const elTotalSales = document.getElementById('summary-total-sales');
-    const elAvgAch = document.getElementById('summary-avg-ach');
-    const elTopSalesStore = document.getElementById('summary-top-sales-store');
-    const elTopSalesVal = document.getElementById('summary-top-sales-val');
-    const elTopAchStore = document.getElementById('summary-top-ach-store');
-    const elTopAchVal = document.getElementById('summary-top-ach-val');
+    // Sambungkan ke HTML
+    const elTarget = document.getElementById('summary-total-target');
+    const elLY = document.getElementById('summary-total-ly');
+    const elSSSG = document.getElementById('summary-sssg');
+    const elProjSSSG = document.getElementById('summary-proj-sssg');
     
-    // Lempar nilainya ke layar
-    if (elTotalSales) elTotalSales.innerText = "Rp " + totalSales.toLocaleString('id-ID');
-    if (elAvgAch) elAvgAch.innerText = avgAch + "%";
+    if (elTarget) elTarget.innerText = "Rp " + totalTarget.toLocaleString('id-ID');
+    if (elLY) elLY.innerText = "Rp " + totalLY.toLocaleString('id-ID');
     
-    if (elTopSalesStore) elTopSalesStore.innerText = topSalesStore.name;
-    if (elTopSalesVal) elTopSalesVal.innerText = "Rp " + topSalesStore.val.toLocaleString('id-ID');
-    
-    if (elTopAchStore) elTopAchStore.innerText = topAchStore.name;
-    if (elTopAchVal) elTopAchVal.innerText = topAchStore.val.toFixed(2) + "%";
-
-    // Panggil ulang render icon Lucide karena kita menambahkan icon baru di HTML
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
+    // Logika warna cerdas: Hijau jika plus/positif, Merah jika minus
+    if (elSSSG) {
+        elSSSG.innerText = avgSSSG.toFixed(2) + "%";
+        elSSSG.className = avgSSSG >= 0 ? "text-2xl font-black text-emerald-500" : "text-2xl font-black text-rose-500";
+    }
+    if (elProjSSSG) {
+        elProjSSSG.innerText = avgProjSSSG.toFixed(2) + "%";
+        elProjSSSG.className = avgProjSSSG >= 0 ? "text-2xl font-black text-emerald-500" : "text-2xl font-black text-rose-500";
     }
 }
 
