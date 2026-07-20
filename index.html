@@ -170,6 +170,31 @@
                     <div id="podium-top-content"></div>
                 </div>
 
+                <!-- Tabel Tambahan UPT dari Data Sales -->
+            <div class="bg-white border border-slate-200/60 rounded-3xl shadow-sm overflow-hidden mb-6">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="table" class="w-4 h-4 text-amber-500"></i> Rangkuman UPT Sales</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Data MTD UPT, Target UPT Lv 1, dan Achievement berdasarkan kolom CSV Sales.</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-50 text-slate-500 border-b border-slate-200/60">
+                            <tr>
+                                <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider w-16">No</th>
+                                <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider">Store</th>
+                                <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">MTD UPT</th>
+                                <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">Target UPT Lv 1</th>
+                                <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider">% Ach</th>
+                            </tr>
+                        </thead>
+                        <tbody id="upt-sales-table-body" class="divide-y divide-slate-100">
+                            <tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Memuat data UPT...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
                     <div>
                         <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500"></i> Bottom 3 Performa Staff</h3>
