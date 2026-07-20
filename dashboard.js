@@ -831,26 +831,36 @@ async function fetchAndRenderUptSalesTable() {
         const kategoriSlicer = document.getElementById('slicerKategori')?.value || 'all';
         const spesifikSlicer = document.getElementById('slicerSpesifik')?.value || 'all';
 
+        // --- TRIK JITU: Gunakan Data Dashboard untuk mencari daftar toko milik BM/ABM ---
+        const allowedStores = new Set();
+        if (kategoriSlicer !== 'all' && spesifikSlicer !== 'all') {
+            if (typeof dashboardData !== 'undefined') {
+                dashboardData.forEach(item => {
+                    if (kategoriSlicer === 'bm' && item.namaBM === spesifikSlicer) {
+                        allowedStores.add(item.namaStore.toLowerCase().trim());
+                    } else if (kategoriSlicer === 'abm' && item.namaABM === spesifikSlicer) {
+                        allowedStores.add(item.namaStore.toLowerCase().trim());
+                    }
+                });
+            }
+        }
+
         let rawRows = [];
 
         for (let i = 3; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
             let row = parseCSVRowForUpt(lines[i]);
 
-            let namaBM = row[0] ? row[0].replace(/[\r"]/g, "").trim() : "-";
-            let namaABM = row[1] ? row[1].replace(/[\r"]/g, "").trim() : "-";
             let namaStore = row[2] ? row[2].replace(/[\r"]/g, "").trim() : "-";
 
             // Sembunyikan baris jika nama store kosong atau "-"
             if (!namaStore || namaStore === "" || namaStore === "-") continue;
 
-            // --- FILTER BERDASARKAN SLICER (DIUBAH AMAN DARI HURUF BESAR/KECIL) ---
+            // --- FILTER BERDASARKAN NAMA TOKO (Sama dengan logika Dashboard Sales) ---
             if (kategoriSlicer !== 'all' && spesifikSlicer !== 'all') {
-                let matchBm = namaBM.toLowerCase().trim() === spesifikSlicer.toLowerCase().trim();
-                let matchAbm = namaABM.toLowerCase().trim() === spesifikSlicer.toLowerCase().trim();
-
-                if (kategoriSlicer === 'bm' && !matchBm) continue;
-                if (kategoriSlicer === 'abm' && !matchAbm) continue;
+                if (!allowedStores.has(namaStore.toLowerCase().trim())) {
+                    continue; // Lewati jika toko ini bukan milik BM/ABM yang dipilih
+                }
             }
 
             let mtdUpt = row[13] ? row[13].replace(/[\r"]/g, "").trim() : "0";
