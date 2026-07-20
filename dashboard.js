@@ -535,33 +535,39 @@ function renderSalesChartFiltered(data) {
             labels: data.map(item => item.store),
             datasets: [
                 {
-                    // 1. GRAFIK GARIS (ACHIEVEMENT PERSENTASE)
+                    // 1. GARIS ACHIEVEMENT (PALET WARNA BARU: ROSE/MERAH ELEGAN)
                     type: 'line',
                     label: 'Achievement (%)',
                     data: data.map(item => item.achPercent || 0),
-                    backgroundColor: '#ef4444', // Warna titik merah
-                    borderColor: '#ef4444', // Warna garis merah
-                    borderWidth: 2,
-                    pointRadius: 4, // Memperjelas titik potong
-                    fill: false, // Menghilangkan tirai/blocking warna
-                    tension: 0.4, // Garis melengkung halus
-                    yAxisID: 'y1' // Menggunakan sumbu Y di kanan
+                    backgroundColor: '#f43f5e', 
+                    borderColor: '#f43f5e', 
+                    borderWidth: 2.5,
+                    pointRadius: 4.5,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    fill: false, 
+                    tension: 0.35, 
+                    yAxisID: 'y1' 
                 },
                 {
+                    // 2. TARGET (PALET WARNA BARU: SLATE/ABU-ABU PROFESIONAL)
                     type: 'bar',
                     label: 'MTD Target',
-                    backgroundColor: '#6B4423',
-                    borderColor: '#54351B',
+                    backgroundColor: '#cbd5e1', // Slate-300 yang lembut
+                    borderColor: '#94a3b8',
                     borderWidth: 1,
+                    borderRadius: 6,
                     data: data.map(item => item.mtdTarget || 0),
                     yAxisID: 'y'
                 },
                 {
+                    // 3. SALES AKTUAL (PALET WARNA BARU: INDIGO/BIRU KELAS ATAS)
                     type: 'bar',
                     label: 'MTD Sales',
-                    backgroundColor: '#F49E00',
-                    borderColor: '#E08B00',
+                    backgroundColor: '#6366f1', // Indigo-500 modern SaaS style
+                    borderColor: '#4f46e5',
                     borderWidth: 1,
+                    borderRadius: 6,
                     data: data.map(item => item.mtdSales || 0),
                     yAxisID: 'y'
                 }
@@ -572,29 +578,38 @@ function renderSalesChartFiltered(data) {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             layout: {
-                padding: {
-                    top: 25 // Beri jarak atas agar teks persentase tertinggi tidak terpotong
-                }
+                padding: { top: 30 } // Ruang ekstra untuk label persentase di atas
             },
             scales: {
-                x: { grid: { display: false } },
+                x: { 
+                    grid: { display: false },
+                    ticks: { font: { weight: '600', family: "'Plus Jakarta Sans', sans-serif" } }
+                },
                 // Sumbu Kiri (Rupiah)
                 y: { 
                     type: 'linear', display: true, position: 'left', beginAtZero: true, 
-                    grid: { color: '#f1f5f9' },
-                    ticks: { callback: function(value) { if (value >= 1000000) return 'Rp ' + (value / 1000000) + ' Jt'; return value; } }
+                    grid: { color: '#f8fafc' },
+                    ticks: { 
+                        callback: function(value) { if (value >= 1000000) return 'Rp ' + (value / 1000000) + ' Jt'; return value; },
+                        font: { family: "'Plus Jakarta Sans', sans-serif" }
+                    }
                 },
-                // Sumbu Kanan (Persen) - DIHILANGKAN KETERANGANNYA
+                // Sumbu Kanan (Persen) - Disembunyikan karena sudah ada label teks langsung
                 y1: {
-                    type: 'linear', 
-                    display: false, // Menyembunyikan seluruh sumbu & tulisan di sebelah kanan
-                    position: 'right', 
-                    beginAtZero: true
+                    type: 'linear', display: false, position: 'right', beginAtZero: true
                 }
             },
             plugins: {
-                legend: { position: 'top', labels: { font: { weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" } } },
+                legend: { 
+                    position: 'top', 
+                    labels: { boxWidth: 12, font: { weight: '700', family: "'Plus Jakarta Sans', sans-serif" } } 
+                },
                 tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold' },
+                    bodyFont: { family: "'Plus Jakarta Sans', sans-serif" },
+                    padding: 12,
+                    cornerRadius: 12,
                     callbacks: {
                         label: function(context) {
                             let label = context.dataset.label || '';
@@ -610,25 +625,22 @@ function renderSalesChartFiltered(data) {
                 }
             }
         },
-        // PLUGIN KHUSUS: Untuk mencetak angka persen persis di atas titik garis
+        // PLUGIN: Mencetak teks persentase tepat di atas titik garis merah
         plugins: [{
-            id: 'customDataLabels',
+            id: 'customDataLabelsSales',
             afterDatasetsDraw: (chart) => {
                 const ctx = chart.ctx;
                 chart.data.datasets.forEach((dataset, i) => {
-                    // Hanya cetak label untuk grafik garis (Achievement)
                     if (dataset.type === 'line') { 
                         const meta = chart.getDatasetMeta(i);
                         if (!meta.hidden) {
                             meta.data.forEach((element, index) => {
-                                ctx.fillStyle = '#ef4444'; // Warna teks sama dengan garis (merah)
-                                ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+                                ctx.fillStyle = '#e11d48'; // Merah gelap yang kontras
+                                ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'bottom';
                                 
                                 const dataString = dataset.data[index].toFixed(1) + '%';
-                                
-                                // Cetak teks dengan posisi 8 pixel tepat di atas titik kordinat (element.x, element.y)
                                 ctx.fillText(dataString, element.x, element.y - 8); 
                             });
                         }
