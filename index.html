@@ -430,21 +430,28 @@
 
        // FUNGSI NAVIGASI YANG DIPERBARUI
         function switchView(view) {
-            // --- TAMBAHKAN BARIS INI UNTUK MENYIMPAN HALAMAN TERAKHIR ---
             sessionStorage.setItem('lastActiveView', view); 
 
-            // Sembunyikan semua halaman
-            ['files', 'dashboard', 'sales'].forEach(id => {
+            // 1. Sembunyikan semua halaman
+            const allSections = ['files', 'dashboard', 'sales', 'damage'];
+            allSections.forEach(id => {
                 const el = document.getElementById('section-' + id);
                 if(el) el.classList.add('hidden');
             });
                       
-            // Reset semua style menu ke default
-            ['files', 'dashboard', 'sales'].forEach(id => {
-                const btn = document.getElementById('menu-' + id);
+            // 2. Reset semua style menu ke default
+            allSections.forEach(id => {
+                // Menyesuaikan ID tombol Anda (menu-files vs nav-damage)
+                const btnId = id === 'damage' ? 'nav-damage' : 'menu-' + id;
+                const btn = document.getElementById(btnId);
+                
                 if(btn) {
-                    btn.classList.remove('bg-amber-500', 'text-white');
-                    btn.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                    btn.classList.remove('bg-amber-500', 'text-white', 'bg-slate-800/50');
+                    btn.classList.add('text-slate-400');
+                    
+                    // Reset icon khusus untuk tombol F003
+                    const icon = btn.querySelector('i');
+                    if (icon && id === 'damage') icon.classList.remove('text-amber-500');
                 }
             });
 
@@ -452,25 +459,39 @@
             const title = document.getElementById('pageTitle');
             const fileTools = document.getElementById('fileTools');
 
-            // Aktifkan Halaman & Menu yang dipilih
+            // 3. Aktifkan Halaman & Menu yang dipilih
             if (view === 'dashboard') {
                 document.getElementById('section-dashboard').classList.remove('hidden');
-                document.getElementById('menu-dashboard').classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                document.getElementById('menu-dashboard').classList.remove('text-slate-400');
                 document.getElementById('menu-dashboard').classList.add('bg-amber-500', 'text-white');
                 title.innerText = "Performa UPT Dashboard";
                 if(fileTools) fileTools.classList.add('invisible');
                 if (typeof fetchDashboardData === "function") fetchDashboardData();
+                
             } else if (view === 'sales') {
                 document.getElementById('section-sales').classList.remove('hidden');
-                document.getElementById('menu-sales').classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                document.getElementById('menu-sales').classList.remove('text-slate-400');
                 document.getElementById('menu-sales').classList.add('bg-amber-500', 'text-white');
                 title.innerText = "Sales Target Dashboard";
                 if(fileTools) fileTools.classList.add('invisible');
                 if (typeof fetchSalesData === "function") fetchSalesData();
+                
+            } else if (view === 'damage') {
+                document.getElementById('section-damage').classList.remove('hidden');
+                document.getElementById('nav-damage').classList.remove('text-slate-400');
+                document.getElementById('nav-damage').classList.add('bg-slate-800/50', 'text-white');
+                
+                // Nyalakan icon untuk F003
+                const icon = document.getElementById('nav-damage').querySelector('i');
+                if (icon) icon.classList.add('text-amber-500');
+                
+                title.innerText = "F003 Builder";
+                if(fileTools) fileTools.classList.add('invisible');
+                
             } else {
                 // Default is Files
                 document.getElementById('section-files').classList.remove('hidden');
-                document.getElementById('menu-files').classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+                document.getElementById('menu-files').classList.remove('text-slate-400');
                 document.getElementById('menu-files').classList.add('bg-amber-500', 'text-white');
                 title.innerText = "File Manager";
                 if(fileTools) fileTools.classList.remove('invisible');
