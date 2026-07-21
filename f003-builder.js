@@ -1,19 +1,14 @@
-// Variable untuk menghitung jumlah baris
 let f003RowCount = 0;
 
-// Otomatis isi tanggal hari ini saat halaman dimuat
 document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('f003-date');
     if(dateInput) {
         const today = new Date().toISOString().split('T')[0];
         dateInput.value = today;
     }
-    
-    // Otomatis tambahkan 1 baris pertama
     addF003Row();
 });
 
-// Fungsi untuk menambah baris tabel
 function addF003Row() {
     f003RowCount++;
     const tbody = document.getElementById('f003-tbody');
@@ -54,10 +49,8 @@ function addF003Row() {
             <div class="relative flex items-center justify-center gap-2">
                 <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-200 shadow-sm flex items-center">
                     <i data-lucide="camera" class="w-3.5 h-3.5 mr-1.5"></i> Foto
-                    <!-- Ini input yang akan memanggil kamera / galeri di HP Android -->
                     <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewPhoto(this, ${f003RowCount})">
                 </label>
-                <!-- Tempat foto kecil akan muncul setelah di-upload -->
                 <img id="preview-${f003RowCount}" src="" class="hidden w-9 h-9 rounded object-cover border border-slate-200 shadow-sm cursor-pointer" onclick="window.open(this.src)">
             </div>
         </td>
@@ -69,24 +62,19 @@ function addF003Row() {
     `;
     
     tbody.appendChild(tr);
-    
-    // Panggil ulang ikon Lucide agar ikon kamera & tempat sampah muncul
     if (typeof lucide !== 'undefined') lucide.createIcons();
     
-    // Trik Scanner: Otomatis memfokuskan kursor ke kolom barcode yang baru dibuat
     setTimeout(() => {
         const barcodeInput = document.getElementById(`barcode-${f003RowCount}`);
         if(barcodeInput) barcodeInput.focus();
     }, 100);
 }
 
-// Fungsi untuk menghapus baris jika salah klik
 function removeF003Row(rowId) {
     const row = document.getElementById(rowId);
     if(row) row.remove();
 }
 
-// Fungsi untuk membaca foto lokal dan menampilkannya di tabel
 function previewPhoto(input, rowId) {
     const previewImg = document.getElementById(`preview-${rowId}`);
     const file = input.files[0];
@@ -94,19 +82,92 @@ function previewPhoto(input, rowId) {
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            // Tampilkan fotonya
             previewImg.src = e.target.result;
             previewImg.classList.remove('hidden');
-            
-            // Simpan data foto secara rahasia untuk dimasukkan ke Excel nanti
             previewImg.setAttribute('data-base64', e.target.result);
         }
-        // Proses pembacaan foto di dalam browser (tanpa internet/cloud)
         reader.readAsDataURL(file);
     }
 }
 
-// Fungsi sementara sebelum kita masuk ke Tahap 3B (Ekspor Excel)
-function generateF003Excel() {
-    alert("Keren! Form sudah bisa diisi. Kita akan aktifkan fitur download Excel di tahap selanjutnya!");
+// ==========================================
+// MESIN PEMBUAT EXCEL OTOMATIS
+// ==========================================
+async function generateF003Excel() {
+    const storeCode = document.getElementById('f003-store-code').value.trim();
+    const storeName = document.getElementById('f003-store-name').value.trim();
+    const sendDate = document.getElementById('f003-date').value;
+
+    if (!storeCode || !storeName) {
+        alert("Mohon isi Store Code dan Store Name terlebih dahulu!");
+        return;
+    }
+
+    // Ambil data dari semua baris tabel
+    const rows = document.querySelectorAll('#f003-tbody tr');
+    if (rows.length === 0) {
+        alert("Belum ada baris barang yang ditambahkan!");
+        return;
+    }
+
+    // Siapkan struktur Sheet 'QM Report (Template)'
+    let qmData = [
+        ["", "STORE CODE :", "", "", "", "F003 STORE DAMAGE FILE", "", "", "", "", "DIBUAT", "", "MENGETAHUI", "", "MENYETUJUI", ""],
+        ["", "STORE NAME :", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ["", "DATE SEND DM FILE:", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", "DDR / DMC / DMW / DME", "DMC & DMW DETAILS", "DMP / DPI / 2DMP DETAILS", "DMW DETAILS", "DMC & DMW USE - CUSTOMER DETAILS", "", "", "", "FOR QM USE"],
+        ["", "NO.", "BARCODE", "DAMAGE QUANTITY", "CATEGORY", "REASON DAMAGE", "OTHER REASON", "DDR/DMC/DMW/DME NUMBER", "NEW RECEIPT DATE", "EXPIRY DATE", "SERIAL NUMBER", "OLD RECEIPT DATE", "OLD RECEIPT NUMBER", "CUSTOMER NAME", "CUSTOMER PHONE", "FEEDBACK"]
+    ];
+
+    // Masukkan data Header Store
+    qmData[0][2] = storeCode;
+    qmData[1][2] = storeName;
+    qmData[2][2] = sendDate;
+
+    // Siapkan struktur Sheet 'BEFORE' untuk rekap foto
+    let beforeData = [
+        ["No", "BARCODE", "QTY", "REASON DAMAGE", "BEFORE", "AFTER", "", "", "", "EXP PHOTOS :"],
+    ];
+
+    // Loop setiap baris tabel di web
+    rows.forEach((tr, index) => {
+        const rowNum = index + 1;
+        const barcode = document.getElementById(`barcode-${rowNum}`)?.value || "";
+        const qty = document.getElementById(`qty-${rowNum}`)?.value || "0";
+        const kategori = document.getElementById(`kategori-${rowNum}`)?.value || "";
+        const alasan = document.getElementById(`alasan-${rowNum}`)?.value || "";
+        
+        // Cek apakah ada foto yang di-upload di baris ini
+        const previewImg = document.getElementById(`preview-${rowNum}`);
+        let hasPhoto = previewImg && !previewImg.classList.contains('hidden');
+
+        // Masukkan ke QM Report
+        qmData.push([
+            "", rowNum, barcode, qty, kategori, alasan, "", "", "", "", "", "", "", "", "", ""
+        ]);
+
+        // Masukkan ke Sheet Before
+        beforeData.push([
+            rowNum, barcode, qty, alasan, hasPhoto ? "[ADA FOTO]" : "", "", "", "", "", ""
+        ]);
+    });
+
+    // Buat Workbook Excel baru menggunakan SheetJS
+    const wb = XLSX.utils.book_new();
+
+    // Buat Sheet QM Report
+    const wsQm = XLSX.utils.aoa_to_sheet(qmData);
+    XLSX.utils.book_append_sheet(wb, wsQm, "QM Report (Template)");
+
+    // Buat Sheet Before
+    const wsBefore = XLSX.utils.aoa_to_sheet(beforeData);
+    XLSX.utils.book_append_sheet(wb, wsBefore, "BEFORE");
+
+    // Download file Excel secara otomatis ke komputer/PDT user
+    const fileName = `F003_Damage_${storeCode}_${sendDate}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    alert("File Excel berhasil di-generate dan di-download!");
 }
