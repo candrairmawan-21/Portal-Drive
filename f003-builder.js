@@ -110,7 +110,7 @@ function previewPhoto(input, rowId) {
     }
 }
 
-// MESIN EXCEL OTOMATIS FETCH DARI GITHUB
+// MESIN EXCEL YANG AMAN & ANTI-MACET
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
@@ -127,38 +127,51 @@ async function generateF003Excel() {
         return;
     }
 
-    // Ubah teks tombol jadi Loading
     const btnGenerate = document.querySelector('button[onclick="generateF003Excel()"]');
     const originalText = btnGenerate.innerHTML;
     btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Memproses Excel...`;
     btnGenerate.disabled = true;
 
     try {
-        // 1. Fetch file template Excel dari server/GitHub secara otomatis
-        const templateResponse = await fetch('F003_Template.xlsx');
-        if (!templateResponse.ok) {
-            throw new Error("Gagal menemukan F003_Template.xlsx di server.");
+        // Coba ambil file template dari folder repository
+        let arrayBuffer;
+        try {
+            const response = await fetch('F003 STORE DAMAGE FILE (Indonesia).xlsx');
+            if (!response.ok) throw new Error("File tidak ditemukan");
+            arrayBuffer = await response.arrayBuffer();
+        } catch (err) {
+            // Jika gagal di-fetch (misal karena dibuka offline), gunakan prompt pilihan file manual sebagai cadangan darurat
+            const promptInput = document.createElement('input');
+            promptInput.type = 'file';
+            promptInput.accept = '.xlsx';
+            
+            await new Promise((resolve, reject) => {
+                promptInput.onchange = async (e) => {
+                    if(e.target.files[0]) {
+                        arrayBuffer = await e.target.files[0].arrayBuffer();
+                        resolve();
+                    } else {
+                        reject(new Error("Pilihan file dibatalkan."));
+                    }
+                };
+                promptInput.click();
+            });
         }
-        const arrayBuffer = await templateResponse.arrayBuffer();
 
-        // 2. Load template ke ExcelJS
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
-        // 3. Akses Sheet yang tepat
         const wsQm = workbook.getWorksheet('QM Report (Template)');
         const wsBefore = workbook.getWorksheet('BEFORE');
 
         if (!wsQm || !wsBefore) {
-            throw new Error("Format template salah. Sheet QM Report (Template) atau BEFORE tidak ditemukan.");
+            throw new Error("Sheet 'QM Report (Template)' atau 'BEFORE' tidak ditemukan di dalam file template Excel!");
         }
 
-        // 4. Masukkan Data Header ke QM Report
         wsQm.getCell('C1').value = storeCode;
         wsQm.getCell('C2').value = storeName;
         wsQm.getCell('C3').value = sendDate;
 
-        // 5. Looping Data Tabel dan Masukkan ke Sheet
         let qmStartRow = 8; 
         let beforeStartRow = 2;
 
@@ -169,7 +182,6 @@ async function generateF003Excel() {
             const kategori = document.getElementById(`kategori-${rowNum}`)?.value || "";
             const alasan = document.getElementById(`alasan-${rowNum}`)?.value || "";
 
-            // --- ISI KE QM REPORT ---
             const qmRow = qmStartRow + index;
             wsQm.getCell(`B${qmRow}`).value = rowNum;
             wsQm.getCell(`C${qmRow}`).value = barcode;
@@ -177,14 +189,12 @@ async function generateF003Excel() {
             wsQm.getCell(`E${qmRow}`).value = kategori;
             wsQm.getCell(`F${qmRow}`).value = alasan;
 
-            // --- ISI KE SHEET BEFORE & INJECT FOTO ---
             const beforeRow = beforeStartRow + index;
             wsBefore.getCell(`A${beforeRow}`).value = rowNum;
             wsBefore.getCell(`B${beforeRow}`).value = barcode;
             wsBefore.getCell(`C${beforeRow}`).value = Number(qty);
             wsBefore.getCell(`D${beforeRow}`).value = alasan;
 
-            // Proses Inject Foto
             const previewImg = document.getElementById(`preview-${rowNum}`);
             if (previewImg && !previewImg.classList.contains('hidden')) {
                 const base64Data = previewImg.getAttribute('data-base64');
@@ -198,7 +208,6 @@ async function generateF003Excel() {
                         extension: extension,
                     });
 
-                    // Tempelkan foto di cell kolom BEFORE (Kolom E)
                     wsBefore.addImage(imageId, {
                         tl: { col: 4, row: beforeRow - 1 },
                         extents: { width: 140, height: 140 }
@@ -209,16 +218,14 @@ async function generateF003Excel() {
             }
         });
 
-        // 6. Generate dan Download
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         saveAs(blob, `F003_Damage_${storeCode}_${sendDate}.xlsx`);
         
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan: " + error.message + " Pastikan file F003_Template.xlsx sudah di-upload ke GitHub.");
+        alert("Gagal memproses: " + error.message);
     } finally {
-        // Kembalikan tombol ke semula
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
         if (typeof lucide !== 'undefined') lucide.createIcons();
