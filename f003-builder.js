@@ -21,11 +21,10 @@ function addF003Row() {
     tr.innerHTML = `
         <td class="px-4 py-3 text-center font-bold text-xs text-slate-400">${f003RowCount}</td>
         <td class="px-4 py-3">
-            <!-- Tambahan onkeydown untuk mencegat scanner PDT -->
-            <input type="text" id="barcode-${f003RowCount}" onkeydown="handleBarcodeScan(event, ${f003RowCount})" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white transition-all" placeholder="Scan lalu Enter..." autofocus>
+            <input type="text" id="barcode-${f003RowCount}" onkeydown="handleBarcodeScan(event, ${f003RowCount})" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white transition-all shadow-inner text-amber-900" placeholder="Scan Barcode..." autofocus>
         </td>
         <td class="px-4 py-3">
-            <input type="number" id="qty-${f003RowCount}" min="1" value="1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 text-center focus:outline-none focus:border-amber-500">
+            <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 text-center focus:outline-none focus:border-amber-500">
         </td>
         <td class="px-4 py-3">
             <select id="kategori-${f003RowCount}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500">
@@ -65,21 +64,33 @@ function addF003Row() {
     tbody.appendChild(tr);
     if (typeof lucide !== 'undefined') lucide.createIcons();
     
+    // Auto-focus ke input barcode saat baris baru dibuat
     setTimeout(() => {
         const barcodeInput = document.getElementById(`barcode-${f003RowCount}`);
         if(barcodeInput) barcodeInput.focus();
     }, 100);
 }
 
-// LOGIKA SCANNER: Cegah browser refresh saat scanner nembak, lalu pindahkan kursor ke Qty
+// MESIN PENANGKAP SCANNER PDT SUPER RESPONSIVE
 function handleBarcodeScan(event, rowNum) {
-    if (event.key === 'Enter' || event.keyCode === 13) {
-        event.preventDefault(); 
+    // Menangkap sinyal Enter (13), Tab (9), atau Line Feed (10) dari PDT
+    if (event.key === 'Enter' || event.keyCode === 13 || event.keyCode === 10 || event.key === 'Tab') {
+        event.preventDefault(); // Jangan biarkan browser me-refresh halaman!
+        
         const qtyField = document.getElementById(`qty-${rowNum}`);
         if (qtyField) {
-            qtyField.focus();
-            qtyField.select(); // Langsung blok angka 1 agar bisa langsung ditimpa angka lain jika perlu
+            qtyField.focus(); // Pindahkan kursor ke QTY
+            qtyField.select(); // Langsung blok angka '1' agar mudah diganti jika lebih dari 1
         }
+    }
+}
+
+// Pindah dari QTY ke Kategori jika ditekan Enter
+function handleEnterOnQty(event, rowNum) {
+    if (event.key === 'Enter' || event.keyCode === 13) {
+        event.preventDefault();
+        const kategoriField = document.getElementById(`kategori-${rowNum}`);
+        if (kategoriField) kategoriField.focus();
     }
 }
 
@@ -103,14 +114,17 @@ function previewPhoto(input, rowId) {
     }
 }
 
-// ==========================================
-// MESIN PEMBUAT EXCEL EXCELJS (SUPPORT TEMPLATE & FOTO)
-// ==========================================
+// MESIN EXCEL (Menggunakan Template yang Diupload User)
 async function generateF003Excel() {
+    const templateInput = document.getElementById('f003-template-file');
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
     const sendDate = document.getElementById('f003-date').value;
 
+    if (!templateInput.files || templateInput.files.length === 0) {
+        alert("Wajib: Pilih file 'F003 STORE DAMAGE FILE (Indonesia).xlsx' di kotak template paling kiri atas!");
+        return;
+    }
     if (!storeCode || !storeName) {
         alert("Mohon isi Store Code dan Store Name terlebih dahulu!");
         return;
@@ -123,24 +137,20 @@ async function generateF003Excel() {
     }
 
     try {
-        // 1. Download file template asli dari folder (Pastikan file F003_Template.xlsx sudah ada di GitHub)
-        const templateResponse = await fetch('F003_Template.xlsx');
-        if (!templateResponse.ok) {
-            alert("Gagal memuat template Excel! Pastikan Anda sudah mengupload file 'F003_Template.xlsx' di folder yang sama.");
-            return;
-        }
-        const arrayBuffer = await templateResponse.arrayBuffer();
+        // 1. Baca file template asli dari inputan user
+        const templateFile = templateInput.files[0];
+        const arrayBuffer = await templateFile.arrayBuffer();
 
-        // 2. Load template tersebut menggunakan ExcelJS
+        // 2. Load template ke ExcelJS
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
-        // 3. Akses Sheet yang dituju
+        // 3. Akses Sheet yang tepat
         const wsQm = workbook.getWorksheet('QM Report (Template)');
         const wsBefore = workbook.getWorksheet('BEFORE');
 
         if (!wsQm || !wsBefore) {
-            alert("Nama sheet di dalam template tidak cocok. Pastikan ada sheet 'QM Report (Template)' dan 'BEFORE'.");
+            alert("Error: File template salah! Pastikan file Excel Anda memiliki sheet bernama 'QM Report (Template)' dan 'BEFORE'.");
             return;
         }
 
@@ -150,9 +160,8 @@ async function generateF003Excel() {
         wsQm.getCell('C3').value = sendDate;
 
         // 5. Looping Data Tabel dan Masukkan ke Sheet
-        // Catatan: Baris data di QM report dimulai dari baris 8
         let qmStartRow = 8; 
-        let beforeStartRow = 2; // Mulai foto di sheet before di baris 2
+        let beforeStartRow = 2;
 
         rows.forEach((tr, index) => {
             const rowNum = index + 1;
@@ -181,13 +190,10 @@ async function generateF003Excel() {
             if (previewImg && !previewImg.classList.contains('hidden')) {
                 const base64Data = previewImg.getAttribute('data-base64');
                 if (base64Data) {
-                    // Ekstrak base64 menjadi string murni
                     const base64String = base64Data.split(',')[1];
-                    // Cek format (jpeg/png)
                     const formatData = base64Data.substring("data:image/".length, base64Data.indexOf(";base64"));
                     const extension = formatData === 'jpeg' ? 'jpeg' : 'png';
 
-                    // Daftarkan foto ke dalam workbook
                     const imageId = workbook.addImage({
                         base64: base64String,
                         extension: extension,
@@ -195,12 +201,11 @@ async function generateF003Excel() {
 
                     // Tempelkan foto di cell kolom BEFORE (Kolom E)
                     wsBefore.addImage(imageId, {
-                        tl: { col: 4, row: beforeRow - 1 }, // col 4 = Kolom E (mulai dari 0)
-                        extents: { width: 120, height: 120 } // Ukuran foto (piksel)
+                        tl: { col: 4, row: beforeRow - 1 }, // col 4 = Kolom E
+                        extents: { width: 140, height: 140 }
                     });
 
-                    // Lebarkan baris agar fotonya muat dan rapi
-                    wsBefore.getRow(beforeRow).height = 100;
+                    wsBefore.getRow(beforeRow).height = 110; // Perlebar baris agar foto muat
                 }
             }
         });
@@ -212,6 +217,6 @@ async function generateF003Excel() {
         
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan sistem: " + error.message);
+        alert("Gagal meracik Excel. Pastikan file template tidak corrupt/rusak. Detail Error: " + error.message);
     }
 }
