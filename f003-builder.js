@@ -64,28 +64,24 @@ function addF003Row() {
     tbody.appendChild(tr);
     if (typeof lucide !== 'undefined') lucide.createIcons();
     
-    // Auto-focus ke input barcode saat baris baru dibuat
     setTimeout(() => {
         const barcodeInput = document.getElementById(`barcode-${f003RowCount}`);
         if(barcodeInput) barcodeInput.focus();
     }, 100);
 }
 
-// MESIN PENANGKAP SCANNER PDT SUPER RESPONSIVE
+// PENANGKAP SCANNER PDT
 function handleBarcodeScan(event, rowNum) {
-    // Menangkap sinyal Enter (13), Tab (9), atau Line Feed (10) dari PDT
     if (event.key === 'Enter' || event.keyCode === 13 || event.keyCode === 10 || event.key === 'Tab') {
-        event.preventDefault(); // Jangan biarkan browser me-refresh halaman!
-        
+        event.preventDefault(); 
         const qtyField = document.getElementById(`qty-${rowNum}`);
         if (qtyField) {
-            qtyField.focus(); // Pindahkan kursor ke QTY
-            qtyField.select(); // Langsung blok angka '1' agar mudah diganti jika lebih dari 1
+            qtyField.focus();
+            qtyField.select(); 
         }
     }
 }
 
-// Pindah dari QTY ke Kategori jika ditekan Enter
 function handleEnterOnQty(event, rowNum) {
     if (event.key === 'Enter' || event.keyCode === 13) {
         event.preventDefault();
@@ -114,17 +110,12 @@ function previewPhoto(input, rowId) {
     }
 }
 
-// MESIN EXCEL (Menggunakan Template yang Diupload User)
+// MESIN EXCEL OTOMATIS FETCH DARI GITHUB
 async function generateF003Excel() {
-    const templateInput = document.getElementById('f003-template-file');
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
     const sendDate = document.getElementById('f003-date').value;
 
-    if (!templateInput.files || templateInput.files.length === 0) {
-        alert("Wajib: Pilih file 'F003 STORE DAMAGE FILE (Indonesia).xlsx' di kotak template paling kiri atas!");
-        return;
-    }
     if (!storeCode || !storeName) {
         alert("Mohon isi Store Code dan Store Name terlebih dahulu!");
         return;
@@ -136,10 +127,19 @@ async function generateF003Excel() {
         return;
     }
 
+    // Ubah teks tombol jadi Loading
+    const btnGenerate = document.querySelector('button[onclick="generateF003Excel()"]');
+    const originalText = btnGenerate.innerHTML;
+    btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Memproses Excel...`;
+    btnGenerate.disabled = true;
+
     try {
-        // 1. Baca file template asli dari inputan user
-        const templateFile = templateInput.files[0];
-        const arrayBuffer = await templateFile.arrayBuffer();
+        // 1. Fetch file template Excel dari server/GitHub secara otomatis
+        const templateResponse = await fetch('F003_Template.xlsx');
+        if (!templateResponse.ok) {
+            throw new Error("Gagal menemukan F003_Template.xlsx di server.");
+        }
+        const arrayBuffer = await templateResponse.arrayBuffer();
 
         // 2. Load template ke ExcelJS
         const workbook = new ExcelJS.Workbook();
@@ -150,8 +150,7 @@ async function generateF003Excel() {
         const wsBefore = workbook.getWorksheet('BEFORE');
 
         if (!wsQm || !wsBefore) {
-            alert("Error: File template salah! Pastikan file Excel Anda memiliki sheet bernama 'QM Report (Template)' dan 'BEFORE'.");
-            return;
+            throw new Error("Format template salah. Sheet QM Report (Template) atau BEFORE tidak ditemukan.");
         }
 
         // 4. Masukkan Data Header ke QM Report
@@ -201,11 +200,11 @@ async function generateF003Excel() {
 
                     // Tempelkan foto di cell kolom BEFORE (Kolom E)
                     wsBefore.addImage(imageId, {
-                        tl: { col: 4, row: beforeRow - 1 }, // col 4 = Kolom E
+                        tl: { col: 4, row: beforeRow - 1 },
                         extents: { width: 140, height: 140 }
                     });
 
-                    wsBefore.getRow(beforeRow).height = 110; // Perlebar baris agar foto muat
+                    wsBefore.getRow(beforeRow).height = 110; 
                 }
             }
         });
@@ -217,6 +216,11 @@ async function generateF003Excel() {
         
     } catch (error) {
         console.error(error);
-        alert("Gagal meracik Excel. Pastikan file template tidak corrupt/rusak. Detail Error: " + error.message);
+        alert("Terjadi kesalahan: " + error.message + " Pastikan file F003_Template.xlsx sudah di-upload ke GitHub.");
+    } finally {
+        // Kembalikan tombol ke semula
+        btnGenerate.innerHTML = originalText;
+        btnGenerate.disabled = false;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
