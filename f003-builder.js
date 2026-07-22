@@ -303,67 +303,87 @@ async function generateF003Excel() {
 
     const btnGenerate = document.querySelector('button[onclick="generateF003Excel()"]');
     const originalText = btnGenerate.innerHTML;
-    btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Memproses File Toko...`;
+    
+    // --- ANIMASI LOADING DINAMIS (MEMBUATNYA TIDAK MEMBOSANKAN) ---
     btnGenerate.disabled = true;
+    btnGenerate.classList.add('opacity-90', 'cursor-not-allowed', 'scale-95');
+    
+    let step = 0;
+    const loadingMessages = [
+        "Memproses data barang...",
+        "Menyiapkan template spreadsheet...",
+        "Menyematkan foto bukti in-cell...",
+        "Finalisasi file toko..."
+    ];
+    
+    btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin inline mr-2"></i> ${loadingMessages[0]}`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    let items = [];
-    rows.forEach((tr, index) => {
-        const rowNumIndex = index + 1;
-        const barcodeInput = tr.querySelector('input[id^="barcode-"]');
-        const qtyInput = tr.querySelector('input[id^="qty-"]');
-        const kategoriSelect = tr.querySelector('select[id^="kategori-"]');
-        const alasanSelect = tr.querySelector('select[id^="alasan-"]');
-        
-        const barcode = barcodeInput ? barcodeInput.value : "";
-        const qty = qtyInput ? qtyInput.value : "0";
-        const kategori = kategoriSelect ? kategoriSelect.value : "";
-        const alasan = alasanSelect ? alasanSelect.value : "";
-
-        const invoiceNo = tr.querySelector(`input[id^="invoice-no-"]`)?.value || "";
-        const ctmReceipt = tr.querySelector(`input[id^="ctm-receipt-"]`)?.value || "";
-        const newReceiptDate = tr.querySelector(`input[id^="new-receipt-date-"]`)?.value || "";
-        const expiryDate = tr.querySelector(`input[id^="expiry-date-"]`)?.value || "";
-        const serialNumber = tr.querySelector(`input[id^="serial-number-"]`)?.value || "";
-        const oldReceiptDate = tr.querySelector(`input[id^="old-receipt-date-"]`)?.value || "";
-        const oldReceiptNo = tr.querySelector(`input[id^="old-receipt-no-"]`)?.value || "";
-        const custName = tr.querySelector(`input[id^="cust-name-"]`)?.value || "";
-        const custPhone = tr.querySelector(`input[id^="cust-phone-"]`)?.value || "";
-        
-        const previewImg = tr.querySelector('img[id^="preview-"]');
-        let photoBase64 = "";
-        if (previewImg && !previewImg.classList.contains('hidden')) {
-            photoBase64 = previewImg.getAttribute('data-base64') || "";
-        }
-
-        items.push({
-            no: rowNumIndex,
-            barcode: barcode,
-            qty: qty,
-            kategori: kategori,
-            alasan: alasan,
-            invoiceNo: invoiceNo,
-            ctmReceipt: ctmReceipt,
-            newReceiptDate: newReceiptDate,
-            expiryDate: expiryDate,
-            serialNumber: serialNumber,
-            oldReceiptDate: oldReceiptDate,
-            oldReceiptNo: oldReceiptNo,
-            custName: custName,
-            custPhone: custPhone,
-            photoBase64: photoBase64
-        });
-    });
-
-    const payload = {
-        storeCode: storeCode,
-        storeName: storeName,
-        sendDate: sendDate,
-        items: items
-    };
+    const intervalAnimasi = setInterval(() => {
+        step = (step + 1) % loadingMessages.length;
+        btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin inline mr-2"></i> ${loadingMessages[step]}`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }, 1200);
+    // -------------------------------------------------------------
 
     const scriptUrl = "https://script.google.com/macros/s/AKfycbyGg_4yU44ZetFlNCbsA2vpNaTHZITLd1od7XX_0R2_Cg34py9qMbN0OFX-BwFdDftVDA/exec";
 
     try {
+        let items = [];
+        rows.forEach((tr, index) => {
+            const rowNumIndex = index + 1;
+            const barcodeInput = tr.querySelector('input[id^="barcode-"]');
+            const qtyInput = tr.querySelector('input[id^="qty-"]');
+            const kategoriSelect = tr.querySelector('select[id^="kategori-"]');
+            const alasanSelect = tr.querySelector('select[id^="alasan-"]');
+            
+            const barcode = barcodeInput ? barcodeInput.value : "";
+            const qty = qtyInput ? qtyInput.value : "0";
+            const kategori = kategoriSelect ? kategoriSelect.value : "";
+            const alasan = alasanSelect ? alasanSelect.value : "";
+
+            const invoiceNo = tr.querySelector(`input[id^="invoice-no-"]`)?.value || "";
+            const ctmReceipt = tr.querySelector(`input[id^="ctm-receipt-"]`)?.value || "";
+            const newReceiptDate = tr.querySelector(`input[id^="new-receipt-date-"]`)?.value || "";
+            const expiryDate = tr.querySelector(`input[id^="expiry-date-"]`)?.value || "";
+            const serialNumber = tr.querySelector(`input[id^="serial-number-"]`)?.value || "";
+            const oldReceiptDate = tr.querySelector(`input[id^="old-receipt-date-"]`)?.value || "";
+            const oldReceiptNo = tr.querySelector(`input[id^="old-receipt-no-"]`)?.value || "";
+            const custName = tr.querySelector(`input[id^="cust-name-"]`)?.value || "";
+            const custPhone = tr.querySelector(`input[id^="cust-phone-"]`)?.value || "";
+            
+            const previewImg = tr.querySelector('img[id^="preview-"]');
+            let photoBase64 = "";
+            if (previewImg && !previewImg.classList.contains('hidden')) {
+                photoBase64 = previewImg.getAttribute('data-base64') || "";
+            }
+
+            items.push({
+                no: rowNumIndex,
+                barcode: barcode,
+                qty: qty,
+                kategori: kategori,
+                alasan: alasan,
+                invoiceNo: invoiceNo,
+                ctmReceipt: ctmReceipt,
+                newReceiptDate: newReceiptDate,
+                expiryDate: expiryDate,
+                serialNumber: serialNumber,
+                oldReceiptDate: oldReceiptDate,
+                oldReceiptNo: oldReceiptNo,
+                custName: custName,
+                custPhone: custPhone,
+                photoBase64: photoBase64
+            });
+        });
+
+        const payload = {
+            storeCode: storeCode,
+            storeName: storeName,
+            sendDate: sendDate,
+            items: items
+        };
+
         const response = await fetch(scriptUrl, {
             method: "POST",
             headers: {
@@ -373,6 +393,9 @@ async function generateF003Excel() {
         });
 
         const result = await response.json();
+
+        // Hentikan animasi loading
+        clearInterval(intervalAnimasi);
 
         if (result.status === "success") {
             const userChoice = confirm(`BERHASIL!\n\nFile Spreadsheet khusus toko ${storeCode} telah dibuat lengkap dengan data dinamisnya.\n\nKlik OK untuk langsung membuka Google Spreadsheet.`);
@@ -384,11 +407,13 @@ async function generateF003Excel() {
         }
 
     } catch (error) {
+        clearInterval(intervalAnimasi);
         console.error(error);
         alert("Terjadi kesalahan jaringan atau izin akses Apps Script: " + error.message);
     } finally {
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
+        btnGenerate.classList.remove('opacity-90', 'cursor-not-allowed', 'scale-95');
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
