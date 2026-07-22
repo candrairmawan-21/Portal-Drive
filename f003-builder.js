@@ -1,145 +1,176 @@
 let f003RowCount = 0;
 
-document.addEventListener('DOMContentLoaded', () => {
-    const dateInput = document.getElementById('f003-date');
-    if(dateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
-    }
+// Inisialisasi baris pertama saat halaman dimuat
+document.addEventListener("DOMContentLoaded", function () {
     addF003Row();
 });
 
+// Fungsi untuk menambah baris baru
 function addF003Row() {
     f003RowCount++;
     const tbody = document.getElementById('f003-tbody');
-    const rowId = 'row-' + f003RowCount;
     
     const tr = document.createElement('tr');
-    tr.id = rowId;
-    tr.className = "hover:bg-amber-50/30 transition-colors border-b border-slate-100";
+    tr.id = `row-${f003RowCount}`;
+    tr.className = "border-b border-slate-100 hover:bg-slate-50/50 transition-colors";
     
     tr.innerHTML = `
-        <td class="px-4 py-3 text-center font-bold text-xs text-slate-400">${f003RowCount}</td>
-        <td class="px-4 py-3">
-            <input type="text" id="barcode-${f003RowCount}" onkeydown="handleBarcodeScan(event, ${f003RowCount})" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white transition-all shadow-inner text-amber-900" placeholder="Scan Barcode..." autofocus>
+        <td class="p-3 text-center font-bold text-slate-500 row-number">${f003RowCount}</td>
+        <td class="p-3">
+            <input type="text" 
+                id="barcode-${f003RowCount}"
+                autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="none"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white transition-all shadow-inner text-amber-900"
+                placeholder="Scan Barcode...">
         </td>
-        <td class="px-4 py-3">
-            <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 text-center focus:outline-none focus:border-amber-500">
+        <td class="p-3">
+            <input type="number" 
+                id="qty-${f003RowCount}"
+                value="1" min="1"
+                onkeydown="handleEnterOnQty(event, ${f003RowCount})"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white transition-all text-center">
         </td>
-        <td class="px-4 py-3">
-            <select id="kategori-${f003RowCount}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500">
-                <option value="">-- Pilih --</option>
-                <option value="DMO">DMO</option>
-                <option value="DDR">DDR</option>
-                <option value="DMC">DMC</option>
-                <option value="DMP">DMP</option>
-                <option value="DPI">DPI</option>
-                <option value="2DMP">2DMP</option>
-                <option value="DMW">DMW</option>
-                <option value="DMQ">DMQ</option>
-                <option value="DMN">DMN</option>
-                <option value="SCB">SCB</option>
-                <option value="DME">DME</option>
+        <td class="p-3">
+            <select id="kategori-${f003RowCount}" 
+                onchange="document.getElementById('alasan-${f003RowCount}').focus()"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white transition-all">
+                <option value="">Pilih Kategori...</option>
+                <option value="Expired">Expired</option>
+                <option value="Damaged">Damaged (Rusak)</option>
+                <option value="Broken">Broken (Pecah)</option>
+                <option value="Other">Other (Lainnya)</option>
             </select>
         </td>
-        <td class="px-4 py-3">
-            <input type="text" id="alasan-${f003RowCount}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500" placeholder="Ketik alasan...">
+        <td class="p-3">
+            <input type="text" 
+                id="alasan-${f003RowCount}"
+                onkeydown="finishRow(event, ${f003RowCount})"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                placeholder="Alasan kerusakan...">
         </td>
-        <td class="px-4 py-3 text-center">
-            <div class="relative flex items-center justify-center gap-2">
-                <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-200 shadow-sm flex items-center">
-                    <i data-lucide="camera" class="w-3.5 h-3.5 mr-1.5"></i> Foto
-                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewPhoto(this, ${f003RowCount})">
-                </label>
-                <img id="preview-${f003RowCount}" src="" class="hidden w-9 h-9 rounded object-cover border border-slate-200 shadow-sm cursor-pointer" onclick="window.open(this.src)">
+        <td class="p-3">
+            <div class="flex items-center gap-2">
+                <input type="file" id="foto-${f003RowCount}" accept="image/*" class="hidden" onchange="previewF003Image(event, ${f003RowCount})">
+                <button type="button" onclick="document.getElementById('foto-${f003RowCount}').click()" 
+                    class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all">
+                    <i data-lucide="camera" class="w-4 h-4"></i> Foto
+                </button>
+                <span id="preview-text-${f003RowCount}" class="text-xs text-slate-400 italic">Belum ada</span>
+                <img id="preview-${f003RowCount}" class="hidden w-10 h-10 object-cover rounded-lg border border-slate-200 cursor-pointer shadow-sm" onclick="openImageModal(this.src)">
             </div>
         </td>
-        <td class="px-4 py-3 text-center">
-            <button onclick="removeF003Row('${rowId}')" class="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-colors">
+        <td class="p-3 text-center">
+            <button type="button" onclick="removeF003Row(${f003RowCount})" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
         </td>
     `;
     
     tbody.appendChild(tr);
-    if (typeof lucide !== 'undefined') lucide.createIcons();
     
+    // Pasang listener scanner untuk baris ini
+    setupBarcodeScannerListener(f003RowCount);
+    
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+    
+    // Fokus otomatis ke input barcode pada baris baru
     setTimeout(() => {
-        const barcodeInput = document.getElementById(`barcode-${f003RowCount}`);
-        if(barcodeInput) barcodeInput.focus();
+        document.getElementById(`barcode-${f003RowCount}`)?.focus();
     }, 100);
 }
 
-function handleBarcodeScan(event, rowNum) {
-    // Menangkap sinyal Enter atau Tab dari laser scanner PDT
-    if (event.key === 'Enter' || event.keyCode === 13 || event.keyCode === 10 || event.key === 'Tab') {
-        event.preventDefault(); // Mencegah form submit/reload halaman secara tidak sengaja
-        
-        const barcodeInput = document.getElementById(`barcode-${rowNum}`);
-        
-        // Pastikan input barcode tidak kosong sebelum pindah
-        if (barcodeInput && barcodeInput.value.trim() !== "") {
-            const qtyField = document.getElementById(`qty-${rowNum}`);
-            if (qtyField) {
-                qtyField.focus(); // Pindahkan kursor ke kolom Qty
-                qtyField.select(); // Blok angka '1' bawaan agar mudah langsung diketik jumlah barunya
-            }
+// 1. Mekanisme Scanner Handal untuk Android PDT & Manual
+function setupBarcodeScannerListener(rowNum) {
+    const barcodeInput = document.getElementById(`barcode-${rowNum}`);
+    if (!barcodeInput) return;
+
+    let scanTimer;
+
+    function moveNext() {
+        const value = barcodeInput.value.trim();
+        if (value === "") return;
+
+        const qty = document.getElementById(`qty-${rowNum}`);
+        if (qty) {
+            qty.focus();
+            qty.select();
         }
     }
+
+    // Tangkap input string cepat dari PDT Android
+    barcodeInput.addEventListener("input", function () {
+        clearTimeout(scanTimer);
+        scanTimer = setTimeout(moveNext, 80);
+    });
+
+    // Tangkap jika scanner/keyboard mengirim Enter atau Tab
+    barcodeInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === "Tab" || e.keyCode === 13 || e.keyCode === 9) {
+            e.preventDefault();
+            clearTimeout(scanTimer);
+            moveNext();
+        }
+    });
 }
 
+// 2. Alur setelah dari Qty
 function handleEnterOnQty(event, rowNum) {
-    if (event.key === 'Enter' || event.keyCode === 13) {
+    if (event.key === "Enter") {
         event.preventDefault();
-        const kategoriField = document.getElementById(`kategori-${rowNum}`);
-        if (kategoriField) kategoriField.focus();
+        document.getElementById(`kategori-${rowNum}`)?.focus();
     }
 }
 
-function removeF003Row(rowId) {
-    const row = document.getElementById(rowId);
-    if(row) row.remove();
+// 3. Alur setelah dari kolom Alasan (Tekan Enter langsung buat baris baru)
+function finishRow(e, rowNum) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        addF003Row();
+    }
 }
 
-// Konversi foto agar aman dikirim ke Spreadsheet
-function previewPhoto(input, rowId) {
-    const previewImg = document.getElementById(`preview-${rowId}`);
-    const file = input.files[0];
-    
+// 4. Hapus Baris dan Perbarui Nomor Urut (Fix Bug Indeks)
+function removeF003Row(rowNum) {
+    const row = document.getElementById(`row-${rowNum}`);
+    if (row) {
+        row.remove();
+        recalculateRowNumbers();
+    }
+}
+
+function recalculateRowNumbers() {
+    const rows = document.querySelectorAll('#f003-tbody tr');
+    rows.forEach((tr, index) => {
+        const newNum = index + 1;
+        // Update nomor tampilan baris
+        const numCell = tr.querySelector('.row-number');
+        if (numCell) numCell.textContent = newNum;
+    });
+}
+
+// 5. Preview Foto
+function previewF003Image(event, rowNum) {
+    const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 600; // Kompresi ringan agar pengiriman data cepat
-                let width = img.width;
-                let height = img.height;
-                
-                if (width > MAX_WIDTH) {
-                    height = Math.round((height * MAX_WIDTH) / width);
-                    width = MAX_WIDTH;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                const safeBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                previewImg.src = safeBase64;
-                previewImg.classList.remove('hidden');
-                previewImg.setAttribute('data-base64', safeBase64);
-            }
-            img.src = e.target.result;
-        }
+        reader.onload = function (e) {
+            const previewImg = document.getElementById(`preview-${rowNum}`);
+            const previewText = document.getElementById(`preview-text-${rowNum}`);
+            
+            previewImg.src = e.target.result;
+            previewImg.setAttribute('data-base64', e.target.result);
+            previewImg.classList.remove('hidden');
+            previewText.classList.add('hidden');
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        };
         reader.readAsDataURL(file);
     }
 }
 
-// ========================================================
-// KIRIM DATA KE GOOGLE SPREADSHEET (MULTI-USER & AUTO-COPY)
-// ========================================================
+// 6. Fungsi Kirim Data Utama ke Google Apps Script (Sudah Optimal)
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
@@ -158,25 +189,31 @@ async function generateF003Excel() {
 
     const btnGenerate = document.querySelector('button[onclick="generateF003Excel()"]');
     const originalText = btnGenerate.innerHTML;
-    btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Memproses File Toko...`;
+    btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Mengirim Data...`;
     btnGenerate.disabled = true;
 
     let items = [];
     rows.forEach((tr, index) => {
-        const rowNum = index + 1;
-        const barcode = document.getElementById(`barcode-${rowNum}`)?.value || "";
-        const qty = document.getElementById(`qty-${rowNum}`)?.value || "0";
-        const kategori = document.getElementById(`kategori-${rowNum}`)?.value || "";
-        const alasan = document.getElementById(`alasan-${rowNum}`)?.value || "";
+        const rowNumIndex = index + 1;
+        // Ambil ID asli berdasarkan elemen yang ada di dalam baris tersebut agar aman walau ada yang dihapus
+        const barcodeInput = tr.querySelector('input[id^="barcode-"]');
+        const qtyInput = tr.querySelector('input[id^="qty-"]');
+        const kategoriSelect = tr.querySelector('select[id^="kategori-"]');
+        const alasanInput = tr.querySelector('input[id^="alasan-"]');
+        const previewImg = tr.querySelector('img[id^="preview-"]');
+
+        const barcode = barcodeInput ? barcodeInput.value : "";
+        const qty = qtyInput ? qtyInput.value : "0";
+        const kategori = kategoriSelect ? kategoriSelect.value : "";
+        const alasan = alasanInput ? alasanInput.value : "";
         
-        const previewImg = document.getElementById(`preview-${rowNum}`);
         let photoBase64 = "";
         if (previewImg && !previewImg.classList.contains('hidden')) {
             photoBase64 = previewImg.getAttribute('data-base64') || "";
         }
 
         items.push({
-            no: rowNum,
+            no: rowNumIndex,
             barcode: barcode,
             qty: qty,
             kategori: kategori,
@@ -195,70 +232,29 @@ async function generateF003Excel() {
     const scriptUrl = "https://script.google.com/macros/s/AKfycbyGg_4yU44ZetFlNCbsA2vpNaTHZITLd1od7XX_0R2_Cg34py9qMbN0OFX-BwFdDftVDA/exec";
 
     try {
-        // Menggunakan mode cors standar untuk menangkap link balasan spreadsheet baru
         const response = await fetch(scriptUrl, {
             method: "POST",
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8" // Trik aman CORS untuk Google Apps Script
-            },
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(payload)
         });
 
         const result = await response.json();
 
         if (result.status === "success") {
-            // Tampilkan pop-up interaktif berisi link file spreadsheet khusus toko tersebut
-            const userChoice = confirm(`BERHASIL!\n\nFile Spreadsheet khusus toko ${storeCode} telah dibuat dan foto berhasil disematkan.\n\nKlik OK untuk langsung membuka Google Spreadsheet.`);
+            const userChoice = confirm(`SUKSES!\n\nFile spreadsheet toko berhasil dibuat.\n\nKlik OK untuk membuka Google Spreadsheet.`);
             if (userChoice) {
                 window.open(result.url, '_blank');
             }
         } else {
-            alert("Gagal memproses di server: " + result.message);
+            alert("Gagal: " + result.message);
         }
 
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan jaringan atau izin akses Apps Script: " + error.message);
+        alert("Terjadi kesalahan: " + error.message);
     } finally {
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
-// --- TAMBAHKAN KODE INI TEPAT DI BAGIAN PALING BAWAH FILE f003-builder.js ---
-
-function setupBarcodeScannerListener(rowNum) {
-    const barcodeInput = document.getElementById(`barcode-${rowNum}`);
-    if (!barcodeInput) return;
-
-    // 1. Tangkap jika scanner mengirim Enter
-    barcodeInput.addEventListener('keydown', function(event) {
-        if (event.key === 'Enter' || event.keyCode === 13 || event.keyCode === 229) {
-            event.preventDefault();
-            pindahKeQty(rowNum);
-        }
-    });
-
-    // 2. Tangkap otomatis untuk Android PDT (jika panjang digit barcode >= 12)
-    barcodeInput.addEventListener('input', function(event) {
-        const val = barcodeInput.value.trim();
-        if (val.length >= 12) { 
-            setTimeout(() => {
-                pindahKeQty(rowNum);
-            }, 100);
-        }
-    });
-}
-
-function pindahKeQty(rowNum) {
-    const qtyField = document.getElementById(`qty-${rowNum}`);
-    if (qtyField) {
-        qtyField.focus();
-        qtyField.select();
-    }
-}
-
-// Untuk otomatis aktifkan di baris pertama saat halaman baru dibuka
-document.addEventListener("DOMContentLoaded", function() {
-    setupBarcodeScannerListener(1);
-});
