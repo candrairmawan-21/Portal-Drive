@@ -110,7 +110,7 @@ function previewPhoto(input, rowId) {
     }
 }
 
-// MESIN EXCEL YANG AMAN & ANTI-MACET
+// MESIN EXCEL OTOMATIS FETCH DARI GITHUB
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
@@ -133,31 +133,18 @@ async function generateF003Excel() {
     btnGenerate.disabled = true;
 
     try {
-        // Coba ambil file template dari folder repository
-        let arrayBuffer;
-        try {
-            const response = await fetch('F003 STORE DAMAGE FILE (Indonesia).xlsx');
-            if (!response.ok) throw new Error("File tidak ditemukan");
-            arrayBuffer = await response.arrayBuffer();
-        } catch (err) {
-            // Jika gagal di-fetch (misal karena dibuka offline), gunakan prompt pilihan file manual sebagai cadangan darurat
-            const promptInput = document.createElement('input');
-            promptInput.type = 'file';
-            promptInput.accept = '.xlsx';
-            
-            await new Promise((resolve, reject) => {
-                promptInput.onchange = async (e) => {
-                    if(e.target.files[0]) {
-                        arrayBuffer = await e.target.files[0].arrayBuffer();
-                        resolve();
-                    } else {
-                        reject(new Error("Pilihan file dibatalkan."));
-                    }
-                };
-                promptInput.click();
-            });
-        }
+        // Nama file HARUS SAMA PERSIS dengan yang di-upload ke GitHub
+        // Menggunakan encodeURI agar spasi dan kurung terbaca aman oleh server
+        const exactFileName = 'F003 STORE DAMAGE FILE (Indonesia).xlsx';
+        const fileUrl = encodeURI(exactFileName);
 
+        const response = await fetch(fileUrl);
+        
+        if (!response.ok) {
+            throw new Error(`File template "${exactFileName}" tidak ditemukan di server (Error ${response.status}).`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
@@ -165,9 +152,10 @@ async function generateF003Excel() {
         const wsBefore = workbook.getWorksheet('BEFORE');
 
         if (!wsQm || !wsBefore) {
-            throw new Error("Sheet 'QM Report (Template)' atau 'BEFORE' tidak ditemukan di dalam file template Excel!");
+            throw new Error("Sheet 'QM Report (Template)' atau 'BEFORE' tidak ditemukan di dalam file template Anda!");
         }
 
+        // Isi Header
         wsQm.getCell('C1').value = storeCode;
         wsQm.getCell('C2').value = storeName;
         wsQm.getCell('C3').value = sendDate;
@@ -182,6 +170,7 @@ async function generateF003Excel() {
             const kategori = document.getElementById(`kategori-${rowNum}`)?.value || "";
             const alasan = document.getElementById(`alasan-${rowNum}`)?.value || "";
 
+            // Isi QM Report
             const qmRow = qmStartRow + index;
             wsQm.getCell(`B${qmRow}`).value = rowNum;
             wsQm.getCell(`C${qmRow}`).value = barcode;
@@ -189,12 +178,14 @@ async function generateF003Excel() {
             wsQm.getCell(`E${qmRow}`).value = kategori;
             wsQm.getCell(`F${qmRow}`).value = alasan;
 
+            // Isi Sheet Before
             const beforeRow = beforeStartRow + index;
             wsBefore.getCell(`A${beforeRow}`).value = rowNum;
             wsBefore.getCell(`B${beforeRow}`).value = barcode;
             wsBefore.getCell(`C${beforeRow}`).value = Number(qty);
             wsBefore.getCell(`D${beforeRow}`).value = alasan;
 
+            // Proses Foto
             const previewImg = document.getElementById(`preview-${rowNum}`);
             if (previewImg && !previewImg.classList.contains('hidden')) {
                 const base64Data = previewImg.getAttribute('data-base64');
@@ -218,13 +209,14 @@ async function generateF003Excel() {
             }
         });
 
+        // Generate & Download
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         saveAs(blob, `F003_Damage_${storeCode}_${sendDate}.xlsx`);
         
     } catch (error) {
         console.error(error);
-        alert("Gagal memproses: " + error.message);
+        alert("GAGAL MEMPROSES EXCEL:\n\n" + error.message + "\n\nCatatan: Jika Anda mengetes ini di komputer lokal (file:///...), fitur ini akan diblokir oleh browser. Anda harus mencobanya melalui link GitHub Pages (https://...).");
     } finally {
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
