@@ -225,3 +225,40 @@ async function generateF003Excel() {
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
+// --- TAMBAHKAN KODE INI TEPAT DI BAGIAN PALING BAWAH FILE f003-builder.js ---
+
+function setupBarcodeScannerListener(rowNum) {
+    const barcodeInput = document.getElementById(`barcode-${rowNum}`);
+    if (!barcodeInput) return;
+
+    // 1. Tangkap jika scanner mengirim Enter
+    barcodeInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' || event.keyCode === 13 || event.keyCode === 229) {
+            event.preventDefault();
+            pindahKeQty(rowNum);
+        }
+    });
+
+    // 2. Tangkap otomatis untuk Android PDT (jika panjang digit barcode >= 12)
+    barcodeInput.addEventListener('input', function(event) {
+        const val = barcodeInput.value.trim();
+        if (val.length >= 12) { 
+            setTimeout(() => {
+                pindahKeQty(rowNum);
+            }, 100);
+        }
+    });
+}
+
+function pindahKeQty(rowNum) {
+    const qtyField = document.getElementById(`qty-${rowNum}`);
+    if (qtyField) {
+        qtyField.focus();
+        qtyField.select();
+    }
+}
+
+// Untuk otomatis aktifkan di baris pertama saat halaman baru dibuka
+document.addEventListener("DOMContentLoaded", function() {
+    setupBarcodeScannerListener(1);
+});
