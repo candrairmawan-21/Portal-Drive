@@ -133,12 +133,9 @@ async function generateF003Excel() {
     btnGenerate.disabled = true;
 
     try {
-        // Nama file HARUS SAMA PERSIS dengan yang di-upload ke GitHub
-        // Menggunakan encodeURI agar spasi dan kurung terbaca aman oleh server
-        const exactFileName = 'F003 STORE DAMAGE FILE (Indonesia).xlsx';
-        const fileUrl = encodeURI(exactFileName);
-
-        const response = await fetch(fileUrl);
+        // Nama file disesuaikan persis dengan yang ada di GitHub Anda
+        const exactFileName = 'F003_Template.xlsx';
+        const response = await fetch(exactFileName);
         
         if (!response.ok) {
             throw new Error(`File template "${exactFileName}" tidak ditemukan di server (Error ${response.status}).`);
@@ -216,7 +213,7 @@ async function generateF003Excel() {
         
     } catch (error) {
         console.error(error);
-        alert("GAGAL MEMPROSES EXCEL:\n\n" + error.message + "\n\nCatatan: Jika Anda mengetes ini di komputer lokal (file:///...), fitur ini akan diblokir oleh browser. Anda harus mencobanya melalui link GitHub Pages (https://...).");
+        alert("GAGAL MEMPROSES EXCEL:\n\n" + error.message + "\n\nCatatan: Pastikan Anda mengetesnya lewat link GitHub Pages, bukan file lokal.");
     } finally {
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
