@@ -71,12 +71,19 @@ function addF003Row() {
 }
 
 function handleBarcodeScan(event, rowNum) {
+    // Menangkap sinyal Enter atau Tab dari laser scanner PDT
     if (event.key === 'Enter' || event.keyCode === 13 || event.keyCode === 10 || event.key === 'Tab') {
-        event.preventDefault(); 
-        const qtyField = document.getElementById(`qty-${rowNum}`);
-        if (qtyField) {
-            qtyField.focus();
-            qtyField.select(); 
+        event.preventDefault(); // Mencegah form submit/reload halaman secara tidak sengaja
+        
+        const barcodeInput = document.getElementById(`barcode-${rowNum}`);
+        
+        // Pastikan input barcode tidak kosong sebelum pindah
+        if (barcodeInput && barcodeInput.value.trim() !== "") {
+            const qtyField = document.getElementById(`qty-${rowNum}`);
+            if (qtyField) {
+                qtyField.focus(); // Pindahkan kursor ke kolom Qty
+                qtyField.select(); // Blok angka '1' bawaan agar mudah langsung diketik jumlah barunya
+            }
         }
     }
 }
