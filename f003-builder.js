@@ -131,7 +131,7 @@ function previewPhoto(input, rowId) {
 }
 
 // ========================================================
-// KIRIM DATA KE GOOGLE SPREADSHEET
+// KIRIM DATA KE GOOGLE SPREADSHEET (MULTI-USER & AUTO-COPY)
 // ========================================================
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
@@ -151,10 +151,9 @@ async function generateF003Excel() {
 
     const btnGenerate = document.querySelector('button[onclick="generateF003Excel()"]');
     const originalText = btnGenerate.innerHTML;
-    btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Mengirim ke Spreadsheet...`;
+    btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Memproses File Toko...`;
     btnGenerate.disabled = true;
 
-    // Kumpulkan data dari tabel web
     let items = [];
     rows.forEach((tr, index) => {
         const rowNum = index + 1;
@@ -186,24 +185,33 @@ async function generateF003Excel() {
         items: items
     };
 
-    // URL Web App Google Apps Script Anda
     const scriptUrl = "https://script.google.com/macros/s/AKfycbyGg_4yU44ZetFlNCbsA2vpNaTHZITLd1od7XX_0R2_Cg34py9qMbN0OFX-BwFdDftVDA/exec";
 
     try {
+        // Menggunakan mode cors standar untuk menangkap link balasan spreadsheet baru
         const response = await fetch(scriptUrl, {
             method: "POST",
-            mode: "no-cors", // Diperlukan agar tidak terhalang kebijakan CORS Google
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "text/plain;charset=utf-8" // Trik aman CORS untuk Google Apps Script
             },
             body: JSON.stringify(payload)
         });
 
-        alert("Berhasil! Data dan foto telah dikirim ke Google Sheet Master. Silakan cek Google Spreadsheet Anda untuk melihat hasilnya dan mengunduhnya!");
+        const result = await response.json();
+
+        if (result.status === "success") {
+            // Tampilkan pop-up interaktif berisi link file spreadsheet khusus toko tersebut
+            const userChoice = confirm(`BERHASIL!\n\nFile Spreadsheet khusus toko ${storeCode} telah dibuat dan foto berhasil disematkan.\n\nKlik OK untuk langsung membuka Google Spreadsheet.`);
+            if (userChoice) {
+                window.open(result.url, '_blank');
+            }
+        } else {
+            alert("Gagal memproses di server: " + result.message);
+        }
 
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan saat mengirim data: " + error.message);
+        alert("Terjadi kesalahan jaringan atau izin akses Apps Script: " + error.message);
     } finally {
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
