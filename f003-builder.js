@@ -16,43 +16,40 @@ function addF003Row() {
     
     const tr = document.createElement('tr');
     tr.id = rowId;
-    tr.className = "border-b border-slate-200 block md:table-row mb-4 md:mb-0 bg-white md:bg-transparent p-4 md:p-0 rounded-xl shadow-sm md:shadow-none";
+    tr.className = "border-b border-slate-200 block md:table-row mb-3 md:mb-0 bg-white md:bg-transparent p-3 md:p-0 rounded-xl shadow-sm md:shadow-none";
     
     tr.innerHTML = `
-        <td colspan="7" class="p-4">
-            <div class="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4 relative transition-all hover:border-amber-300 shadow-sm">
+        <td colspan="7" class="p-2 md:p-3">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 relative transition-all shadow-sm">
                 
-                <!-- HEADER CARD: NOMOR & TOMBOL HAPUS -->
-                <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
-                    <div class="flex items-center gap-2">
-                        <span class="bg-amber-500 text-white text-xs font-black px-2.5 py-1 rounded-md row-number">Item #${f003RowCount}</span>
-                        <span class="text-xs font-semibold text-slate-400">Silakan scan barcode atau isi data manual</span>
-                    </div>
-                    <button type="button" onclick="removeF003Row('${rowId}')" class="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Item
+                <!-- HEADER CARD -->
+                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-200">
+                    <span class="bg-amber-500 text-white text-[11px] font-black px-2 py-0.5 rounded row-number">Item #${f003RowCount}</span>
+                    <button type="button" onclick="removeF003Row('${rowId}')" class="text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus
                     </button>
                 </div>
 
-                <!-- GRID UTAMA INPUT -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                <!-- GRID UTAMA (DIPADATKAN AGAR TIDAK BOROS RUANG) -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                     
-                    <!-- 1. BARCODE -->
-                    <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Barcode / SKU</label>
-                        <input type="text" id="barcode-${f003RowCount}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="none" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:outline-none focus:border-amber-500 shadow-inner" placeholder="Scan Barcode...">
+                    <!-- Barcode -->
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Barcode / SKU</label>
+                        <input type="text" id="barcode-${f003RowCount}" autocomplete="off" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Scan Barcode...">
                     </div>
 
-                    <!-- 2. QTY -->
+                    <!-- Qty -->
                     <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Qty</label>
-                        <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-800 text-center focus:outline-none focus:border-amber-500 shadow-inner">
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Qty</label>
+                        <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 text-center focus:outline-none focus:border-amber-500">
                     </div>
 
-                    <!-- 3. KATEGORI -->
+                    <!-- Kategori -->
                     <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Category</label>
-                        <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-inner">
-                            <option value="">-- Pilih Kategori --</option>
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Category</label>
+                        <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
+                            <option value="">-- Pilih --</option>
                             <option value="DMO">DMO</option>
                             <option value="DDR">DDR</option>
                             <option value="DMC">DMC</option>
@@ -67,10 +64,10 @@ function addF003Row() {
                         </select>
                     </div>
 
-                    <!-- 4. ALASAN -->
-                    <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Reason (Alasan Rusak)</label>
-                        <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-inner">
+                    <!-- Alasan -->
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Reason</label>
+                        <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
                             <option value="">-- Pilih Alasan --</option>
                             <option value="PECAH">PECAH</option>
                             <option value="PATAH">PATAH</option>
@@ -87,19 +84,17 @@ function addF003Row() {
                     </div>
                 </div>
 
-                <!-- AREA KOLOM DINAMIS (MUNCUL OTOMATIS SESUAI KATEGORI) -->
-                <div id="dynamic-fields-${f003RowCount}" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-                    <!-- Dinamis terisi via JS -->
-                </div>
+                <!-- KONTainer KOLOM DINAMIS (H s.d O) -->
+                <div id="dynamic-fields-${f003RowCount}" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2"></div>
 
-                <!-- UPLOAD FOTO BUKTI -->
-                <div class="flex items-center gap-3 pt-2 border-t border-slate-200/60">
-                    <label class="cursor-pointer bg-white hover:bg-amber-50 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition-all border border-slate-300 shadow-sm flex items-center gap-1.5">
-                        <i data-lucide="camera" class="w-4 h-4 text-amber-600"></i> Ambil / Upload Foto Bukti
+                <!-- FOTO BUKTI -->
+                <div class="flex items-center gap-2 pt-2 border-t border-slate-200">
+                    <label class="cursor-pointer bg-white hover:bg-amber-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-300 shadow-sm flex items-center gap-1">
+                        <i data-lucide="camera" class="w-3.5 h-3.5 text-amber-600"></i> Upload Foto
                         <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewPhoto(this, ${f003RowCount})">
                     </label>
-                    <span id="preview-text-${f003RowCount}" class="text-xs text-slate-400 italic">Belum ada foto dipilih</span>
-                    <img id="preview-${f003RowCount}" src="" class="hidden w-12 h-12 rounded-lg object-cover border-2 border-amber-500 shadow cursor-pointer" onclick="window.open(this.src)" title="Klik untuk memperbesar">
+                    <span id="preview-text-${f003RowCount}" class="text-[11px] text-slate-400 italic">Belum ada foto</span>
+                    <img id="preview-${f003RowCount}" src="" class="hidden w-9 h-9 rounded object-cover border border-amber-500 shadow cursor-pointer" onclick="window.open(this.src)">
                 </div>
 
             </div>
@@ -117,71 +112,66 @@ function addF003Row() {
     }, 100);
 }
 
-// Handler Perubahan Kategori untuk Kolom Dinamis (Masuk ke Kolom H s.d O)
+// Handler Perubahan Kategori (Input Ringkas & Terstruktur)
 function handleCategoryChange(rowNum) {
     const kategori = document.getElementById(`kategori-${rowNum}`).value;
     const container = document.getElementById(`dynamic-fields-${rowNum}`);
     
     let html = '';
     
-    // 1. DDR -> Invoice No (Col H)
     if (kategori === 'DDR') {
         html += `
-            <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-1">Invoice No. (Col H)</label>
-                <input type="text" id="invoice-no-${rowNum}" class="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="No. Invoice">
+            <div class="col-span-2 md:col-span-1">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Invoice No. (Col H)</label>
+                <input type="text" id="invoice-no-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="No. Invoice">
             </div>
         `;
     }
-    // 2. DMC atau DMW -> CTM Receipt No (Col H) & New Receipt Date (Col I)
     else if (kategori === 'DMC' || kategori === 'DMW') {
         html += `
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-1">CTM Receipt No. (Col H)</label>
-                <input type="text" id="ctm-receipt-${rowNum}" class="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="CTM Receipt No">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">CTM Receipt (Col H)</label>
+                <input type="text" id="ctm-receipt-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="CTM Receipt">
             </div>
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-1">New Receipt Date (Col I)</label>
-                <input type="text" id="new-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-sm">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">New Date (Col I)</label>
+                <input type="text" id="new-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
             </div>
         `;
         
-        // 4. Khusus DMW tambah Serial Number (Col K)
         if (kategori === 'DMW') {
             html += `
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-1">Serial Number (Col K)</label>
-                    <input type="text" id="serial-number-${rowNum}" class="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="Serial Number">
+                    <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Serial No. (Col K)</label>
+                    <input type="text" id="serial-number-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Serial No.">
                 </div>
             `;
         }
         
-        // 5. DMC & DMW tambah Old Receipt Date (Col L), Old Receipt No (Col M), Customer Name (Col N), Customer Phone (Col O)
         html += `
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-1">Old Receipt Date (Col L)</label>
-                <input type="text" id="old-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-sm">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Old Date (Col L)</label>
+                <input type="text" id="old-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
             </div>
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-1">Old Receipt No (Col M)</label>
-                <input type="text" id="old-receipt-no-${rowNum}" class="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="Old Receipt No">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Old Receipt No (Col M)</label>
+                <input type="text" id="old-receipt-no-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Old Receipt">
             </div>
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-1">Customer Name (Col N)</label>
-                <input type="text" id="cust-name-${rowNum}" class="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="Nama Customer">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Customer Name (Col N)</label>
+                <input type="text" id="cust-name-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Nama Customer">
             </div>
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-1">Customer Phone (Col O)</label>
-                <input type="text" id="cust-phone-${rowNum}" class="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="No. Telp Customer">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Customer Phone (Col O)</label>
+                <input type="text" id="cust-phone-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="No. Telp">
             </div>
         `;
     }
-    // 3. DMP / DPI / 2DMP -> Expiry Date (Col J)
     else if (kategori === 'DMP' || kategori === 'DPI' || kategori === '2DMP') {
         html += `
-            <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-1">Expiry Date (Col J)</label>
-                <input type="text" id="expiry-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-sm">
+            <div class="col-span-2 md:col-span-1">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Expiry Date (Col J)</label>
+                <input type="text" id="expiry-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
             </div>
         `;
     }
@@ -231,7 +221,7 @@ function handleEnterOnQty(event, rowNum) {
 
 function finishRow(e, rowNum) {
     if (e.key === 'Enter' || e.keyCode === 13) {
-        event.preventDefault();
+        e.preventDefault();
         addF003Row();
     }
 }
@@ -267,6 +257,7 @@ function resetF003Table() {
     }
 }
 
+// Preview Foto Stabil & Aman
 function previewPhoto(input, rowId) {
     const previewImg = document.getElementById(`preview-${rowId}`);
     const previewText = document.getElementById(`preview-text-${rowId}`);
@@ -305,7 +296,7 @@ function previewPhoto(input, rowId) {
 }
 
 // ========================================================
-// KIRIM DATA KE GOOGLE SPREADSHEET (DENGAN KOLOM DINAMIS H s.d O)
+// KIRIM DATA KE GOOGLE SPREADSHEET (DENGAN PEMETAAN H s.d O YANG PRESISI)
 // ========================================================
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
@@ -353,7 +344,6 @@ async function generateF003Excel() {
         rows.forEach((tr, index) => {
             const rowNumIndex = index + 1;
             
-            // Cari elemen di dalam card baris ini menggunakan pencarian ID parsial yang aman
             const barcodeInput = tr.querySelector('input[id^="barcode-"]');
             const qtyInput = tr.querySelector('input[id^="qty-"]');
             const kategoriSelect = tr.querySelector('select[id^="kategori-"]');
@@ -364,7 +354,7 @@ async function generateF003Excel() {
             const kategori = kategoriSelect ? kategoriSelect.value : "";
             const alasan = alasanSelect ? alasanSelect.value : "";
 
-            // Ambil data dinamis dengan aman
+            // Pengambilan nilai kolom dinamis H s.d O secara presisi
             const invoiceNo = tr.querySelector(`input[id^="invoice-no-"]`)?.value || "";
             const ctmReceipt = tr.querySelector(`input[id^="ctm-receipt-"]`)?.value || "";
             const newReceiptDate = tr.querySelector(`input[id^="new-receipt-date-"]`)?.value || "";
