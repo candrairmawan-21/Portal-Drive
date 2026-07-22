@@ -44,6 +44,20 @@ function addF003Row() {
         </td>
         <td class="px-4 py-3">
             <input type="text" id="alasan-${f003RowCount}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500" placeholder="Ketik alasan...">
+ <option value="">-- Pilih --</option>
+                <option value="PECAH">PECAH</option>
+                <option value="PATAH">PATAH</option>
+                <option value="SOBEK">SOBEK</option>
+                <option value="KEMASAN RUSAK ">KEMASAN RUSAK</option>
+                <option value="BOCOR">BOCOR</option>
+                <option value="KOTOR">KOTOR </option>
+                <option value="TIDAK BERFUNGSI ">TIDAK BERFUNGSI</option>
+                <option value="PART TIDAK LENGKAP">PART TIDAK LENGKAP</option>
+                <option value="DIMAKAN TIKUS">DIMAKAN TIKUS</option>
+                <option value="EXPIRED">EXPIRED</option>
+                <option value="H-35 EXPIRED">H-35 EXPIRED</option>
+            </select>
+
         </td>
         <td class="px-4 py-3 text-center">
             <div class="relative flex items-center justify-center gap-2">
