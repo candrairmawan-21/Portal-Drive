@@ -110,7 +110,7 @@ function previewPhoto(input, rowId) {
     }
 }
 
-// MESIN EXCEL OTOMATIS FETCH DARI GITHUB
+// MESIN EXCEL OTOMATIS FETCH DARI GITHUB (VERSI ANTI-CRASH FOTO)
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
@@ -133,12 +133,11 @@ async function generateF003Excel() {
     btnGenerate.disabled = true;
 
     try {
-        // Nama file disesuaikan persis dengan yang ada di GitHub Anda
         const exactFileName = 'F003_Template.xlsx';
         const response = await fetch(exactFileName);
         
         if (!response.ok) {
-            throw new Error(`File template "${exactFileName}" tidak ditemukan di server (Error ${response.status}).`);
+            throw new Error(`File template "${exactFileName}" tidak ditemukan (Error ${response.status}).`);
         }
         
         const arrayBuffer = await response.arrayBuffer();
@@ -149,7 +148,7 @@ async function generateF003Excel() {
         const wsBefore = workbook.getWorksheet('BEFORE');
 
         if (!wsQm || !wsBefore) {
-            throw new Error("Sheet 'QM Report (Template)' atau 'BEFORE' tidak ditemukan di dalam file template Anda!");
+            throw new Error("Sheet 'QM Report (Template)' atau 'BEFORE' tidak ditemukan di template Anda!");
         }
 
         // Isi Header
@@ -182,28 +181,43 @@ async function generateF003Excel() {
             wsBefore.getCell(`C${beforeRow}`).value = Number(qty);
             wsBefore.getCell(`D${beforeRow}`).value = alasan;
 
-            // Proses Foto
+            // Proses Foto dengan Sistem Kebal (Try-Catch)
             const previewImg = document.getElementById(`preview-${rowNum}`);
             if (previewImg && !previewImg.classList.contains('hidden')) {
                 const base64Data = previewImg.getAttribute('data-base64');
                 if (base64Data) {
-                    const base64String = base64Data.split(',')[1];
-                    const formatData = base64Data.substring("data:image/".length, base64Data.indexOf(";base64"));
-                    const extension = formatData === 'jpeg' ? 'jpeg' : 'png';
+                    try {
+                        const base64String = base64Data.split(',')[1];
+                        
+                        // Deteksi format super aman
+                        let extension = 'png'; 
+                        const lowerData = base64Data.toLowerCase();
+                        if (lowerData.includes('jpeg') || lowerData.includes('jpg')) {
+                            extension = 'jpeg';
+                        } else if (lowerData.includes('gif')) {
+                            extension = 'gif';
+                        }
 
-                    const imageId = workbook.addImage({
-                        base64: base64String,
-                        extension: extension,
-                    });
+                        // Registrasi foto ke Excel
+                        const imageId = workbook.addImage({
+                            base64: base64String,
+                            extension: extension,
+                        });
 
-                    wsBefore.addImage(imageId, {
-                        tl: { col: 4, row: beforeRow - 1 },
-                        extents: { width: 140, height: 140 }
-                    });
+                        // Tempelkan foto menggunakan koordinat aman (agar tidak error 'width')
+                        wsBefore.addImage(imageId, {
+                            tl: { col: 4, row: beforeRow - 1 }, // Pojok kiri atas di Kolom E
+                            br: { col: 5, row: beforeRow }      // Pojok kanan bawah di Kolom F
+                        });
 
-                    wsBefore.getRow(beforeRow).height = 110; 
+                    } catch (imgError) {
+                        console.error("Gagal menyisipkan foto di baris " + rowNum, imgError);
+                        wsBefore.getCell(`E${beforeRow}`).value = "[Format Foto Tidak Didukung]";
+                    }
                 }
             }
+            // Lebarkan baris agar foto (jika ada) terlihat rapi
+            wsBefore.getRow(beforeRow).height = 110; 
         });
 
         // Generate & Download
@@ -213,7 +227,7 @@ async function generateF003Excel() {
         
     } catch (error) {
         console.error(error);
-        alert("GAGAL MEMPROSES EXCEL:\n\n" + error.message + "\n\nCatatan: Pastikan Anda mengetesnya lewat link GitHub Pages, bukan file lokal.");
+        alert("GAGAL MEMPROSES EXCEL:\n\n" + error.message);
     } finally {
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
