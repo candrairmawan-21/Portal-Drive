@@ -11,93 +11,86 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function addF003Row() {
     f003RowCount++;
-    const tbody = document.getElementById('f003-tbody');
-    const rowId = 'row-' + f003RowCount;
+    const container = document.getElementById('f003-container');
+    const cardId = 'card-item-' + f003RowCount;
     
-    const tr = document.createElement('tr');
-    tr.id = rowId;
-    tr.className = "border-b border-slate-200 block w-full mb-3 bg-white p-3 rounded-xl shadow-sm";
+    const cardDiv = document.createElement('div');
+    cardDiv.id = cardId;
+    cardDiv.className = "bg-slate-50/90 border border-slate-200 rounded-xl p-3.5 shadow-sm transition-all hover:border-amber-400";
     
-    tr.innerHTML = `
-        <td colspan="7" class="p-0 w-full block">
-            <div class="w-full bg-slate-50/80 border border-slate-200 rounded-lg p-3 relative">
-                
-                <!-- HEADER CARD -->
-                <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-slate-200">
-                    <span class="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded row-number">Item #${f003RowCount}</span>
-                    <button type="button" onclick="removeF003Row('${rowId}')" class="text-rose-500 hover:bg-rose-50 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus
-                    </button>
-                </div>
+    cardDiv.innerHTML = `
+        <!-- HEADER CARD -->
+        <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+            <span class="bg-amber-600 text-white text-[10px] font-black px-2.5 py-1 rounded row-number">Item #${f003RowCount}</span>
+            <button type="button" onclick="removeF003Card('${cardId}')" class="text-rose-500 hover:bg-rose-50 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 transition-colors">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus Item
+            </button>
+        </div>
 
-                <!-- GRID UTAMA (DIKUNCI AGAR TIDAK LEBAR/BOROS) -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                    
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Barcode / SKU</label>
-                        <input type="text" id="barcode-${f003RowCount}" autocomplete="off" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Scan Barcode...">
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Qty</label>
-                        <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 text-center focus:outline-none focus:border-amber-500">
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Category</label>
-                        <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
-                            <option value="">-- Pilih --</option>
-                            <option value="DMO">DMO</option>
-                            <option value="DDR">DDR</option>
-                            <option value="DMC">DMC</option>
-                            <option value="DMP">DMP</option>
-                            <option value="DPI">DPI</option>
-                            <option value="2DMP">2DMP</option>
-                            <option value="DMW">DMW</option>
-                            <option value="DMQ">DMQ</option>
-                            <option value="DMN">DMN</option>
-                            <option value="SCB">SCB</option>
-                            <option value="DME">DME</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">Reason</label>
-                        <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
-                            <option value="">-- Pilih Alasan --</option>
-                            <option value="PECAH">PECAH</option>
-                            <option value="PATAH">PATAH</option>
-                            <option value="SOBEK">SOBEK</option>
-                            <option value="KEMASAN RUSAK">KEMASAN RUSAK</option>
-                            <option value="BOCOR">BOCOR</option>
-                            <option value="KOTOR">KOTOR</option>
-                            <option value="TIDAK BERFUNGSI">TIDAK BERFUNGSI</option>
-                            <option value="PART TIDAK LENGKAP">PART TIDAK LENGKAP</option>
-                            <option value="DIMAKAN TIKUS">DIMAKAN TIKUS</option>
-                            <option value="EXPIRED">EXPIRED</option>
-                            <option value="H-35 EXPIRED">H-35 EXPIRED</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- KOLOM DINAMIS (H s.d O) -->
-                <div id="dynamic-fields-${f003RowCount}" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2"></div>
-
-                <!-- FOTO BUKTI -->
-                <div class="flex items-center gap-2 pt-2 border-t border-slate-200">
-                    <label class="cursor-pointer bg-white hover:bg-slate-100 text-slate-700 px-2.5 py-1 rounded text-xs font-bold border border-slate-300 shadow-sm flex items-center gap-1">
-                        <i data-lucide="camera" class="w-3.5 h-3.5 text-amber-600"></i> Upload Foto
-                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewPhoto(this, ${f003RowCount})">
-                    </label>
-                    <span id="preview-text-${f003RowCount}" class="text-[10px] text-slate-400 italic">Belum ada foto</span>
-                    <img id="preview-${f003RowCount}" src="" class="hidden w-8 h-8 rounded object-cover border border-amber-500 cursor-pointer" onclick="window.open(this.src)">
-                </div>
-
+        <!-- GRID UTAMA (KECIL, PADAT, PAS DI MOBILE) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-2.5">
+            <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Barcode / SKU</label>
+                <input type="text" id="barcode-${f003RowCount}" autocomplete="off" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500 shadow-inner" placeholder="Scan Barcode...">
             </div>
-        </td>
+
+            <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Qty</label>
+                <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 text-center focus:outline-none focus:border-amber-500 shadow-inner">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Category</label>
+                <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-inner">
+                    <option value="">-- Pilih Kategori --</option>
+                    <option value="DMO">DMO</option>
+                    <option value="DDR">DDR</option>
+                    <option value="DMC">DMC</option>
+                    <option value="DMP">DMP</option>
+                    <option value="DPI">DPI</option>
+                    <option value="2DMP">2DMP</option>
+                    <option value="DMW">DMW</option>
+                    <option value="DMQ">DMQ</option>
+                    <option value="DMN">DMN</option>
+                    <option value="SCB">SCB</option>
+                    <option value="DME">DME</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Reason (Alasan)</label>
+                <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500 shadow-inner">
+                    <option value="">-- Pilih Alasan --</option>
+                    <option value="PECAH">PECAH</option>
+                    <option value="PATAH">PATAH</option>
+                    <option value="SOBEK">SOBEK</option>
+                    <option value="KEMASAN RUSAK">KEMASAN RUSAK</option>
+                    <option value="BOCOR">BOCOR</option>
+                    <option value="KOTOR">KOTOR</option>
+                    <option value="TIDAK BERFUNGSI">TIDAK BERFUNGSI</option>
+                    <option value="PART TIDAK LENGKAP">PART TIDAK LENGKAP</option>
+                    <option value="DIMAKAN TIKUS">DIMAKAN TIKUS</option>
+                    <option value="EXPIRED">EXPIRED</option>
+                    <option value="H-35 EXPIRED">H-35 EXPIRED</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- KOLOM DINAMIS H s.d O (MUNCUL OTOMATIS & RAPI) -->
+        <div id="dynamic-fields-${f003RowCount}" class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-2.5"></div>
+
+        <!-- FOTO BUKTI -->
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-200">
+            <label class="cursor-pointer bg-white hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-300 shadow-sm flex items-center gap-1.5">
+                <i data-lucide="camera" class="w-4 h-4 text-amber-600"></i> Upload Foto Bukti
+                <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewPhoto(this, ${f003RowCount})">
+            </label>
+            <span id="preview-text-${f003RowCount}" class="text-[11px] text-slate-400 italic">Belum ada foto</span>
+            <img id="preview-${f003RowCount}" src="" class="hidden w-9 h-9 rounded-lg object-cover border-2 border-amber-500 shadow cursor-pointer" onclick="window.open(this.src)">
+        </div>
     `;
     
-    tbody.appendChild(tr);
+    container.appendChild(cardDiv);
     setupBarcodeScannerListener(f003RowCount);
     
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -117,56 +110,56 @@ function handleCategoryChange(rowNum) {
     if (kategori === 'DDR') {
         html += `
             <div>
-                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Invoice No. (Col H)</label>
-                <input type="text" id="invoice-no-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="No. Invoice">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">Invoice No. (Col H)</label>
+                <input type="text" id="invoice-no-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="No. Invoice">
             </div>
         `;
     }
     else if (kategori === 'DMC' || kategori === 'DMW') {
         html += `
             <div>
-                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">CTM Receipt (Col H)</label>
-                <input type="text" id="ctm-receipt-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="CTM Receipt">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">CTM Receipt (Col H)</label>
+                <input type="text" id="ctm-receipt-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="CTM Receipt">
             </div>
             <div>
-                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">New Date (Col I)</label>
-                <input type="text" id="new-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">New Date (Col I)</label>
+                <input type="text" id="new-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
             </div>
         `;
         
         if (kategori === 'DMW') {
             html += `
                 <div>
-                    <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Serial No. (Col K)</label>
-                    <input type="text" id="serial-number-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Serial No.">
+                    <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">Serial No. (Col K)</label>
+                    <input type="text" id="serial-number-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Serial No.">
                 </div>
             `;
         }
         
         html += `
             <div>
-                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Old Date (Col L)</label>
-                <input type="text" id="old-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">Old Date (Col L)</label>
+                <input type="text" id="old-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
             </div>
             <div>
-                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Old Receipt No (Col M)</label>
-                <input type="text" id="old-receipt-no-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Old Receipt">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">Old Receipt No (Col M)</label>
+                <input type="text" id="old-receipt-no-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Old Receipt">
             </div>
             <div>
-                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Customer Name (Col N)</label>
-                <input type="text" id="cust-name-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Nama Customer">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">Customer Name (Col N)</label>
+                <input type="text" id="cust-name-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="Nama Customer">
             </div>
             <div>
-                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Customer Phone (Col O)</label>
-                <input type="text" id="cust-phone-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="No. Telp">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">Customer Phone (Col O)</label>
+                <input type="text" id="cust-phone-${rowNum}" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500" placeholder="No. Telp">
             </div>
         `;
     }
     else if (kategori === 'DMP' || kategori === 'DPI' || kategori === '2DMP') {
         html += `
             <div>
-                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-0.5">Expiry Date (Col J)</label>
-                <input type="text" id="expiry-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
+                <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">Expiry Date (Col J)</label>
+                <input type="text" id="expiry-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
             </div>
         `;
     }
@@ -210,34 +203,34 @@ function handleEnterOnQty(event, rowNum) {
 
 function finishRow(e, rowNum) {
     if (e.key === 'Enter' || e.keyCode === 13) {
-        event.preventDefault();
+        e.preventDefault();
         addF003Row();
     }
 }
 
-function removeF003Row(rowId) {
-    const tbody = document.getElementById('f003-tbody');
-    if (tbody.children.length <= 1) {
+function removeF003Card(cardId) {
+    const container = document.getElementById('f003-container');
+    if (container.children.length <= 1) {
         resetF003Table();
         return;
     }
-    const row = document.getElementById(rowId);
-    if(row) { row.remove(); recalculateRowNumbers(); }
+    const card = document.getElementById(cardId);
+    if(card) { card.remove(); recalculateRowNumbers(); }
 }
 
 function recalculateRowNumbers() {
-    const rows = document.querySelectorAll('#f003-tbody tr');
-    rows.forEach((tr, index) => {
+    const cards = document.querySelectorAll('#f003-container > div');
+    cards.forEach((card, index) => {
         const newNum = index + 1;
-        const numCell = tr.querySelector('.row-number');
+        const numCell = card.querySelector('.row-number');
         if (numCell) numCell.textContent = `Item #${newNum}`;
     });
 }
 
 function resetF003Table() {
     if (confirm("Reset semua baris?")) {
-        const tbody = document.getElementById('f003-tbody');
-        tbody.innerHTML = "";
+        const container = document.getElementById('f003-container');
+        container.innerHTML = "";
         f003RowCount = 0;
         addF003Row();
     }
@@ -288,8 +281,8 @@ async function generateF003Excel() {
         return;
     }
 
-    const rows = document.querySelectorAll('#f003-tbody tr');
-    if (rows.length === 0) {
+    const cards = document.querySelectorAll('#f003-container > div');
+    if (cards.length === 0) {
         alert("Belum ada baris barang!");
         return;
     }
@@ -314,29 +307,24 @@ async function generateF003Excel() {
 
     try {
         let items = [];
-        rows.forEach((tr, index) => {
+        cards.forEach((card, index) => {
             const rowNumIndex = index + 1;
-            const barcodeInput = tr.querySelector('input[id^="barcode-"]');
-            const qtyInput = tr.querySelector('input[id^="qty-"]');
-            const kategoriSelect = tr.querySelector('select[id^="kategori-"]');
-            const alasanSelect = tr.querySelector('select[id^="alasan-"]');
-            
             items.push({
                 no: rowNumIndex,
-                barcode: barcodeInput ? barcodeInput.value : "",
-                qty: qtyInput ? qtyInput.value : "0",
-                kategori: kategoriSelect ? kategoriSelect.value : "",
-                alasan: alasanSelect ? alasanSelect.value : "",
-                invoiceNo: tr.querySelector(`input[id^="invoice-no-"]`)?.value || "",
-                ctmReceipt: tr.querySelector(`input[id^="ctm-receipt-"]`)?.value || "",
-                newReceiptDate: tr.querySelector(`input[id^="new-receipt-date-"]`)?.value || "",
-                expiryDate: tr.querySelector(`input[id^="expiry-date-"]`)?.value || "",
-                serialNumber: tr.querySelector(`input[id^="serial-number-"]`)?.value || "",
-                oldReceiptDate: tr.querySelector(`input[id^="old-receipt-date-"]`)?.value || "",
-                oldReceiptNo: tr.querySelector(`input[id^="old-receipt-no-"]`)?.value || "",
-                custName: tr.querySelector(`input[id^="cust-name-"]`)?.value || "",
-                custPhone: tr.querySelector(`input[id^="cust-phone-"]`)?.value || "",
-                photoBase64: tr.querySelector('img[id^="preview-"]')?.getAttribute('data-base64') || ""
+                barcode: card.querySelector('input[id^="barcode-"]')?.value || "",
+                qty: card.querySelector('input[id^="qty-"]')?.value || "0",
+                kategori: card.querySelector('select[id^="kategori-"]')?.value || "",
+                alasan: card.querySelector('select[id^="alasan-"]')?.value || "",
+                invoiceNo: card.querySelector('input[id^="invoice-no-"]')?.value || "",
+                ctmReceipt: card.querySelector('input[id^="ctm-receipt-"]')?.value || "",
+                newReceiptDate: card.querySelector('input[id^="new-receipt-date-"]')?.value || "",
+                expiryDate: card.querySelector('input[id^="expiry-date-"]')?.value || "",
+                serialNumber: card.querySelector('input[id^="serial-number-"]')?.value || "",
+                oldReceiptDate: card.querySelector('input[id^="old-receipt-date-"]')?.value || "",
+                oldReceiptNo: card.querySelector('input[id^="old-receipt-no-"]')?.value || "",
+                custName: card.querySelector('input[id^="cust-name-"]')?.value || "",
+                custPhone: card.querySelector('input[id^="cust-phone-"]')?.value || "",
+                photoBase64: card.querySelector('img[id^="preview-"]')?.getAttribute('data-base64') || ""
             });
         });
 
