@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     addF003Row();
 });
 
-// 1. TAMBAH BARIS (LAYOUT SANGAT CONDENSED & DINAMIS MENYAMPING)
 function addF003Row() {
     f003RowCount++;
     const tbody = document.getElementById('f003-tbody');
@@ -21,22 +20,18 @@ function addF003Row() {
     tr.className = "border-b border-slate-200 hover:bg-slate-50 transition-colors";
     
     tr.innerHTML = `
-        <!-- NO -->
-        <td class="p-2 text-center text-xs font-bold text-slate-500 align-middle row-number" style="width: 40px;">${f003RowCount}</td>
+        <td class="p-2 text-center text-xs font-bold text-slate-500 align-top row-number" style="width: 40px;">${f003RowCount}</td>
         
-        <!-- BARCODE (Ketat) -->
-        <td class="p-2 align-middle" style="width: 140px;">
-            <input type="text" id="barcode-${f003RowCount}" autocomplete="off" class="w-full px-2 py-1.5 text-xs font-bold border border-slate-300 rounded focus:border-amber-500 outline-none" placeholder="Scan Barcode">
+        <td class="p-2 align-top" style="width: 130px;">
+            <input type="text" id="barcode-${f003RowCount}" autocomplete="off" class="w-full px-2 py-1.5 text-[11px] font-bold border border-slate-300 rounded focus:border-amber-500 outline-none" placeholder="Scan Barcode">
         </td>
         
-        <!-- QTY (Ketat) -->
-        <td class="p-2 align-middle" style="width: 60px;">
-            <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-1 py-1.5 text-xs font-bold text-center border border-slate-300 rounded focus:border-amber-500 outline-none">
+        <td class="p-2 align-top" style="width: 60px;">
+            <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-1 py-1.5 text-[11px] font-bold text-center border border-slate-300 rounded focus:border-amber-500 outline-none">
         </td>
         
-        <!-- KATEGORI (Ketat) -->
-        <td class="p-2 align-middle" style="width: 110px;">
-            <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-full px-1 py-1.5 text-xs font-semibold border border-slate-300 rounded focus:border-amber-500 outline-none cursor-pointer">
+        <td class="p-2 align-top" style="width: 110px;">
+            <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-full px-1 py-1.5 text-[11px] font-bold border border-slate-300 rounded focus:border-amber-500 outline-none cursor-pointer">
                 <option value="">-- Kategori --</option>
                 <option value="DMO">DMO</option>
                 <option value="DDR">DDR</option>
@@ -52,10 +47,10 @@ function addF003Row() {
             </select>
         </td>
         
-        <!-- ALASAN & KOLOM DINAMIS (Mengisi sisa ruang menyamping horizontal) -->
-        <td class="p-2 align-middle">
-            <div class="flex flex-row items-center gap-2">
-                <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-36 shrink-0 px-2 py-1.5 text-xs font-semibold border border-slate-300 rounded focus:border-amber-500 outline-none cursor-pointer">
+        <!-- ALASAN & KOLOM DINAMIS (Disusun Rapi ke Bawah Menggunakan Grid) -->
+        <td class="p-2 align-top">
+            <div class="flex flex-col gap-1.5 w-full">
+                <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-full px-2 py-1.5 text-[11px] font-bold border border-slate-300 rounded focus:border-amber-500 outline-none cursor-pointer">
                     <option value="">-- Alasan Rusak --</option>
                     <option value="PECAH">PECAH</option>
                     <option value="PATAH">PATAH</option>
@@ -69,13 +64,12 @@ function addF003Row() {
                     <option value="EXPIRED">EXPIRED</option>
                     <option value="H-35 EXPIRED">H-35 EXPIRED</option>
                 </select>
-                <!-- Kolom dinamis H-O akan masuk ke sini berjejer -->
-                <div id="dynamic-fields-${f003RowCount}" class="flex flex-row items-center gap-2 flex-wrap empty:hidden"></div>
+                <!-- TEMPAT KOLOM DINAMIS -->
+                <div id="dynamic-fields-${f003RowCount}" class="grid grid-cols-2 gap-1.5 w-full empty:hidden"></div>
             </div>
         </td>
         
-        <!-- FOTO -->
-        <td class="p-2 align-middle text-center" style="width: 70px;">
+        <td class="p-2 align-top text-center" style="width: 70px;">
             <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 px-2 py-1.5 rounded text-[10px] font-bold border border-slate-300 flex items-center justify-center gap-1 w-full transition-colors">
                 <i data-lucide="camera" class="w-3 h-3 text-amber-600"></i> Foto
                 <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewPhoto(this, ${f003RowCount})">
@@ -83,8 +77,7 @@ function addF003Row() {
             <img id="preview-${f003RowCount}" src="" class="hidden w-10 h-10 mt-1 object-cover rounded border border-amber-500 mx-auto cursor-pointer" onclick="window.open(this.src)">
         </td>
         
-        <!-- AKSI -->
-        <td class="p-2 align-middle text-center" style="width: 40px;">
+        <td class="p-2 align-top text-center" style="width: 40px;">
             <button onclick="removeF003Row('${rowId}')" class="text-rose-500 hover:bg-rose-50 p-1.5 rounded transition-colors inline-block">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
@@ -101,36 +94,35 @@ function addF003Row() {
     }, 100);
 }
 
-// 2. KONTROL KOLOM DINAMIS (Input berjejer menyamping)
+// 2. KONTROL KOLOM DINAMIS (Akan masuk sempurna ke dalam Grid)
 function handleCategoryChange(rowNum) {
     const kategori = document.getElementById(`kategori-${rowNum}`).value;
     const container = document.getElementById(`dynamic-fields-${rowNum}`);
     
     let html = '';
-    const inputClass = "w-28 px-2 py-1.5 text-[11px] font-semibold border border-amber-300 bg-amber-50/70 rounded outline-none placeholder-slate-400 focus:bg-white focus:border-amber-500";
+    const inputClass = "w-full px-2 py-1 text-[10px] font-bold border border-amber-300 bg-amber-50 rounded outline-none placeholder-slate-500 focus:bg-white focus:border-amber-500";
     
     if (kategori === 'DDR') {
-        html += `<input type="text" id="invoice-no-${rowNum}" class="${inputClass}" placeholder="Invoice No">`;
+        html += `<input type="text" id="invoice-no-${rowNum}" class="${inputClass} col-span-2" placeholder="Invoice No.">`;
     }
     else if (kategori === 'DMC' || kategori === 'DMW') {
         html += `<input type="text" id="ctm-receipt-${rowNum}" class="${inputClass}" placeholder="CTM Receipt">
-                 <input type="text" id="new-receipt-date-${rowNum}" class="${inputClass}" placeholder="New Date (DD/MM)">`;
+                 <input type="text" id="new-receipt-date-${rowNum}" class="${inputClass}" placeholder="New Date">`;
         if (kategori === 'DMW') {
-            html += `<input type="text" id="serial-number-${rowNum}" class="${inputClass}" placeholder="Serial No">`;
+            html += `<input type="text" id="serial-number-${rowNum}" class="${inputClass} col-span-2" placeholder="Serial No.">`;
         }
         html += `<input type="text" id="old-receipt-date-${rowNum}" class="${inputClass}" placeholder="Old Date">
                  <input type="text" id="old-receipt-no-${rowNum}" class="${inputClass}" placeholder="Old Receipt">
-                 <input type="text" id="cust-name-${rowNum}" class="${inputClass} !w-32" placeholder="Cust. Name">
+                 <input type="text" id="cust-name-${rowNum}" class="${inputClass}" placeholder="Cust. Name">
                  <input type="text" id="cust-phone-${rowNum}" class="${inputClass}" placeholder="Cust. Phone">`;
     }
     else if (kategori === 'DMP' || kategori === 'DPI' || kategori === '2DMP') {
-        html += `<input type="text" id="expiry-date-${rowNum}" class="${inputClass}" placeholder="Expiry Date">`;
+        html += `<input type="text" id="expiry-date-${rowNum}" class="${inputClass} col-span-2" placeholder="Expiry Date">`;
     }
     
     container.innerHTML = html;
 }
 
-// 3. SCANNER PDT LISTENER
 function setupBarcodeScannerListener(rowNum) {
     const barcodeInput = document.getElementById(`barcode-${rowNum}`);
     if (!barcodeInput) return;
@@ -189,7 +181,6 @@ function resetF003Table() {
     }
 }
 
-// 4. PREVIEW FOTO
 function previewPhoto(input, rowId) {
     const previewImg = document.getElementById(`preview-${rowId}`);
     const file = input.files[0];
@@ -199,7 +190,7 @@ function previewPhoto(input, rowId) {
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 400; // Kompresi kuat
+                const MAX_WIDTH = 400; 
                 let width = img.width; let height = img.height;
                 if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
                 canvas.width = width; canvas.height = height;
@@ -215,7 +206,7 @@ function previewPhoto(input, rowId) {
     }
 }
 
-// 5. GENERATE DATA (ANTI "FAILED TO FETCH")
+// 5. FETCH API (DENGAN HEADER DAN REDIRECT YANG BENAR ANTI FAILED TO FETCH)
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
@@ -256,10 +247,14 @@ async function generateF003Excel() {
             });
         });
 
-        // HAPUS blok `headers` sepenuhnya agar browser tidak melakukan preflight request
-        // Ini adalah cara paling ampuh menangani Error: Failed to Fetch di Google Apps Script
+        // INI KUNCI UTAMA ANTI ERROR JARINGAN: 
+        // Wajib menggunakan 'text/plain;charset=utf-8' dan redirect: 'follow'
         const response = await fetch(scriptUrl, {
             method: "POST",
+            redirect: "follow",
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
             body: JSON.stringify({ storeCode, storeName, sendDate, items })
         });
 
