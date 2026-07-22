@@ -16,80 +16,73 @@ function addF003Row() {
     
     const tr = document.createElement('tr');
     tr.id = rowId;
-    tr.className = "hover:bg-amber-50/30 transition-colors border-b border-slate-100";
+    tr.className = "hover:bg-amber-50/30 transition-colors border-b border-slate-100 text-sm";
     
     tr.innerHTML = `
-        <td class="px-4 py-3 text-center font-bold text-xs text-slate-400 row-number align-top pt-4">${f003RowCount}</td>
+        <td class="px-3 py-3 text-center font-bold text-xs text-slate-400 row-number align-middle">${f003RowCount}</td>
         
-        <!-- KOLOM UTAMA -->
-        <td class="px-4 py-3 align-top">
-            <div class="space-y-3 min-w-[220px]">
-                <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Barcode</label>
-                    <input type="text" id="barcode-${f003RowCount}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="none" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white transition-all shadow-inner text-amber-900" placeholder="Scan Barcode...">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Qty</label>
-                        <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 text-center focus:outline-none focus:border-amber-500">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Category</label>
-                        <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500">
-                            <option value="">-- Pilih --</option>
-                            <option value="DMO">DMO</option>
-                            <option value="DDR">DDR</option>
-                            <option value="DMC">DMC</option>
-                            <option value="DMP">DMP</option>
-                            <option value="DPI">DPI</option>
-                            <option value="2DMP">2DMP</option>
-                            <option value="DMW">DMW</option>
-                            <option value="DMQ">DMQ</option>
-                            <option value="DMN">DMN</option>
-                            <option value="SCB">SCB</option>
-                            <option value="DME">DME</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Reason</label>
-                    <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500">
-                        <option value="">-- Pilih Alasan --</option>
-                        <option value="PECAH">PECAH</option>
-                        <option value="PATAH">PATAH</option>
-                        <option value="SOBEK">SOBEK</option>
-                        <option value="KEMASAN RUSAK">KEMASAN RUSAK</option>
-                        <option value="BOCOR">BOCOR</option>
-                        <option value="KOTOR">KOTOR</option>
-                        <option value="TIDAK BERFUNGSI">TIDAK BERFUNGSI</option>
-                        <option value="PART TIDAK LENGKAP">PART TIDAK LENGKAP</option>
-                        <option value="DIMAKAN TIKUS">DIMAKAN TIKUS</option>
-                        <option value="EXPIRED">EXPIRED</option>
-                        <option value="H-35 EXPIRED">H-35 EXPIRED</option>
-                    </select>
-                </div>
+        <!-- BARCODE & QTY -->
+        <td class="px-3 py-3 align-middle">
+            <div class="flex gap-2 items-center">
+                <input type="text" id="barcode-${f003RowCount}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="none" class="w-40 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white transition-all shadow-inner text-amber-900" placeholder="Scan Barcode...">
+                <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-16 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 text-center focus:outline-none focus:border-amber-500" title="Qty">
             </div>
         </td>
 
-        <!-- KOLOM DINAMIS (BERDASARKAN KATEGORI) -->
-        <td class="px-4 py-3 align-top">
-            <div id="dynamic-fields-${f003RowCount}" class="space-y-3 min-w-[240px]">
-                <div class="text-xs text-slate-400 italic py-2">Pilih kategori kerusakan terlebih dahulu...</div>
+        <!-- KATEGORI & ALASAN -->
+        <td class="px-3 py-3 align-middle">
+            <div class="flex gap-2">
+                <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-36 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500">
+                    <option value="">-- Kategori --</option>
+                    <option value="DMO">DMO</option>
+                    <option value="DDR">DDR</option>
+                    <option value="DMC">DMC</option>
+                    <option value="DMP">DMP</option>
+                    <option value="DPI">DPI</option>
+                    <option value="2DMP">2DMP</option>
+                    <option value="DMW">DMW</option>
+                    <option value="DMQ">DMQ</option>
+                    <option value="DMN">DMN</option>
+                    <option value="SCB">SCB</option>
+                    <option value="DME">DME</option>
+                </select>
+                <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-44 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500">
+                    <option value="">-- Alasan Rusak --</option>
+                    <option value="PECAH">PECAH</option>
+                    <option value="PATAH">PATAH</option>
+                    <option value="SOBEK">SOBEK</option>
+                    <option value="KEMASAN RUSAK">KEMASAN RUSAK</option>
+                    <option value="BOCOR">BOCOR</option>
+                    <option value="KOTOR">KOTOR</option>
+                    <option value="TIDAK BERFUNGSI">TIDAK BERFUNGSI</option>
+                    <option value="PART TIDAK LENGKAP">PART TIDAK LENGKAP</option>
+                    <option value="DIMAKAN TIKUS">DIMAKAN TIKUS</option>
+                    <option value="EXPIRED">EXPIRED</option>
+                    <option value="H-35 EXPIRED">H-35 EXPIRED</option>
+                </select>
             </div>
         </td>
 
-        <!-- FOTO & AKSI -->
-        <td class="px-4 py-3 text-center align-top pt-4">
-            <div class="flex flex-col items-center justify-center gap-2">
+        <!-- KOLOM DINAMIS (MUNCUL JIKA KATEGORI DIPILIH) -->
+        <td class="px-3 py-3 align-middle">
+            <div id="dynamic-fields-${f003RowCount}" class="flex flex-wrap gap-2 items-center">
+                <span class="text-xs text-slate-400 italic">Pilih kategori...</span>
+            </div>
+        </td>
+
+        <!-- FOTO BUKTI -->
+        <td class="px-3 py-3 text-center align-middle">
+            <div class="flex items-center justify-center gap-2">
                 <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-200 shadow-sm flex items-center">
                     <i data-lucide="camera" class="w-3.5 h-3.5 mr-1.5"></i> Foto
                     <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewPhoto(this, ${f003RowCount})">
                 </label>
-                <img id="preview-${f003RowCount}" src="" class="hidden w-12 h-12 rounded-lg object-cover border border-slate-200 shadow-sm cursor-pointer" onclick="window.open(this.src)">
+                <img id="preview-${f003RowCount}" src="" class="hidden w-9 h-9 rounded-lg object-cover border border-slate-200 shadow-sm cursor-pointer" onclick="window.open(this.src)">
             </div>
         </td>
         
-        <td class="px-4 py-3 text-center align-top pt-4">
+        <!-- AKSI -->
+        <td class="px-3 py-3 text-center align-middle">
             <button onclick="removeF003Row('${rowId}')" class="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-colors">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
@@ -107,78 +100,70 @@ function addF003Row() {
     }, 100);
 }
 
-// Handler Perubahan Kategori untuk Memunculkan Kolom Dinamis Layout Rapi
+// Handler Perubahan Kategori (Ditata menyamping agar rapi di tabel)
 function handleCategoryChange(rowNum) {
     const kategori = document.getElementById(`kategori-${rowNum}`).value;
     const container = document.getElementById(`dynamic-fields-${rowNum}`);
     
     let html = '';
     
-    // Kondisi 1: DDR -> Invoice No (Col H)
     if (kategori === 'DDR') {
         html += `
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">Invoice No.</label>
-                <input type="text" id="invoice-no-${rowNum}" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="No. Invoice...">
+            <div class="flex flex-col">
+                <span class="text-[9px] font-bold text-amber-600 uppercase">Invoice No.</span>
+                <input type="text" id="invoice-no-${rowNum}" class="w-36 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="No. Invoice">
             </div>
         `;
     }
-    
-    // Kondisi 1 & 2 & 5: DMC atau DMW
     else if (kategori === 'DMC' || kategori === 'DMW') {
-        // CTM Receipt No (Col H) & New Receipt Date (Col I)
         html += `
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">CTM Receipt No.</label>
-                <input type="text" id="ctm-receipt-${rowNum}" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="CTM Receipt No...">
+            <div class="flex flex-col">
+                <span class="text-[9px] font-bold text-amber-600 uppercase">CTM Receipt No.</span>
+                <input type="text" id="ctm-receipt-${rowNum}" class="w-32 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="CTM Receipt">
             </div>
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">New Receipt Date (dd/mm/yyyy)</label>
-                <input type="text" id="new-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm">
+            <div class="flex flex-col">
+                <span class="text-[9px] font-bold text-amber-600 uppercase">New Receipt Date</span>
+                <input type="text" id="new-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-32 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm">
             </div>
         `;
         
-        // Kondisi 4: Khusus DMW tambah Serial Number (Col K)
         if (kategori === 'DMW') {
             html += `
-                <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">Serial Number</label>
-                    <input type="text" id="serial-number-${rowNum}" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="Serial Number...">
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-bold text-amber-600 uppercase">Serial Number</span>
+                    <input type="text" id="serial-number-${rowNum}" class="w-32 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="Serial No.">
                 </div>
             `;
         }
         
-        // Kondisi 5: DMC & DMW perlu Old Receipt Date (Col L), Old Receipt Number (Col M), Customer Name (Col N), Customer Phone (Col O)
         html += `
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">Old Receipt Date (dd/mm/yyyy)</label>
-                <input type="text" id="old-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm">
+            <div class="flex flex-col">
+                <span class="text-[9px] font-bold text-amber-600 uppercase">Old Receipt Date</span>
+                <input type="text" id="old-receipt-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-32 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm">
             </div>
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">Old Receipt Number</label>
-                <input type="text" id="old-receipt-no-${rowNum}" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="Old Receipt No...">
+            <div class="flex flex-col">
+                <span class="text-[9px] font-bold text-amber-600 uppercase">Old Receipt No</span>
+                <input type="text" id="old-receipt-no-${rowNum}" class="w-32 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="Old Receipt">
             </div>
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">Customer Name</label>
-                <input type="text" id="cust-name-${rowNum}" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="Nama Customer...">
+            <div class="flex flex-col">
+                <span class="text-[9px] font-bold text-amber-600 uppercase">Customer Name</span>
+                <input type="text" id="cust-name-${rowNum}" class="w-32 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="Nama Customer">
             </div>
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">Customer Phone Number</label>
-                <input type="text" id="cust-phone-${rowNum}" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="No. Telp Customer...">
+            <div class="flex flex-col">
+                <span class="text-[9px] font-bold text-amber-600 uppercase">Customer Phone</span>
+                <input type="text" id="cust-phone-${rowNum}" class="w-32 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm" placeholder="No. Telp">
             </div>
         `;
     }
-    
-    // Kondisi 3: DMP / DPI / 2DMP -> Expiry Date (Col J)
     else if (kategori === 'DMP' || kategori === 'DPI' || kategori === '2DMP') {
         html += `
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">Expiry Date (dd/mm/yyyy)</label>
-                <input type="text" id="expiry-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm">
+            <div class="flex flex-col">
+                <span class="text-[9px] font-bold text-amber-600 uppercase">Expiry Date</span>
+                <input type="text" id="expiry-date-${rowNum}" placeholder="DD/MM/YYYY" class="w-32 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm">
             </div>
         `;
     } else {
-        html += `<div class="text-xs text-slate-400 italic py-2">Tidak ada kolom tambahan untuk kategori ini.</div>`;
+        html += `<span class="text-xs text-slate-400 italic">Tidak ada kolom tambahan</span>`;
     }
     
     container.innerHTML = html;
@@ -334,7 +319,6 @@ async function generateF003Excel() {
         const kategori = kategoriSelect ? kategoriSelect.value : "";
         const alasan = alasanSelect ? alasanSelect.value : "";
 
-        // Ambil nilai dari kolom dinamis jika ada
         const invoiceNo = tr.querySelector(`input[id^="invoice-no-"]`)?.value || "";
         const ctmReceipt = tr.querySelector(`input[id^="ctm-receipt-"]`)?.value || "";
         const newReceiptDate = tr.querySelector(`input[id^="new-receipt-date-"]`)?.value || "";
