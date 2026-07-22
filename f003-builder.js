@@ -70,7 +70,6 @@ function addF003Row() {
     }, 100);
 }
 
-// PENANGKAP SCANNER PDT
 function handleBarcodeScan(event, rowNum) {
     if (event.key === 'Enter' || event.keyCode === 13 || event.keyCode === 10 || event.key === 'Tab') {
         event.preventDefault(); 
@@ -95,6 +94,9 @@ function removeF003Row(rowId) {
     if(row) row.remove();
 }
 
+// ========================================================
+// PABRIK KONVERSI FOTO (ANTI ERROR "WIDTH" & KOMPRESI UKURAN)
+// ========================================================
 function previewPhoto(input, rowId) {
     const previewImg = document.getElementById(`preview-${rowId}`);
     const file = input.files[0];
@@ -102,15 +104,40 @@ function previewPhoto(input, rowId) {
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            previewImg.classList.remove('hidden');
-            previewImg.setAttribute('data-base64', e.target.result);
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                // Maksimal lebar foto 800px agar Excel tidak lemot/berat
+                const MAX_WIDTH = 800;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > MAX_WIDTH) {
+                    height = Math.round((height * MAX_WIDTH) / width);
+                    width = MAX_WIDTH;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Paksa ubah ke format standar JPEG kualitas 80% (Pasti bisa dibaca ExcelJS)
+                const safeBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                
+                previewImg.src = safeBase64;
+                previewImg.classList.remove('hidden');
+                previewImg.setAttribute('data-base64', safeBase64);
+            }
+            img.src = e.target.result;
         }
         reader.readAsDataURL(file);
     }
 }
 
-// MESIN EXCEL OTOMATIS FETCH DARI GITHUB (VERSI FINAL ANTI-CORRUPT)
+// ========================================================
+// MESIN EXCEL UTAMA (ANTI CORRUPT FILTER DATABASE)
+// ========================================================
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
@@ -144,18 +171,13 @@ async function generateF003Excel() {
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
-        // ========================================================
-        // OBAT ANTI-CRASH EXCELJS (Menghapus Bug _FilterDatabase)
-        // ========================================================
+        // Hapus Bug Filter Bawaan ExcelJS
         workbook.worksheets.forEach(sheet => {
-            if (sheet.autoFilter) {
-                sheet.autoFilter = null; 
-            }
+            if (sheet.autoFilter) sheet.autoFilter = null; 
         });
         if (workbook.definedNames) {
             workbook.definedNames.model = workbook.definedNames.model.filter(dn => !dn.name.includes('_FilterDatabase'));
         }
-        // ========================================================
 
         const wsQm = workbook.getWorksheet('QM Report (Template)');
         const wsBefore = workbook.getWorksheet('BEFORE');
@@ -164,7 +186,6 @@ async function generateF003Excel() {
             throw new Error("Sheet 'QM Report (Template)' atau 'BEFORE' tidak ditemukan!");
         }
 
-        // Isi Header
         wsQm.getCell('C1').value = storeCode;
         wsQm.getCell('C2').value = storeName;
         wsQm.getCell('C3').value = sendDate;
@@ -179,7 +200,7 @@ async function generateF003Excel() {
             const kategori = document.getElementById(`kategori-${rowNum}`)?.value || "";
             const alasan = document.getElementById(`alasan-${rowNum}`)?.value || "";
 
-            // Isi QM Report (Barcode & Qty dipaksa jadi Number agar rapi)
+            // Isi QM Report
             const qmRow = qmStartRow + index;
             wsQm.getCell(`B${qmRow}`).value = rowNum;
             wsQm.getCell(`C${qmRow}`).value = Number(barcode) || barcode; 
@@ -194,26 +215,21 @@ async function generateF003Excel() {
             wsBefore.getCell(`C${beforeRow}`).value = Number(qty);
             wsBefore.getCell(`D${beforeRow}`).value = alasan;
 
-            // Proses Foto (Menggunakan Koordinat Sel String agar aman)
+            // Proses Foto (Pasti JPEG dari pabrik konversi)
             const previewImg = document.getElementById(`preview-${rowNum}`);
             if (previewImg && !previewImg.classList.contains('hidden')) {
                 const base64Data = previewImg.getAttribute('data-base64');
                 if (base64Data) {
                     try {
                         const base64String = base64Data.split(',')[1];
-                        const lowerData = base64Data.toLowerCase();
-                        let extension = 'png'; 
-                        if (lowerData.includes('jpeg') || lowerData.includes('jpg')) extension = 'jpeg';
-                        else if (lowerData.includes('gif')) extension = 'gif';
-
+                        
                         const imageId = workbook.addImage({
                             base64: base64String,
-                            extension: extension,
+                            extension: 'jpeg', // Sudah pasti JPEG, tidak akan error 'width' lagi!
                         });
 
-                        // Tempelkan foto menggunakan titik sel yang pasti (Kolom E)
                         wsBefore.addImage(imageId, {
-                            tl: 'E' + beforeRow,
+                            tl: { col: 4, row: beforeRow - 1 }, // Index kolom ke-4 = E
                             extents: { width: 140, height: 140 }
                         });
 
@@ -221,7 +237,7 @@ async function generateF003Excel() {
 
                     } catch (imgError) {
                         console.error("Gagal foto baris " + rowNum, imgError);
-                        wsBefore.getCell(`E${beforeRow}`).value = "[Format Foto Tidak Didukung]";
+                        wsBefore.getCell(`E${beforeRow}`).value = "[Error Insert Foto]";
                     }
                 }
             }
