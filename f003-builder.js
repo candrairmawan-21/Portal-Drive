@@ -103,13 +103,11 @@ function setupBarcodeScannerListener(rowNum) {
         }
     }
 
-    // Tangkap input string cepat dari PDT Android
     barcodeInput.addEventListener("input", function () {
         clearTimeout(scanTimer);
         scanTimer = setTimeout(moveNext, 80);
     });
 
-    // Tangkap jika scanner/keyboard mengirim Enter atau Tab
     barcodeInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.key === "Tab" || e.keyCode === 13 || e.keyCode === 9) {
             e.preventDefault();
@@ -127,7 +125,6 @@ function handleEnterOnQty(event, rowNum) {
     }
 }
 
-// Tekan enter di alasan langsung buat baris baru
 function finishRow(e, rowNum) {
     if (e.key === 'Enter' || e.keyCode === 13) {
         e.preventDefault();
@@ -136,6 +133,12 @@ function finishRow(e, rowNum) {
 }
 
 function removeF003Row(rowId) {
+    const tbody = document.getElementById('f003-tbody');
+    // Jika hanya sisa 1 baris, jangan biarkan tabel kosong total, lakukan reset atau biarkan
+    if (tbody.children.length <= 1) {
+        resetF003Table();
+        return;
+    }
     const row = document.getElementById(rowId);
     if(row) {
         row.remove();
@@ -150,6 +153,16 @@ function recalculateRowNumbers() {
         const numCell = tr.querySelector('.row-number');
         if (numCell) numCell.textContent = newNum;
     });
+}
+
+// --- FUNGSI RESET TABEL (Hapus Semua & Sisakan 1 Baris Kosong) ---
+function resetF003Table() {
+    if (confirm("Apakah Anda yakin ingin mereset dan menghapus semua baris?")) {
+        const tbody = document.getElementById('f003-tbody');
+        tbody.innerHTML = ""; // Kosongkan isi tabel
+        f003RowCount = 0;     // Reset penghitung baris
+        addF003Row();         // Buat kembali 1 baris kosong baru
+    }
 }
 
 // Konversi foto agar aman dikirim ke Spreadsheet
