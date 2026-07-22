@@ -110,7 +110,7 @@ function previewPhoto(input, rowId) {
     }
 }
 
-// MESIN EXCEL OTOMATIS FETCH DARI GITHUB (VERSI ANTI-CRASH FOTO)
+// MESIN EXCEL OTOMATIS FETCH DARI GITHUB (VERSI FINAL ANTI-CORRUPT)
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
@@ -135,20 +135,33 @@ async function generateF003Excel() {
     try {
         const exactFileName = 'F003_Template.xlsx';
         const response = await fetch(exactFileName);
-        
+
         if (!response.ok) {
             throw new Error(`File template "${exactFileName}" tidak ditemukan (Error ${response.status}).`);
         }
-        
+
         const arrayBuffer = await response.arrayBuffer();
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
+
+        // ========================================================
+        // OBAT ANTI-CRASH EXCELJS (Menghapus Bug _FilterDatabase)
+        // ========================================================
+        workbook.worksheets.forEach(sheet => {
+            if (sheet.autoFilter) {
+                sheet.autoFilter = null; 
+            }
+        });
+        if (workbook.definedNames) {
+            workbook.definedNames.model = workbook.definedNames.model.filter(dn => !dn.name.includes('_FilterDatabase'));
+        }
+        // ========================================================
 
         const wsQm = workbook.getWorksheet('QM Report (Template)');
         const wsBefore = workbook.getWorksheet('BEFORE');
 
         if (!wsQm || !wsBefore) {
-            throw new Error("Sheet 'QM Report (Template)' atau 'BEFORE' tidak ditemukan di template Anda!");
+            throw new Error("Sheet 'QM Report (Template)' atau 'BEFORE' tidak ditemukan!");
         }
 
         // Isi Header
@@ -166,10 +179,10 @@ async function generateF003Excel() {
             const kategori = document.getElementById(`kategori-${rowNum}`)?.value || "";
             const alasan = document.getElementById(`alasan-${rowNum}`)?.value || "";
 
-            // Isi QM Report
+            // Isi QM Report (Barcode & Qty dipaksa jadi Number agar rapi)
             const qmRow = qmStartRow + index;
             wsQm.getCell(`B${qmRow}`).value = rowNum;
-            wsQm.getCell(`C${qmRow}`).value = barcode;
+            wsQm.getCell(`C${qmRow}`).value = Number(barcode) || barcode; 
             wsQm.getCell(`D${qmRow}`).value = Number(qty);
             wsQm.getCell(`E${qmRow}`).value = kategori;
             wsQm.getCell(`F${qmRow}`).value = alasan;
@@ -177,54 +190,47 @@ async function generateF003Excel() {
             // Isi Sheet Before
             const beforeRow = beforeStartRow + index;
             wsBefore.getCell(`A${beforeRow}`).value = rowNum;
-            wsBefore.getCell(`B${beforeRow}`).value = barcode;
+            wsBefore.getCell(`B${beforeRow}`).value = Number(barcode) || barcode;
             wsBefore.getCell(`C${beforeRow}`).value = Number(qty);
             wsBefore.getCell(`D${beforeRow}`).value = alasan;
 
-            // Proses Foto dengan Sistem Kebal (Try-Catch)
+            // Proses Foto (Menggunakan Koordinat Sel String agar aman)
             const previewImg = document.getElementById(`preview-${rowNum}`);
             if (previewImg && !previewImg.classList.contains('hidden')) {
                 const base64Data = previewImg.getAttribute('data-base64');
                 if (base64Data) {
                     try {
                         const base64String = base64Data.split(',')[1];
-                        
-                        // Deteksi format super aman
-                        let extension = 'png'; 
                         const lowerData = base64Data.toLowerCase();
-                        if (lowerData.includes('jpeg') || lowerData.includes('jpg')) {
-                            extension = 'jpeg';
-                        } else if (lowerData.includes('gif')) {
-                            extension = 'gif';
-                        }
+                        let extension = 'png'; 
+                        if (lowerData.includes('jpeg') || lowerData.includes('jpg')) extension = 'jpeg';
+                        else if (lowerData.includes('gif')) extension = 'gif';
 
-                        // Registrasi foto ke Excel
                         const imageId = workbook.addImage({
                             base64: base64String,
                             extension: extension,
                         });
 
-                        // Tempelkan foto menggunakan koordinat aman (agar tidak error 'width')
+                        // Tempelkan foto menggunakan titik sel yang pasti (Kolom E)
                         wsBefore.addImage(imageId, {
-                            tl: { col: 4, row: beforeRow - 1 }, // Pojok kiri atas di Kolom E
-                            br: { col: 5, row: beforeRow }      // Pojok kanan bawah di Kolom F
+                            tl: 'E' + beforeRow,
+                            extents: { width: 140, height: 140 }
                         });
 
+                        wsBefore.getRow(beforeRow).height = 110; 
+
                     } catch (imgError) {
-                        console.error("Gagal menyisipkan foto di baris " + rowNum, imgError);
+                        console.error("Gagal foto baris " + rowNum, imgError);
                         wsBefore.getCell(`E${beforeRow}`).value = "[Format Foto Tidak Didukung]";
                     }
                 }
             }
-            // Lebarkan baris agar foto (jika ada) terlihat rapi
-            wsBefore.getRow(beforeRow).height = 110; 
         });
 
-        // Generate & Download
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         saveAs(blob, `F003_Damage_${storeCode}_${sendDate}.xlsx`);
-        
+
     } catch (error) {
         console.error(error);
         alert("GAGAL MEMPROSES EXCEL:\n\n" + error.message);
