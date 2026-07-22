@@ -94,9 +94,7 @@ function removeF003Row(rowId) {
     if(row) row.remove();
 }
 
-// ========================================================
-// PABRIK KONVERSI FOTO (ANTI ERROR "WIDTH" & KOMPRESI UKURAN)
-// ========================================================
+// Konversi foto agar aman dikirim ke Spreadsheet
 function previewPhoto(input, rowId) {
     const previewImg = document.getElementById(`preview-${rowId}`);
     const file = input.files[0];
@@ -107,8 +105,7 @@ function previewPhoto(input, rowId) {
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                // Maksimal lebar foto 800px agar Excel tidak lemot/berat
-                const MAX_WIDTH = 800;
+                const MAX_WIDTH = 600; // Kompresi ringan agar pengiriman data cepat
                 let width = img.width;
                 let height = img.height;
                 
@@ -122,9 +119,7 @@ function previewPhoto(input, rowId) {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // Paksa ubah ke format standar JPEG kualitas 80% (Pasti bisa dibaca ExcelJS)
-                const safeBase64 = canvas.toDataURL('image/jpeg', 0.8);
-                
+                const safeBase64 = canvas.toDataURL('image/jpeg', 0.7);
                 previewImg.src = safeBase64;
                 previewImg.classList.remove('hidden');
                 previewImg.setAttribute('data-base64', safeBase64);
@@ -136,7 +131,7 @@ function previewPhoto(input, rowId) {
 }
 
 // ========================================================
-// MESIN EXCEL UTAMA (ANTI CORRUPT FILTER DATABASE)
+// KIRIM DATA KE GOOGLE SPREADSHEET
 // ========================================================
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
@@ -156,100 +151,59 @@ async function generateF003Excel() {
 
     const btnGenerate = document.querySelector('button[onclick="generateF003Excel()"]');
     const originalText = btnGenerate.innerHTML;
-    btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Memproses Excel...`;
+    btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Mengirim ke Spreadsheet...`;
     btnGenerate.disabled = true;
 
+    // Kumpulkan data dari tabel web
+    let items = [];
+    rows.forEach((tr, index) => {
+        const rowNum = index + 1;
+        const barcode = document.getElementById(`barcode-${rowNum}`)?.value || "";
+        const qty = document.getElementById(`qty-${rowNum}`)?.value || "0";
+        const kategori = document.getElementById(`kategori-${rowNum}`)?.value || "";
+        const alasan = document.getElementById(`alasan-${rowNum}`)?.value || "";
+        
+        const previewImg = document.getElementById(`preview-${rowNum}`);
+        let photoBase64 = "";
+        if (previewImg && !previewImg.classList.contains('hidden')) {
+            photoBase64 = previewImg.getAttribute('data-base64') || "";
+        }
+
+        items.push({
+            no: rowNum,
+            barcode: barcode,
+            qty: qty,
+            kategori: kategori,
+            alasan: alasan,
+            photoBase64: photoBase64
+        });
+    });
+
+    const payload = {
+        storeCode: storeCode,
+        storeName: storeName,
+        sendDate: sendDate,
+        items: items
+    };
+
+    // URL Web App Google Apps Script Anda
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbyGg_4yU44ZetFlNCbsA2vpNaTHZITLd1od7XX_0R2_Cg34py9qMbN0OFX-BwFdDftVDA/exec";
+
     try {
-        const exactFileName = 'F003_Template.xlsx';
-        const response = await fetch(exactFileName);
-
-        if (!response.ok) {
-            throw new Error(`File template "${exactFileName}" tidak ditemukan (Error ${response.status}).`);
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(arrayBuffer);
-
-        // Hapus Bug Filter Bawaan ExcelJS
-        workbook.worksheets.forEach(sheet => {
-            if (sheet.autoFilter) sheet.autoFilter = null; 
-        });
-        if (workbook.definedNames) {
-            workbook.definedNames.model = workbook.definedNames.model.filter(dn => !dn.name.includes('_FilterDatabase'));
-        }
-
-        const wsQm = workbook.getWorksheet('QM Report (Template)');
-        const wsBefore = workbook.getWorksheet('BEFORE');
-
-        if (!wsQm || !wsBefore) {
-            throw new Error("Sheet 'QM Report (Template)' atau 'BEFORE' tidak ditemukan!");
-        }
-
-        wsQm.getCell('C1').value = storeCode;
-        wsQm.getCell('C2').value = storeName;
-        wsQm.getCell('C3').value = sendDate;
-
-        let qmStartRow = 8; 
-        let beforeStartRow = 2;
-
-        rows.forEach((tr, index) => {
-            const rowNum = index + 1;
-            const barcode = document.getElementById(`barcode-${rowNum}`)?.value || "";
-            const qty = document.getElementById(`qty-${rowNum}`)?.value || "0";
-            const kategori = document.getElementById(`kategori-${rowNum}`)?.value || "";
-            const alasan = document.getElementById(`alasan-${rowNum}`)?.value || "";
-
-            // Isi QM Report
-            const qmRow = qmStartRow + index;
-            wsQm.getCell(`B${qmRow}`).value = rowNum;
-            wsQm.getCell(`C${qmRow}`).value = Number(barcode) || barcode; 
-            wsQm.getCell(`D${qmRow}`).value = Number(qty);
-            wsQm.getCell(`E${qmRow}`).value = kategori;
-            wsQm.getCell(`F${qmRow}`).value = alasan;
-
-            // Isi Sheet Before
-            const beforeRow = beforeStartRow + index;
-            wsBefore.getCell(`A${beforeRow}`).value = rowNum;
-            wsBefore.getCell(`B${beforeRow}`).value = Number(barcode) || barcode;
-            wsBefore.getCell(`C${beforeRow}`).value = Number(qty);
-            wsBefore.getCell(`D${beforeRow}`).value = alasan;
-
-            // Proses Foto (Pasti JPEG dari pabrik konversi)
-            const previewImg = document.getElementById(`preview-${rowNum}`);
-            if (previewImg && !previewImg.classList.contains('hidden')) {
-                const base64Data = previewImg.getAttribute('data-base64');
-                if (base64Data) {
-                    try {
-                        const base64String = base64Data.split(',')[1];
-                        
-                        const imageId = workbook.addImage({
-                            base64: base64String,
-                            extension: 'jpeg', // Sudah pasti JPEG, tidak akan error 'width' lagi!
-                        });
-
-                        wsBefore.addImage(imageId, {
-                            tl: { col: 4, row: beforeRow - 1 }, // Index kolom ke-4 = E
-                            extents: { width: 140, height: 140 }
-                        });
-
-                        wsBefore.getRow(beforeRow).height = 110; 
-
-                    } catch (imgError) {
-                        console.error("Gagal foto baris " + rowNum, imgError);
-                        wsBefore.getCell(`E${beforeRow}`).value = "[Error Insert Foto]";
-                    }
-                }
-            }
+        const response = await fetch(scriptUrl, {
+            method: "POST",
+            mode: "no-cors", // Diperlukan agar tidak terhalang kebijakan CORS Google
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
         });
 
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-        saveAs(blob, `F003_Damage_${storeCode}_${sendDate}.xlsx`);
+        alert("Berhasil! Data dan foto telah dikirim ke Google Sheet Master. Silakan cek Google Spreadsheet Anda untuk melihat hasilnya dan mengunduhnya!");
 
     } catch (error) {
         console.error(error);
-        alert("GAGAL MEMPROSES EXCEL:\n\n" + error.message);
+        alert("Terjadi kesalahan saat mengirim data: " + error.message);
     } finally {
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
