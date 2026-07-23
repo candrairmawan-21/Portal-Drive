@@ -1,37 +1,54 @@
 let f003RowCount = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const dateInput = document.getElementById('f003-date');
-    if(dateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
+    try {
+        const dateInput = document.getElementById('f003-date');
+        if(dateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+        
+        // 1. Inject tombol folder khusus di halaman F003 Builder (tidak akan muncul di login)
+        injectFolderButton();
+
+        // 2. Pastikan baris tabel ter-render dengan aman
+        ensureTableStructure();
+        addF003Row();
+    } catch (err) {
+        console.error("Initialization Error:", err);
+        try { addF003Row(); } catch(e) {}
     }
-    
-    // Inject tombol folder di bagian atas sebelum header form
-    injectFolderButton();
-
-    // Pastikan struktur tabel aman dan elemen tbody tersedia
-    ensureTableStructure();
-
-    addF003Row();
 });
 
 function injectFolderButton() {
     if (document.getElementById('f003-folder-btn')) return;
     
+    // Cari judul utama halaman F003 Builder secara spesifik
+    const headings = document.querySelectorAll('h2, h3, .font-bold, div');
+    let targetElement = null;
+    
+    for (let el of headings) {
+        if (el.textContent && el.textContent.trim() === 'Form Pengajuan Damage Items') {
+            targetElement = el;
+            break;
+        }
+    }
+    
+    // Jika teks judul tersebut TIDAK ADA (artinya sedang di halaman login/halaman lain), batalkan!
+    if (!targetElement) return;
+
     const btnContainer = document.createElement('div');
     btnContainer.className = "mb-4 flex justify-end";
     btnContainer.innerHTML = `
         <a id="f003-folder-btn" href="https://drive.google.com/drive/folders/1EICp9CwKRLeVEieO-DOvi-FWLuFfcslU" target="_blank" 
-           class="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-colors">
+           style="background-color: #d97706; color: white;" class="inline-flex items-center gap-2 hover:bg-amber-700 text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-colors">
             <i data-lucide="folder-open" class="w-4 h-4"></i> Klik disini untuk lihat folder nya
         </a>
     `;
     
-    const targetHeader = document.querySelector('h3, .font-bold.text-slate-700, form') || document.querySelector('main') || document.body.firstChild;
-    if (targetHeader && targetHeader.parentNode) {
-        targetHeader.parentNode.insertBefore(btnContainer, targetHeader);
-    }
+    // Letakkan tepat di atas judul form F003 Builder
+    targetElement.parentNode.insertBefore(btnContainer, targetElement);
+    
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -173,40 +190,48 @@ function setupBarcodeScannerListener(rowNum) {
     const barcodeInput = document.getElementById(`barcode-${rowNum}`);
     if (!barcodeInput) return;
 
+    let keystrokeTimes = [];
+
     barcodeInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.key === "Tab" || e.keyCode === 13 || e.keyCode === 9) {
             e.preventDefault();
-            const val = barcodeInput.value.trim();
-            if (val !== "") {
-                const qty = document.getElementById(`qty-${rowNum}`);
-                if (qty) { 
-                    qty.focus(); 
-                    qty.select(); 
-                }
+            moveToQty(rowNum);
+        }
+    });
+
+    barcodeInput.addEventListener("input", function (e) {
+        const now = new Date().getTime();
+        keystrokeTimes.push(now);
+        if (keystrokeTimes.length > 6) {
+            keystrokeTimes.shift();
+        }
+
+        if (keystrokeTimes.length >= 4) {
+            let intervals = [];
+            for (let i = 1; i < keystrokeTimes.length; i++) {
+                intervals.push(keystrokeTimes[i] - keystrokeTimes[i-1]);
+            }
+            const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+
+            if (avgInterval < 35 && barcodeInput.value.trim().length >= 5) {
+                clearTimeout(barcodeInput._scanTimer);
+                barcodeInput._scanTimer = setTimeout(() => {
+                    moveToQty(rowNum);
+                }, 80);
             }
         }
     });
+}
 
-    // Deteksi cerdas untuk ketikan manual vs hardware scanner PDT
-    let lastInputTime = 0;
-    barcodeInput.addEventListener("input", function (e) {
-        const currentTime = new Date().getTime();
-        const interval = currentTime - lastInputTime;
-        lastInputTime = currentTime;
-
-        // Jika karakter masuk dengan sangat cepat berturut-turut (< 30ms), dipastikan dari hardware scanner
-        if (interval < 30 && barcodeInput.value.trim().length >= 4) {
-            clearTimeout(barcodeInput._scanTimer);
-            barcodeInput._scanTimer = setTimeout(() => {
-                const val = barcodeInput.value.trim();
-                const qty = document.getElementById(`qty-${rowNum}`);
-                if (qty && val !== "") {
-                    qty.focus();
-                    qty.select();
-                }
-            }, 100);
+function moveToQty(rowNum) {
+    const barcodeInput = document.getElementById(`barcode-${rowNum}`);
+    if (barcodeInput && barcodeInput.value.trim() !== "") {
+        const qty = document.getElementById(`qty-${rowNum}`);
+        if (qty) {
+            qty.focus();
+            qty.select();
         }
-    });
+    }
 }
 
 function handleEnterOnQty(event, rowNum) {
@@ -232,6 +257,7 @@ function handleSubRowKeydown(event, rowNum) {
 
 function removeF003Row(rowNum) {
     const tbody = document.getElementById('f003-tbody');
+    if (!tbody) return;
     const mainRows = tbody.querySelectorAll('tr[id^="row-main-"]');
     if (mainRows.length <= 1) { resetF003Table(); return; }
     
@@ -253,7 +279,8 @@ function recalculateRowNumbers() {
 
 function resetF003Table() {
     if (confirm("Reset semua baris?")) {
-        document.getElementById('f003-tbody').innerHTML = "";
+        const tbody = document.getElementById('f003-tbody');
+        if(tbody) tbody.innerHTML = "";
         f003RowCount = 0;
         addF003Row();
     }
@@ -271,8 +298,10 @@ function previewPhoto(input, rowId) {
                 const MAX_WIDTH = 400; 
                 let width = img.width; let height = img.height;
                 if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                canvas.width = width; canvas.height = height;
-                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
                 
                 const safeBase64 = canvas.toDataURL('image/jpeg', 0.6);
                 previewImg.src = safeBase64;
