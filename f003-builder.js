@@ -14,24 +14,26 @@ function addF003Row() {
     const tbody = document.getElementById('f003-tbody');
     if(!tbody) return; 
     
-    const rowId = 'row-' + f003RowCount;
-    const tr = document.createElement('tr');
-    tr.id = rowId;
-    tr.className = "border-b border-slate-200 hover:bg-slate-50 transition-colors";
+    const mainRowId = 'row-main-' + f003RowCount;
+    const dynRowId = 'row-dyn-' + f003RowCount;
     
-    tr.innerHTML = `
-        <td class="p-2 text-center text-xs font-bold text-slate-500 align-top row-number" style="width: 40px;">${f003RowCount}</td>
+    // BARIS 1: KOLOM UTAMA YANG SANGAT KETAT (CONDENSED)
+    const trMain = document.createElement('tr');
+    trMain.id = mainRowId;
+    trMain.className = "border-b border-slate-100 hover:bg-slate-50 transition-colors";
+    trMain.innerHTML = `
+        <td class="p-2 text-center text-xs font-bold text-slate-500 align-middle row-number w-10">${f003RowCount}</td>
         
-        <td class="p-2 align-top" style="width: 130px;">
-            <input type="text" id="barcode-${f003RowCount}" autocomplete="off" class="w-full px-2 py-1.5 text-[11px] font-bold border border-slate-300 rounded focus:border-amber-500 outline-none" placeholder="Scan Barcode">
+        <td class="p-2 align-middle">
+            <input type="text" id="barcode-${f003RowCount}" autocomplete="off" class="w-full px-2 py-1 text-xs font-bold border border-slate-300 rounded focus:border-amber-500 outline-none" placeholder="Scan Barcode">
         </td>
         
-        <td class="p-2 align-top" style="width: 60px;">
-            <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-1 py-1.5 text-[11px] font-bold text-center border border-slate-300 rounded focus:border-amber-500 outline-none">
+        <td class="p-2 align-middle w-20">
+            <input type="number" id="qty-${f003RowCount}" min="1" value="1" onkeydown="handleEnterOnQty(event, ${f003RowCount})" class="w-full px-1 py-1 text-xs font-bold text-center border border-slate-300 rounded focus:border-amber-500 outline-none">
         </td>
         
-        <td class="p-2 align-top" style="width: 110px;">
-            <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-full px-1 py-1.5 text-[11px] font-bold border border-slate-300 rounded focus:border-amber-500 outline-none cursor-pointer">
+        <td class="p-2 align-middle w-32">
+            <select id="kategori-${f003RowCount}" onchange="handleCategoryChange(${f003RowCount})" class="w-full px-1 py-1 text-xs font-semibold border border-slate-300 rounded focus:border-amber-500 outline-none cursor-pointer">
                 <option value="">-- Kategori --</option>
                 <option value="DMO">DMO</option>
                 <option value="DDR">DDR</option>
@@ -47,80 +49,93 @@ function addF003Row() {
             </select>
         </td>
         
-        <!-- ALASAN & KOLOM DINAMIS (Disusun Rapi ke Bawah Menggunakan Grid) -->
-        <td class="p-2 align-top">
-            <div class="flex flex-col gap-1.5 w-full">
-                <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-full px-2 py-1.5 text-[11px] font-bold border border-slate-300 rounded focus:border-amber-500 outline-none cursor-pointer">
-                    <option value="">-- Alasan Rusak --</option>
-                    <option value="PECAH">PECAH</option>
-                    <option value="PATAH">PATAH</option>
-                    <option value="SOBEK">SOBEK</option>
-                    <option value="KEMASAN RUSAK">KEMASAN RUSAK</option>
-                    <option value="BOCOR">BOCOR</option>
-                    <option value="KOTOR">KOTOR</option>
-                    <option value="TIDAK BERFUNGSI">TIDAK BERFUNGSI</option>
-                    <option value="PART TIDAK LENGKAP">PART TIDAK LENGKAP</option>
-                    <option value="DIMAKAN TIKUS">DIMAKAN TIKUS</option>
-                    <option value="EXPIRED">EXPIRED</option>
-                    <option value="H-35 EXPIRED">H-35 EXPIRED</option>
-                </select>
-                <!-- TEMPAT KOLOM DINAMIS -->
-                <div id="dynamic-fields-${f003RowCount}" class="grid grid-cols-2 gap-1.5 w-full empty:hidden"></div>
-            </div>
+        <td class="p-2 align-middle w-44">
+            <select id="alasan-${f003RowCount}" onkeydown="finishRow(event, ${f003RowCount})" class="w-full px-2 py-1 text-xs font-semibold border border-slate-300 rounded focus:border-amber-500 outline-none cursor-pointer">
+                <option value="">-- Alasan Rusak --</option>
+                <option value="PECAH">PECAH</option>
+                <option value="PATAH">PATAH</option>
+                <option value="SOBEK">SOBEK</option>
+                <option value="KEMASAN RUSAK">KEMASAN RUSAK</option>
+                <option value="BOCOR">BOCOR</option>
+                <option value="KOTOR">KOTOR</option>
+                <option value="TIDAK BERFUNGSI">TIDAK BERFUNGSI</option>
+                <option value="PART TIDAK LENGKAP">PART TIDAK LENGKAP</option>
+                <option value="DIMAKAN TIKUS">DIMAKAN TIKUS</option>
+                <option value="EXPIRED">EXPIRED</option>
+                <option value="H-35 EXPIRED">H-35 EXPIRED</option>
+            </select>
         </td>
         
-        <td class="p-2 align-top text-center" style="width: 70px;">
-            <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 px-2 py-1.5 rounded text-[10px] font-bold border border-slate-300 flex items-center justify-center gap-1 w-full transition-colors">
+        <td class="p-2 align-middle text-center w-28">
+            <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-[10px] font-bold border border-slate-300 flex items-center justify-center gap-1 transition-colors w-full">
                 <i data-lucide="camera" class="w-3 h-3 text-amber-600"></i> Foto
                 <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewPhoto(this, ${f003RowCount})">
             </label>
-            <img id="preview-${f003RowCount}" src="" class="hidden w-10 h-10 mt-1 object-cover rounded border border-amber-500 mx-auto cursor-pointer" onclick="window.open(this.src)">
+            <img id="preview-${f003RowCount}" src="" class="hidden w-12 h-12 mt-1 object-cover rounded border border-amber-500 mx-auto cursor-pointer" onclick="window.open(this.src)">
         </td>
         
-        <td class="p-2 align-top text-center" style="width: 40px;">
-            <button onclick="removeF003Row('${rowId}')" class="text-rose-500 hover:bg-rose-50 p-1.5 rounded transition-colors inline-block">
+        <td class="p-2 align-middle text-center w-12">
+            <button onclick="removeF003Row(${f003RowCount})" class="text-rose-500 hover:bg-rose-50 p-1.5 rounded transition-colors inline-block">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
         </td>
     `;
     
-    tbody.appendChild(tr);
+    // BARIS 2: BARIS SUB-ROW UNTUK KOLOM DINAMIS (Merentang Penuh)
+    const trDyn = document.createElement('tr');
+    trDyn.id = dynRowId;
+    trDyn.className = "hidden bg-amber-50/20 border-b border-slate-200"; // Tersembunyi secara default
+    trDyn.innerHTML = `
+        <td colspan="7" class="p-3">
+            <div id="dynamic-fields-${f003RowCount}" class="flex flex-wrap gap-3 items-center w-full"></div>
+        </td>
+    `;
+    
+    tbody.appendChild(trMain);
+    tbody.appendChild(trDyn);
+    
     setupBarcodeScannerListener(f003RowCount);
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    
     setTimeout(() => {
         const barcodeInput = document.getElementById(`barcode-${f003RowCount}`);
         if(barcodeInput) barcodeInput.focus();
     }, 100);
 }
 
-// 2. KONTROL KOLOM DINAMIS (Akan masuk sempurna ke dalam Grid)
+// MUNCULKAN KOLOM DINAMIS DI SUB-ROW (TIDAK MERUSAK TABEL ATAS)
 function handleCategoryChange(rowNum) {
     const kategori = document.getElementById(`kategori-${rowNum}`).value;
     const container = document.getElementById(`dynamic-fields-${rowNum}`);
+    const dynRow = document.getElementById(`row-dyn-${rowNum}`);
     
     let html = '';
-    const inputClass = "w-full px-2 py-1 text-[10px] font-bold border border-amber-300 bg-amber-50 rounded outline-none placeholder-slate-500 focus:bg-white focus:border-amber-500";
+    const inputClass = "w-48 px-3 py-1.5 text-xs font-semibold border border-amber-300 bg-white rounded outline-none focus:border-amber-500 shadow-sm";
     
     if (kategori === 'DDR') {
-        html += `<input type="text" id="invoice-no-${rowNum}" class="${inputClass} col-span-2" placeholder="Invoice No.">`;
+        html += `<input type="text" id="invoice-no-${rowNum}" class="${inputClass}" placeholder="Invoice No.">`;
     }
     else if (kategori === 'DMC' || kategori === 'DMW') {
         html += `<input type="text" id="ctm-receipt-${rowNum}" class="${inputClass}" placeholder="CTM Receipt">
-                 <input type="text" id="new-receipt-date-${rowNum}" class="${inputClass}" placeholder="New Date">`;
+                 <input type="text" id="new-receipt-date-${rowNum}" class="${inputClass}" placeholder="New Date (DD/MM/YYYY)">`;
         if (kategori === 'DMW') {
-            html += `<input type="text" id="serial-number-${rowNum}" class="${inputClass} col-span-2" placeholder="Serial No.">`;
+            html += `<input type="text" id="serial-number-${rowNum}" class="${inputClass}" placeholder="Serial Number">`;
         }
-        html += `<input type="text" id="old-receipt-date-${rowNum}" class="${inputClass}" placeholder="Old Date">
-                 <input type="text" id="old-receipt-no-${rowNum}" class="${inputClass}" placeholder="Old Receipt">
-                 <input type="text" id="cust-name-${rowNum}" class="${inputClass}" placeholder="Cust. Name">
-                 <input type="text" id="cust-phone-${rowNum}" class="${inputClass}" placeholder="Cust. Phone">`;
+        html += `<input type="text" id="old-receipt-date-${rowNum}" class="${inputClass}" placeholder="Old Date (DD/MM/YYYY)">
+                 <input type="text" id="old-receipt-no-${rowNum}" class="${inputClass}" placeholder="Old Receipt No">
+                 <input type="text" id="cust-name-${rowNum}" class="${inputClass} !w-56" placeholder="Customer Name">
+                 <input type="text" id="cust-phone-${rowNum}" class="${inputClass}" placeholder="Customer Phone">`;
     }
     else if (kategori === 'DMP' || kategori === 'DPI' || kategori === '2DMP') {
-        html += `<input type="text" id="expiry-date-${rowNum}" class="${inputClass} col-span-2" placeholder="Expiry Date">`;
+        html += `<input type="text" id="expiry-date-${rowNum}" class="${inputClass}" placeholder="Expiry Date (DD/MM/YYYY)">`;
     }
     
-    container.innerHTML = html;
+    if(html !== '') {
+        container.innerHTML = html;
+        dynRow.classList.remove('hidden'); // Tampilkan sub-row
+    } else {
+        container.innerHTML = '';
+        dynRow.classList.add('hidden'); // Sembunyikan sub-row jika kosong
+    }
 }
 
 function setupBarcodeScannerListener(rowNum) {
@@ -159,15 +174,23 @@ function finishRow(e, rowNum) {
     }
 }
 
-function removeF003Row(rowId) {
+function removeF003Row(rowNum) {
     const tbody = document.getElementById('f003-tbody');
-    if (tbody.children.length <= 1) { resetF003Table(); return; }
-    const row = document.getElementById(rowId);
-    if(row) { row.remove(); recalculateRowNumbers(); }
+    // Cek jumlah baris utama
+    const mainRows = tbody.querySelectorAll('tr[id^="row-main-"]');
+    if (mainRows.length <= 1) { resetF003Table(); return; }
+    
+    const mainRow = document.getElementById(`row-main-${rowNum}`);
+    const dynRow = document.getElementById(`row-dyn-${rowNum}`);
+    if(mainRow) mainRow.remove();
+    if(dynRow) dynRow.remove();
+    
+    recalculateRowNumbers();
 }
 
 function recalculateRowNumbers() {
-    document.querySelectorAll('#f003-tbody tr').forEach((tr, index) => {
+    const mainRows = document.querySelectorAll('#f003-tbody tr[id^="row-main-"]');
+    mainRows.forEach((tr, index) => {
         const numCell = tr.querySelector('.row-number');
         if (numCell) numCell.textContent = index + 1;
     });
@@ -195,6 +218,7 @@ function previewPhoto(input, rowId) {
                 if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
                 canvas.width = width; canvas.height = height;
                 canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                // Kompres ke JPEG Kualitas 50% agar API enteng
                 const safeBase64 = canvas.toDataURL('image/jpeg', 0.5);
                 previewImg.src = safeBase64;
                 previewImg.classList.remove('hidden');
@@ -206,7 +230,6 @@ function previewPhoto(input, rowId) {
     }
 }
 
-// 5. FETCH API (DENGAN HEADER DAN REDIRECT YANG BENAR ANTI FAILED TO FETCH)
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim();
     const storeName = document.getElementById('f003-store-name').value.trim();
@@ -214,7 +237,8 @@ async function generateF003Excel() {
 
     if (!storeCode || !storeName) { alert("Isi Store Code & Store Name!"); return; }
     
-    const rows = document.querySelectorAll('#f003-tbody tr');
+    // Ambil data hanya dari Main Row, karena Sub-Row tidak punya ID input utama
+    const rows = document.querySelectorAll('#f003-tbody tr[id^="row-main-"]');
     if (rows.length === 0) { alert("Belum ada barang!"); return; }
 
     const btnGenerate = document.querySelector('button[onclick="generateF003Excel()"]');
@@ -228,33 +252,31 @@ async function generateF003Excel() {
     try {
         let items = [];
         rows.forEach((tr, index) => {
+            // Kita butuh rowNum asli untuk narik data dari Sub-Row
+            const rowNum = tr.id.replace('row-main-', '');
+            
             items.push({
                 no: index + 1,
-                barcode: tr.querySelector('input[id^="barcode-"]')?.value || "",
-                qty: tr.querySelector('input[id^="qty-"]')?.value || "0",
-                kategori: tr.querySelector('select[id^="kategori-"]')?.value || "",
-                alasan: tr.querySelector('select[id^="alasan-"]')?.value || "",
-                invoiceNo: tr.querySelector(`input[id^="invoice-no-"]`)?.value || "",
-                ctmReceipt: tr.querySelector(`input[id^="ctm-receipt-"]`)?.value || "",
-                newReceiptDate: tr.querySelector(`input[id^="new-receipt-date-"]`)?.value || "",
-                expiryDate: tr.querySelector(`input[id^="expiry-date-"]`)?.value || "",
-                serialNumber: tr.querySelector(`input[id^="serial-number-"]`)?.value || "",
-                oldReceiptDate: tr.querySelector(`input[id^="old-receipt-date-"]`)?.value || "",
-                oldReceiptNo: tr.querySelector(`input[id^="old-receipt-no-"]`)?.value || "",
-                custName: tr.querySelector(`input[id^="cust-name-"]`)?.value || "",
-                custPhone: tr.querySelector(`input[id^="cust-phone-"]`)?.value || "",
-                photoBase64: tr.querySelector('img[id^="preview-"]')?.getAttribute('data-base64') || ""
+                barcode: document.getElementById(`barcode-${rowNum}`)?.value || "",
+                qty: document.getElementById(`qty-${rowNum}`)?.value || "0",
+                kategori: document.getElementById(`kategori-${rowNum}`)?.value || "",
+                alasan: document.getElementById(`alasan-${rowNum}`)?.value || "",
+                invoiceNo: document.getElementById(`invoice-no-${rowNum}`)?.value || "",
+                ctmReceipt: document.getElementById(`ctm-receipt-${rowNum}`)?.value || "",
+                newReceiptDate: document.getElementById(`new-receipt-date-${rowNum}`)?.value || "",
+                expiryDate: document.getElementById(`expiry-date-${rowNum}`)?.value || "",
+                serialNumber: document.getElementById(`serial-number-${rowNum}`)?.value || "",
+                oldReceiptDate: document.getElementById(`old-receipt-date-${rowNum}`)?.value || "",
+                oldReceiptNo: document.getElementById(`old-receipt-no-${rowNum}`)?.value || "",
+                custName: document.getElementById(`cust-name-${rowNum}`)?.value || "",
+                custPhone: document.getElementById(`cust-phone-${rowNum}`)?.value || "",
+                photoBase64: document.getElementById(`preview-${rowNum}`)?.getAttribute('data-base64') || ""
             });
         });
 
-        // INI KUNCI UTAMA ANTI ERROR JARINGAN: 
-        // Wajib menggunakan 'text/plain;charset=utf-8' dan redirect: 'follow'
+        // Request murni tanpa Headers untuk Bypass CORS preflight
         const response = await fetch(scriptUrl, {
             method: "POST",
-            redirect: "follow",
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8"
-            },
             body: JSON.stringify({ storeCode, storeName, sendDate, items })
         });
 
@@ -268,10 +290,11 @@ async function generateF003Excel() {
             alert("Gagal memproses di server: " + result.message);
         }
     } catch (error) {
-        alert("Kesalahan jaringan: " + error.message);
+        alert("Kesalahan jaringan (Pastikan Apps Script di-Deploy Ulang!): " + error.message);
     } finally {
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
-}
+            }
+                    
