@@ -8,6 +8,21 @@ document.addEventListener('DOMContentLoaded', () => {
             dateInput.value = today;
         }
         
+        // --- TAMBAHKAN KODE INI ---
+        const storeCodeInput = document.getElementById('f003-store-code');
+        if (storeCodeInput) {
+            storeCodeInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+            });
+        }
+        
+        const storeNameInput = document.getElementById('f003-store-name');
+        if (storeNameInput) {
+            storeNameInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+            });
+        }
+        
         // 1. Inject tombol folder khusus di halaman F003 Builder (tidak akan muncul di login)
         injectFolderButton();
 
@@ -315,8 +330,8 @@ function previewPhoto(input, rowId) {
 }
 
 async function generateF003Excel() {
-    const storeCode = document.getElementById('f003-store-code').value.trim();
-    const storeName = document.getElementById('f003-store-name').value.trim();
+    const storeCode = document.getElementById('f003-store-code').value.trim().toUpperCase();
+const storeName = document.getElementById('f003-store-name').value.trim().toUpperCase();
     const sendDate = document.getElementById('f003-date').value;
 
     if (!storeCode || !storeName) { alert("Isi Store Code & Store Name!"); return; }
