@@ -88,9 +88,15 @@
                     <i data-lucide="file-warning" class="w-4 h-4 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
                     <span class="sidebar-text-element">F003 Builder</span>
                 </button>
-                <a href="https://www.jawara26.biz.id/2026/04/cek-pengiriman-barang-dm-candra.html" target="_blank" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
+                <!-- Menu Cek Pengiriman Barang dengan Popup Konfirmasi -->
+                <a href="#" onclick="openCekPengiriman(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="truck" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
                     <span class="sidebar-text-element">Cek Pengiriman Barang</span>
+                </a>
+                <!-- Menu Baru: Cek Barcode dengan Popup Konfirmasi -->
+                <a href="#" onclick="openCekBarcode(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
+                    <i data-lucide="scan-barcode" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
+                    <span class="sidebar-text-element">Cek Barcode</span>
                 </a>
             </nav>
         </div>
@@ -420,6 +426,24 @@
                 icon.setAttribute('data-lucide', 'chevron-left');
             }
             lucide.createIcons();
+        }
+
+        // Fungsi Pop-up Konfirmasi untuk Cek Pengiriman Barang
+        function openCekPengiriman(event) {
+            event.preventDefault();
+            const pesan = "Catat, silahkan login lagi untuk akses menu ini\npassword : jabarjatengjuara";
+            if (confirm(pesan)) {
+                window.open("https://www.jawara26.biz.id/2026/04/cek-pengiriman-barang-dm-candra.html", "_blank");
+            }
+        }
+
+        // Fungsi Pop-up Konfirmasi untuk Cek Barcode
+        function openCekBarcode(event) {
+            event.preventDefault();
+            const pesan = "Catat, silahkan login lagi untuk akses menu ini\npassword : cekskujawara";
+            if (confirm(pesan)) {
+                window.open("https://sku.jawara26.biz.id", "_blank");
+            }
         }
 
         function switchView(view) {
