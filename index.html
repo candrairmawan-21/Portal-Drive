@@ -9,11 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;450;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Ganti dengan ExcelJS & FileSaver -->
+    <!-- Library ExcelJS & FileSaver untuk F003 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <style>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
         .skeleton {
@@ -86,11 +84,10 @@
                     <i data-lucide="trending-up" class="w-4 h-4 flex-shrink-0"></i> 
                     <span class="sidebar-text-element">Dashboard Sales Target</span>
                 </button>
-                <!-- Tombol Menu F003 Builder -->
-<button onclick="switchView('damage')" id="nav-damage" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 font-bold hover:bg-slate-800/50 hover:text-white transition-all group">
-    <i data-lucide="file-warning" class="w-5 h-5 text-slate-500 group-hover:text-amber-500 transition-colors"></i>
-    <span>F003 Builder</span>
-</button>
+                <button onclick="switchView('damage')" id="nav-damage" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 font-bold hover:bg-slate-800/50 hover:text-white transition-all group">
+                    <i data-lucide="file-warning" class="w-5 h-5 text-slate-500 group-hover:text-amber-500 transition-colors"></i>
+                    <span class="sidebar-text-element">F003 Builder</span>
+                </button>
             </nav>
         </div>
 
@@ -129,12 +126,13 @@
             </div>
         </header>
 
-        <!-- SEKSI 1: FILE MANAGER -->
+        <!-- SEKSI 1: FILE MANAGER (Desain Baru Compact & Dinamis) -->
         <main id="section-files" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="flex items-center flex-wrap gap-2 text-sm text-slate-600 mb-6 bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/40 shadow-sm" id="breadcrumbs"></div>
-            <div id="portalGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                <div class="skeleton h-64 rounded-3xl"></div>
-                <div class="skeleton h-64 rounded-3xl"></div>
+            <!-- Grid dengan ukuran card proporsional dan compact -->
+            <div id="portalGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div class="skeleton h-24 rounded-2xl"></div>
+                <div class="skeleton h-24 rounded-2xl"></div>
             </div>
             <div id="noResults" class="hidden text-center py-20 bg-white/80 backdrop-blur-md rounded-3xl border border-slate-200/50 mt-4">
                 <i data-lucide="folder-search" class="w-8 h-8 text-slate-400 mx-auto mb-3"></i>
@@ -144,7 +142,6 @@
 
         <!-- SEKSI 2: DASHBOARD UPT -->
         <main id="section-dashboard" class="container mx-auto px-6 py-8 flex-1 hidden">
-            <!-- Slicers -->
             <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
@@ -172,9 +169,7 @@
                 <p class="text-sm font-bold text-slate-500">Mengkalkulasi matriks & grafik...</p>
             </div>
             
-            <!-- BAGIAN ATAS: PODIUM & GRAFIK (Berjajar 3 Kolom) -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                <!-- 1. Top 3 Podium -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
                     <div>
                         <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="trophy" class="w-4 h-4 text-amber-500"></i> Top 3 Performa Staff</h3>
@@ -183,7 +178,6 @@
                     <div id="podium-top-content"></div>
                 </div>
 
-                <!-- 2. Bottom 3 Podium -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
                     <div>
                         <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500"></i> Bottom 3 Performa Staff</h3>
@@ -192,7 +186,6 @@
                     <div id="podium-bottom-content"></div>
                 </div>
 
-                <!-- 3. Grafik Bar Chart -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
                     <div>
                         <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i data-lucide="bar-chart-4" class="w-4 h-4 text-amber-500"></i> Grafik Bar Chart Evaluasi</h3>
@@ -204,7 +197,6 @@
                 </div>
             </div>
 
-            <!-- BAGIAN BAWAH: TABEL UPT (Melebar Penuh) -->
             <div class="bg-white border border-slate-200/60 rounded-3xl shadow-sm overflow-hidden mb-6">
                 <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                     <div>
@@ -231,9 +223,8 @@
             </div>
         </main>
 
-        <!-- SEKSI 3: DASHBOARD SALES (Desain disesuaikan ke Light Mode) -->
+        <!-- SEKSI 3: DASHBOARD SALES -->
         <main id="section-sales" class="container mx-auto px-6 py-8 flex-1 hidden">
-            <!-- Header Sales Title -->
             <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm mb-6 flex flex-wrap justify-between items-center gap-4">
                 <div>
                     <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">Sales Dashboard</h1>
@@ -241,7 +232,6 @@
                 </div>
             </div>
 
-            <!-- Slicer Kontainer Baru untuk Sales Dashboard (Ada di dalam tag main) -->
             <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
@@ -278,60 +268,45 @@
                 <p class="text-sm font-bold text-slate-500">Memuat data sales...</p>
             </div>
 
-            <div id="sales-loading" class="hidden text-center py-8 skeleton rounded-3xl mb-6">
-                <p class="text-sm font-bold text-slate-500">Memuat data sales...</p>
-            </div>
-
-            <!-- Summary Cards (6 Kolom Sesuai Permintaan) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-                <!-- 1. Total MTD Sales -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">TOTAL MTD SALES</p>
                     <h3 id="summary-total-sales" class="text-xl font-black text-emerald-500">Rp 0</h3>
                 </div>
-                <!-- 2. Total MTD Target -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">TOTAL MTD TARGET</p>
                     <h3 id="summary-total-target" class="text-xl font-black text-slate-700">Rp 0</h3>
                 </div>
-                <!-- 3. % Achievement -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">% ACHIEVEMENT</p>
                     <h3 id="summary-avg-ach" class="text-xl font-black text-indigo-500">0%</h3>
                 </div>
-                <!-- 4. Total Sales LY -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">TOTAL SALES LY</p>
                     <h3 id="summary-total-ly" class="text-xl font-black text-slate-700">Rp 0</h3>
                 </div>
-                <!-- 5. % Ach SSSG -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">% ACH SSSG</p>
                     <h3 id="summary-sssg" class="text-xl font-black text-emerald-500">0%</h3>
                 </div>
-                <!-- 6. % Projection SSSG -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">% PROJ SSSG</p>
                     <h3 id="summary-proj-sssg" class="text-xl font-black text-amber-500">0%</h3>
                 </div>
             </div>
 
-            <!-- Chart & Toggle Mode -->
             <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm mb-6">
-                <!-- Tombol Toggle (Saklar Mode) -->
                 <div class="flex justify-center mb-6">
                     <div class="bg-slate-100 p-1 rounded-xl inline-flex relative shadow-inner">
                         <button id="btnModeMtd" onclick="setSalesChartMode('mtd')" class="px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all">MTD vs Target</button>
                         <button id="btnModeTrend" onclick="setSalesChartMode('trend')" class="px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all">Tren 6 Bulan</button>
                     </div>
                 </div>
-                <!-- Area Canvas Grafik -->
                 <div class="h-72 w-full relative">
                     <canvas id="salesTargetChart"></canvas>
                 </div>
             </div>
 
-            <!-- Table -->
             <div class="bg-white border border-slate-200/60 rounded-3xl shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left whitespace-nowrap">
@@ -350,117 +325,78 @@
                 </div>
             </div>
         </main>
-        <!-- SEKSI 3: F003 Builder (Masih Kosong) -->
-<main id="section-damage" class="container mx-auto px-6 py-8 flex-1 hidden">
-    
-    <div class="mb-6">
-        <h2 class="text-2xl font-black text-slate-800">Form Pengajuan Damage Items</h2>
-        <p class="text-sm font-semibold text-slate-500 mt-1">Gunakan scanner PDT untuk input SKU. Bukti foto akan otomatis masuk ke file Excel.</p>
-    </div>
 
-    <!-- WADAH FORM F003 -->
-    <div id="damage-form-container" class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm">
-        
-        <!-- 1. Header Informasi Toko -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Store Code</label>
-                <input type="text" id="f003-store-code" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500" placeholder="Contoh: JC2001">
+        <!-- SEKSI 4: F003 Builder -->
+        <main id="section-damage" class="container mx-auto px-6 py-8 flex-1 hidden">
+            <div class="mb-6">
+                <h2 class="text-2xl font-black text-slate-800">Form Pengajuan Damage Items</h2>
+                <p class="text-sm font-semibold text-slate-500 mt-1">Gunakan scanner PDT untuk input SKU. Bukti foto akan otomatis masuk ke file Excel.</p>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Store Name</label>
-                <input type="text" id="f003-store-name" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500" placeholder="Contoh: SLGD">
+
+            <div id="damage-form-container" class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Store Code</label>
+                        <input type="text" id="f003-store-code" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500" placeholder="Contoh: JC2001">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Store Name</label>
+                        <input type="text" id="f003-store-name" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500" placeholder="Contoh: SLGD">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tanggal File</label>
+                        <input type="date" id="f003-date" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto mb-2 border border-slate-200 rounded-2xl">
+                    <table class="w-full text-left whitespace-nowrap min-w-max">
+                        <thead class="bg-slate-800 text-white">
+                            <tr>
+                                <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider w-12">No</th>
+                                <th class="px-4 py-3 text-xs font-bold uppercase tracking-wider w-48">Barcode / SKU</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider w-24">Qty</th>
+                                <th class="px-4 py-3 text-xs font-bold uppercase tracking-wider w-40">Kategori</th>
+                                <th class="px-4 py-3 text-xs font-bold uppercase tracking-wider w-48">Alasan Rusak</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider w-32">Foto Bukti</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider w-16">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="f003-tbody" class="divide-y divide-slate-100 bg-white"></tbody>
+                    </table>
+                </div>
+                <p class="text-[10px] text-slate-400 font-bold mb-6">*Arahkan kursor/fokus ke kolom Barcode lalu tembak menggunakan laser scanner.</p>
+
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-100">
+                    <button onclick="addF003Row()" class="flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-all shadow-sm">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Tambah Baris Barang
+                    </button>
+                    <button type="button" onclick="resetF003Table()" class="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition-all border border-red-200">
+                        Reset Semua Baris
+                    </button>
+                    <button onclick="generateF003Excel()" class="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white text-sm font-black rounded-xl shadow-md transition-all">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5"></i> Generate Excel File
+                    </button>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tanggal File</label>
-                <input type="date" id="f003-date" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-amber-500">
-            </div>
-        </div>
-
-        <!-- 2. Tabel Input Barang (Memanjang Horizontal) -->
-        <div class="overflow-x-auto mb-2 border border-slate-200 rounded-2xl">
-            <table class="w-full text-left whitespace-nowrap min-w-max">
-                <thead class="bg-slate-800 text-white">
-                    <tr>
-                        <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider w-12">No</th>
-                        <th class="px-4 py-3 text-xs font-bold uppercase tracking-wider w-48">Barcode / SKU</th>
-                        <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider w-24">Qty</th>
-                        <th class="px-4 py-3 text-xs font-bold uppercase tracking-wider w-40">Kategori</th>
-                        <th class="px-4 py-3 text-xs font-bold uppercase tracking-wider w-48">Alasan Rusak</th>
-                        <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider w-32">Foto Bukti</th>
-                        <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider w-16">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="f003-tbody" class="divide-y divide-slate-100 bg-white">
-                    <!-- Nanti baris inputannya akan dimunculkan otomatis oleh JavaScript -->
-                </tbody>
-            </table>
-        </div>
-        <p class="text-[10px] text-slate-400 font-bold mb-6">*Arahkan kursor/fokus ke kolom Barcode lalu tembak menggunakan laser scanner.</p>
-
-        <!-- 3. Tombol Eksekusi -->
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-100">
-            <button onclick="addF003Row()" class="flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-all shadow-sm">
-                <i data-lucide="plus" class="w-4 h-4"></i> Tambah Baris Barang
-            </button>
-            <button type="button" onclick="resetF003Table()" class="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition-all border border-red-200">
-    Reset Semua Baris
-</button>
-            <button onclick="generateF003Excel()" class="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white text-sm font-black rounded-xl shadow-md transition-all">
-                <i data-lucide="file-spreadsheet" class="w-5 h-5"></i> Generate Excel File
-            </button>
-        </div>
-
-    </div>
-
-</main>
+        </main>
     </div>
 
     <!-- SCRIPT UTAMA PORTAL MANAGER -->
     <script>
         const API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=119812050&single=true&output=csv';
         let allFiles = []; let accessibleFiles = []; let currentPath = []; let currentViewLayout = 'grid'; let isSidebarCollapsed = false;
+        
         const userDatabase = {
-    'admin': 'admin',
-    'bm agus': 'BM',
-    'bm didik': 'BM',
-    'bm galih': 'BM',
-    'abm anas': 'ABM',
-    'abm bayu': 'ABM',
-    'abm ika': 'ABM',
-    'abm adinda': 'ABM',
-    'abm ridho': 'ABM',
-    'abm fachri': 'ABM',
-    'abm gading': 'ABM',
-    'abm wildan': 'ABM',
-    'abm satria': 'ABM',
-    'jc2017': 'staff',
-    'jc8001': 'staff',
-    'jc2021': 'staff',
-    'jc1029': 'staff',
-    'jc1020': 'staff',
-    'jc3001': 'staff',
-    'jc2001': 'staff',
-    'jc2008': 'staff',
-    'jc5005': 'staff',
-    'jc6003': 'staff',
-    'jc2012': 'staff',
-    'jc1014': 'staff',
-    'jc2018': 'staff',
-    'jc4006': 'staff',
-    'jc8005': 'staff',
-    'jc3003': 'staff',
-    'jc1005': 'staff',
-    'jc5002': 'staff',
-    'jc1012': 'staff',
-    'jc2002': 'staff',
-    'jc5003': 'staff',
-    'jc8006': 'staff',
-    'jc2016': 'staff',
-    'jc1027': 'staff',
-    'jc8004': 'staff'
-};
-
+            'admin': 'admin', 'bm agus': 'BM', 'bm didik': 'BM', 'bm galih': 'BM',
+            'abm anas': 'ABM', 'abm bayu': 'ABM', 'abm ika': 'ABM', 'abm adinda': 'ABM',
+            'abm ridho': 'ABM', 'abm fachri': 'ABM', 'abm gading': 'ABM', 'abm wildan': 'ABM', 'abm satria': 'ABM',
+            'jc2017': 'staff', 'jc8001': 'staff', 'jc2021': 'staff', 'jc1029': 'staff', 'jc1020': 'staff',
+            'jc3001': 'staff', 'jc2001': 'staff', 'jc2008': 'staff', 'jc5005': 'staff', 'jc6003': 'staff',
+            'jc2012': 'staff', 'jc1014': 'staff', 'jc2018': 'staff', 'jc4006': 'staff', 'jc8005': 'staff',
+            'jc3003': 'staff', 'jc1005': 'staff', 'jc5002': 'staff', 'jc1012': 'staff', 'jc2002': 'staff',
+            'jc5003': 'staff', 'jc8006': 'staff', 'jc2016': 'staff', 'jc1027': 'staff', 'jc8004': 'staff'
+        };
 
         function toggleSidebarCollapse() {
             const sidebar = document.getElementById('sidebarMenu');
@@ -483,20 +419,16 @@
             lucide.createIcons();
         }
 
-       // FUNGSI NAVIGASI YANG DIPERBARUI
         function switchView(view) {
             sessionStorage.setItem('lastActiveView', view); 
 
-            // 1. Sembunyikan semua halaman
             const allSections = ['files', 'dashboard', 'sales', 'damage'];
             allSections.forEach(id => {
                 const el = document.getElementById('section-' + id);
                 if(el) el.classList.add('hidden');
             });
                       
-            // 2. Reset semua style menu ke default
             allSections.forEach(id => {
-                // Menyesuaikan ID tombol Anda (menu-files vs nav-damage)
                 const btnId = id === 'damage' ? 'nav-damage' : 'menu-' + id;
                 const btn = document.getElementById(btnId);
                 
@@ -504,17 +436,14 @@
                     btn.classList.remove('bg-amber-500', 'text-white', 'bg-slate-800/50');
                     btn.classList.add('text-slate-400');
                     
-                    // Reset icon khusus untuk tombol F003
                     const icon = btn.querySelector('i');
                     if (icon && id === 'damage') icon.classList.remove('text-amber-500');
                 }
             });
 
-            // Elemen Umum
             const title = document.getElementById('pageTitle');
             const fileTools = document.getElementById('fileTools');
 
-            // 3. Aktifkan Halaman & Menu yang dipilih
             if (view === 'dashboard') {
                 document.getElementById('section-dashboard').classList.remove('hidden');
                 document.getElementById('menu-dashboard').classList.remove('text-slate-400');
@@ -536,7 +465,6 @@
                 document.getElementById('nav-damage').classList.remove('text-slate-400');
                 document.getElementById('nav-damage').classList.add('bg-slate-800/50', 'text-white');
                 
-                // Nyalakan icon untuk F003
                 const icon = document.getElementById('nav-damage').querySelector('i');
                 if (icon) icon.classList.add('text-amber-500');
                 
@@ -544,7 +472,6 @@
                 if(fileTools) fileTools.classList.add('invisible');
                 
             } else {
-                // Default is Files
                 document.getElementById('section-files').classList.remove('hidden');
                 document.getElementById('menu-files').classList.remove('text-slate-400');
                 document.getElementById('menu-files').classList.add('bg-amber-500', 'text-white');
@@ -552,7 +479,6 @@
                 if(fileTools) fileTools.classList.remove('invisible');
             }
 
-            // Tutup sidebar di HP saat menu diklik
             if(window.innerWidth < 768) toggleSidebarMobile();
         }
 
@@ -576,13 +502,24 @@
             lucide.createIcons(); renderPortal();
         }
 
-        function getIconByKategori(kategori) {
+        // Helper Ikon Dinamis berdasarkan Kategori & Nama Berkas (Desain Baru)
+        function getIconByKategori(kategori, fileName = '') {
             const kat = (kategori || '').toUpperCase().trim();
-            if (kat.includes('FORM') || kat.includes('LINK')) return { name: 'file-text', bg: 'bg-emerald-50 text-emerald-600 border-emerald-100/70', badge: 'from-emerald-500/10 to-teal-500/10 text-emerald-700 border-emerald-200/50' };
-            if (kat.includes('PDF')) return { name: 'file-digit', bg: 'bg-rose-50 text-rose-600 border-rose-100/70', badge: 'from-rose-500/10 to-orange-500/10 text-rose-700 border-rose-200/50' };
-            if (kat.includes('EXCEL') || kat.includes('SHEET') || kat.includes('XLS')) return { name: 'table-properties', bg: 'bg-green-50 text-green-600 border-green-100/70', badge: 'from-green-500/10 to-emerald-500/10 text-green-700 border-green-200/50' };
-            if (kat.includes('IMAGE') || kat.includes('PNG') || kat.includes('JPG')) return { name: 'image', bg: 'bg-indigo-50 text-indigo-600 border-indigo-100/70', badge: 'from-indigo-500/10 to-purple-500/10 text-indigo-700 border-indigo-200/50' };
-            return { name: 'file', bg: 'bg-slate-50 text-slate-600 border-slate-200/70', badge: 'from-slate-500/10 to-slate-600/10 text-slate-700 border-slate-200' };
+            const name = (fileName || '').toLowerCase();
+            
+            if (kat.includes('FORM') || kat.includes('LINK') || name.includes('form')) {
+                return { name: 'file-text', bg: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+            }
+            if (kat.includes('PDF') || name.includes('pdf') || name.includes('sop') || name.includes('panduan')) {
+                return { name: 'file-text', bg: 'bg-rose-50 text-rose-600 border-rose-100' };
+            }
+            if (kat.includes('EXCEL') || kat.includes('SHEET') || kat.includes('XLS') || name.includes('excel') || name.includes('rekap') || name.includes('template')) {
+                return { name: 'table-properties', bg: 'bg-green-50 text-green-600 border-green-100' };
+            }
+            if (kat.includes('DRIVE') || name.includes('folder') || name.includes('drive')) {
+                return { name: 'folder-open', bg: 'bg-amber-50 text-amber-600 border-amber-100' };
+            }
+            return { name: 'file', bg: 'bg-indigo-50 text-indigo-600 border-indigo-100' };
         }
 
         function parseCSV(text) {
@@ -628,36 +565,30 @@
         }
 
         document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const inputUser = document.getElementById('usernameInput').value.trim().toLowerCase();
-    const errorText = document.getElementById('loginError');
-    
-    // Cek apakah username ada di userDatabase
-    if (userDatabase.hasOwnProperty(inputUser)) {
-        errorText.classList.add('hidden');
-        
-        sessionStorage.setItem('portalLoggedIn', 'true');
-        sessionStorage.setItem('portalUser', inputUser);
-        sessionStorage.setItem('portalRole', userDatabase[inputUser]); // Menyimpan Role dari object
-        
-        document.getElementById('loginOverlay').remove();
-        document.getElementById('mainBody').classList.remove('overflow-hidden');
-        
-        // ==========================================
-        // TAMBAHKAN BARIS INI:
-        // Panggil fungsi render user secara instan agar 
-        // nama tidak berstatus 'Guest User' saat pertama kali masuk
-        // ==========================================
-        if (typeof renderLoggedInUser === "function") {
-            renderLoggedInUser();
-        }
-        
-        fetchData();
-        switchView('files');
-    } else { 
-        errorText.classList.remove('hidden'); 
-    }
-});
+            e.preventDefault();
+            const inputUser = document.getElementById('usernameInput').value.trim().toLowerCase();
+            const errorText = document.getElementById('loginError');
+            
+            if (userDatabase.hasOwnProperty(inputUser)) {
+                errorText.classList.add('hidden');
+                
+                sessionStorage.setItem('portalLoggedIn', 'true');
+                sessionStorage.setItem('portalUser', inputUser);
+                sessionStorage.setItem('portalRole', userDatabase[inputUser]);
+                
+                document.getElementById('loginOverlay').remove();
+                document.getElementById('mainBody').classList.remove('overflow-hidden');
+                
+                if (typeof renderLoggedInUser === "function") {
+                    renderLoggedInUser();
+                }
+                
+                fetchData();
+                switchView('files');
+            } else { 
+                errorText.classList.remove('hidden'); 
+            }
+        });
 
         function renderPortal() {
             const grid = document.getElementById('portalGrid');
@@ -665,8 +596,12 @@
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             renderBreadcrumbs(); grid.innerHTML = '';
 
-            if (currentViewLayout === 'list') { grid.className = "flex flex-col gap-3 w-full animate-[fadeIn_0.2s_ease-out]"; } 
-            else { grid.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-[fadeIn_0.3s_ease-out]"; }
+            if (currentViewLayout === 'list') { 
+                grid.className = "flex flex-col gap-3 w-full animate-[fadeIn_0.2s_ease-out]"; 
+            } else { 
+                // Grid compact dan rapi sesuai permintaan
+                grid.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 animate-[fadeIn_0.3s_ease-out]"; 
+            }
 
             if (searchTerm) {
                 const filtered = accessibleFiles.filter(f => (f.Nama && f.Nama.toLowerCase().includes(searchTerm)));
@@ -698,7 +633,19 @@
                 if (currentViewLayout === 'list') {
                     grid.innerHTML += `<div onclick="navigateToFolder('${folderName}')" class="bg-white rounded-2xl border border-slate-200/60 p-4 flex items-center justify-between cursor-pointer hover:bg-amber-50/10 transition-all group"><div class="flex items-center gap-4"><div class="bg-amber-500/10 text-amber-600 p-2.5 rounded-xl flex items-center justify-center"><i data-lucide="folder" class="w-5 h-5 fill-current"></i></div><div><h3 class="font-extrabold text-slate-700 text-sm group-hover:text-amber-600 transition-colors">${folderName}</h3></div></div><i data-lucide="chevron-right" class="w-4 h-4 text-slate-300"></i></div>`;
                 } else {
-                    grid.innerHTML += `<div onclick="navigateToFolder('${folderName}')" class="bg-white rounded-3xl border border-slate-200/60 p-6 flex flex-col justify-center items-center text-center cursor-pointer hover-lift aspect-[4/5] group transition-all duration-300"><div class="bg-amber-500/10 text-amber-600 p-6 rounded-3xl group-hover:bg-amber-500 group-hover:text-white transition-all flex items-center justify-center shadow-inner my-auto"><i data-lucide="folder" class="w-12 h-12 fill-current"></i></div><div class="w-full mt-4"><h3 class="font-extrabold text-slate-700 text-sm truncate group-hover:text-amber-600 transition-colors">${folderName}</h3></div></div>`;
+                    // Card folder compact
+                    grid.innerHTML += `<div onclick="navigateToFolder('${folderName}')" class="group bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-amber-400/60 transition-all flex items-center gap-3 cursor-pointer">
+                        <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <i data-lucide="folder" class="w-5 h-5 fill-current"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-xs font-black text-slate-800 truncate group-hover:text-amber-600 transition-colors">${folderName}</h3>
+                            <p class="text-[10px] text-slate-400 font-medium truncate mt-0.5">Folder Direktori</p>
+                        </div>
+                        <div class="text-slate-300 group-hover:text-amber-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </div>
+                    </div>`;
                 }
             });
 
@@ -707,11 +654,24 @@
 
         function renderFilesOnly(files, container) {
             files.forEach(file => {
-                if(!file.Nama) return; const iconConf = getIconByKategori(file.Kategori);
+                if(!file.Nama) return; 
+                const iconConf = getIconByKategori(file.Kategori, file.Nama);
                 if (currentViewLayout === 'list') {
                     container.innerHTML += `<div onclick="window.open('${file.Link || '#'}', '_blank')" class="bg-white rounded-2xl border border-slate-200/50 p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-all group"><div class="flex items-center gap-4 text-left min-w-0 flex-1"><div class="${iconConf.bg} p-2.5 rounded-xl border flex items-center justify-center flex-shrink-0"><i data-lucide="${iconConf.name}" class="w-5 h-5"></i></div><div class="min-w-0 flex-1"><h3 class="text-sm font-extrabold text-slate-800 truncate group-hover:text-amber-600" title="${file.Nama}">${file.Nama}</h3></div></div><i data-lucide="external-link" class="w-4 h-4 text-slate-300"></i></div>`;
                 } else {
-                    container.innerHTML += `<div onclick="window.open('${file.Link || '#'}', '_blank')" class="bg-white rounded-3xl border border-slate-200/50 p-6 hover-lift flex flex-col justify-between items-center text-center cursor-pointer group aspect-[4/5] relative transition-all duration-300"><div class="w-full flex justify-center mb-2"><span class="px-3 py-1 bg-gradient-to-r ${iconConf.badge} border text-[10px] font-extrabold rounded-xl uppercase">${file.Kategori || 'Umum'}</span></div><div class="${iconConf.bg} p-6 rounded-3xl border shadow-sm my-auto"><i data-lucide="${iconConf.name}" class="w-12 h-12"></i></div><div class="w-full mt-4"><h3 class="text-sm font-extrabold text-slate-800 line-clamp-2" title="${file.Nama}">${file.Nama}</h3></div></div>`;
+                    // Card file compact dengan ikon dinamis dan ukuran pas
+                    container.innerHTML += `<div onclick="window.open('${file.Link || '#'}', '_blank')" class="group bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-amber-400/60 transition-all flex items-center gap-3 cursor-pointer relative">
+                        <div class="w-9 h-9 rounded-lg flex items-center justify-center border shrink-0 transition-transform group-hover:scale-105 ${iconConf.bg}">
+                            <i data-lucide="${iconConf.name}" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-xs font-black text-slate-800 truncate group-hover:text-amber-600 transition-colors" title="${file.Nama}">${file.Nama}</h3>
+                            <p class="text-[10px] text-slate-400 font-medium truncate mt-0.5">${file.Kategori || 'Dokumen'}</p>
+                        </div>
+                        <div class="text-slate-300 group-hover:text-amber-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </div>
+                    </div>`;
                 }
             });
         }
@@ -728,14 +688,12 @@
 
         document.getElementById('searchInput').addEventListener('input', renderPortal);
 
-        // FUNGSI LOGOUT AMAN
         function logoutPortal() {
             sessionStorage.clear();
             localStorage.clear();
             window.location.href = 'index.html';
         }
 
-       // CEK LOGIN DAN ROUTING URL INSTAN
         document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('loginOverlay');
             const mainBody = document.getElementById('mainBody');
@@ -748,7 +706,6 @@
                 if (typeof renderLoggedInUser === "function") renderLoggedInUser();
                 fetchData();
 
-                // --- LOGIKA BARU: BACA URL ATAU BACA MEMORI HALAMAN TERAKHIR ---
                 const urlParams = new URLSearchParams(window.location.search);
                 const requestedView = urlParams.get('view') || sessionStorage.getItem('lastActiveView') || 'files';
                 
@@ -757,9 +714,9 @@
                 if (overlay) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
             }
         });
-
     </script>
-    <!-- Pastikan script ini ada di folder yang sama -->
+    
+    <!-- Script Pendukung Eksternal -->
     <script src="dashboard.js"></script>
     <script src="sales-dashboard.js"></script>
     <script src="f003-builder.js"></script>
