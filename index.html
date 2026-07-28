@@ -126,10 +126,9 @@
             </div>
         </header>
 
-        <!-- SEKSI 1: FILE MANAGER (Desain Baru Compact & Dinamis) -->
+        <!-- SEKSI 1: FILE MANAGER -->
         <main id="section-files" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="flex items-center flex-wrap gap-2 text-sm text-slate-600 mb-6 bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/40 shadow-sm" id="breadcrumbs"></div>
-            <!-- Grid dengan ukuran card proporsional dan compact -->
             <div id="portalGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 <div class="skeleton h-24 rounded-2xl"></div>
                 <div class="skeleton h-24 rounded-2xl"></div>
@@ -502,24 +501,29 @@
             lucide.createIcons(); renderPortal();
         }
 
-        // Helper Ikon Dinamis berdasarkan Kategori & Nama Berkas (Desain Baru)
-        function getIconByKategori(kategori, fileName = '') {
-            const kat = (kategori || '').toUpperCase().trim();
-            const name = (fileName || '').toLowerCase();
+        // Helper Ikon Pintar Berdasarkan Keyword Nama Folder / File
+        function getIconByKategori(kategori, itemName = '') {
+            const text = ((kategori || '') + ' ' + (itemName || '')).toLowerCase();
             
-            if (kat.includes('FORM') || kat.includes('LINK') || name.includes('form')) {
-                return { name: 'file-text', bg: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+            if (text.includes('manpower') || text.includes('hr') || text.includes('karyawan') || text.includes('staff') || text.includes('team')) {
+                return { name: 'users', bg: 'bg-indigo-50 text-indigo-600 border-indigo-100' };
             }
-            if (kat.includes('PDF') || name.includes('pdf') || name.includes('sop') || name.includes('panduan')) {
+            if (text.includes('sales') || text.includes('monitoring') || text.includes('target') || text.includes('revenue') || text.includes('finance')) {
+                return { name: 'trending-up', bg: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+            }
+            if (text.includes('damage') || text.includes('f003') || text.includes('rusak') || text.includes('retur')) {
+                return { name: 'file-warning', bg: 'bg-rose-50 text-rose-600 border-rose-100' };
+            }
+            if (text.includes('excel') || text.includes('sheet') || text.includes('xls') || text.includes('rekap') || text.includes('template')) {
+                return { name: 'file-spreadsheet', bg: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+            }
+            if (text.includes('pdf') || text.includes('sop') || text.includes('panduan') || text.includes('doc')) {
                 return { name: 'file-text', bg: 'bg-rose-50 text-rose-600 border-rose-100' };
             }
-            if (kat.includes('EXCEL') || kat.includes('SHEET') || kat.includes('XLS') || name.includes('excel') || name.includes('rekap') || name.includes('template')) {
-                return { name: 'table-properties', bg: 'bg-green-50 text-green-600 border-green-100' };
-            }
-            if (kat.includes('DRIVE') || name.includes('folder') || name.includes('drive')) {
+            if (text.includes('folder') || text.includes('drive')) {
                 return { name: 'folder-open', bg: 'bg-amber-50 text-amber-600 border-amber-100' };
             }
-            return { name: 'file', bg: 'bg-indigo-50 text-indigo-600 border-indigo-100' };
+            return { name: 'folder', bg: 'bg-slate-50 text-slate-600 border-slate-200' };
         }
 
         function parseCSV(text) {
@@ -599,7 +603,6 @@
             if (currentViewLayout === 'list') { 
                 grid.className = "flex flex-col gap-3 w-full animate-[fadeIn_0.2s_ease-out]"; 
             } else { 
-                // Grid compact dan rapi sesuai permintaan
                 grid.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 animate-[fadeIn_0.3s_ease-out]"; 
             }
 
@@ -630,13 +633,14 @@
 
             SubFolders.forEach(folderName => {
                 if(!folderName) return;
+                const folderIcon = getIconByKategori('', folderName);
+                
                 if (currentViewLayout === 'list') {
                     grid.innerHTML += `<div onclick="navigateToFolder('${folderName}')" class="bg-white rounded-2xl border border-slate-200/60 p-4 flex items-center justify-between cursor-pointer hover:bg-amber-50/10 transition-all group"><div class="flex items-center gap-4"><div class="bg-amber-500/10 text-amber-600 p-2.5 rounded-xl flex items-center justify-center"><i data-lucide="folder" class="w-5 h-5 fill-current"></i></div><div><h3 class="font-extrabold text-slate-700 text-sm group-hover:text-amber-600 transition-colors">${folderName}</h3></div></div><i data-lucide="chevron-right" class="w-4 h-4 text-slate-300"></i></div>`;
                 } else {
-                    // Card folder compact
                     grid.innerHTML += `<div onclick="navigateToFolder('${folderName}')" class="group bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-amber-400/60 transition-all flex items-center gap-3 cursor-pointer">
-                        <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                            <i data-lucide="folder" class="w-5 h-5 fill-current"></i>
+                        <div class="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 group-hover:scale-105 ${folderIcon.bg}">
+                            <i data-lucide="${folderIcon.name}" class="w-5 h-5"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <h3 class="text-xs font-black text-slate-800 truncate group-hover:text-amber-600 transition-colors">${folderName}</h3>
@@ -659,9 +663,8 @@
                 if (currentViewLayout === 'list') {
                     container.innerHTML += `<div onclick="window.open('${file.Link || '#'}', '_blank')" class="bg-white rounded-2xl border border-slate-200/50 p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-all group"><div class="flex items-center gap-4 text-left min-w-0 flex-1"><div class="${iconConf.bg} p-2.5 rounded-xl border flex items-center justify-center flex-shrink-0"><i data-lucide="${iconConf.name}" class="w-5 h-5"></i></div><div class="min-w-0 flex-1"><h3 class="text-sm font-extrabold text-slate-800 truncate group-hover:text-amber-600" title="${file.Nama}">${file.Nama}</h3></div></div><i data-lucide="external-link" class="w-4 h-4 text-slate-300"></i></div>`;
                 } else {
-                    // Card file compact dengan ikon dinamis dan ukuran pas
                     container.innerHTML += `<div onclick="window.open('${file.Link || '#'}', '_blank')" class="group bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-amber-400/60 transition-all flex items-center gap-3 cursor-pointer relative">
-                        <div class="w-9 h-9 rounded-lg flex items-center justify-center border shrink-0 transition-transform group-hover:scale-105 ${iconConf.bg}">
+                        <div class="w-9 h-9 rounded-lg flex items-center justify-center border shrink-0 group-hover:scale-105 ${iconConf.bg}">
                             <i data-lucide="${iconConf.name}" class="w-5 h-5"></i>
                         </div>
                         <div class="min-w-0 flex-1">
