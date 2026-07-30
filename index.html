@@ -55,6 +55,28 @@
         </div>
     </div>
 
+    <!-- ================= CUSTOM PASSWORD MODAL POPUP ================= -->
+    <div id="passwordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9998] p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-slate-100 p-6 text-center">
+            <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="key-round" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-base font-black text-slate-800 mb-1">Akses Memerlukan Password</h3>
+            <p class="text-xs text-slate-500 font-medium mb-4">Catat, silahkan login lagi untuk akses menu ini</p>
+            
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between mb-5">
+                <span id="modalPasswordText" class="text-sm font-extrabold text-slate-700 tracking-wider"></span>
+                <button onclick="copyModalPassword()" class="px-3 py-1.5 bg-slate-900 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> <span id="copyBtnText">Copy</span>
+                </button>
+            </div>
+
+            <button onclick="confirmAndOpenLink()" class="w-full py-3 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all">
+                Lanjutkan ke Tab Baru
+            </button>
+        </div>
+    </div>
+
     <!-- ================= SIDEBAR MENU ================= -->
     <aside id="sidebarMenu" class="w-64 sidebar-transition bg-slate-900 text-slate-400 h-screen flex-shrink-0 flex flex-col justify-between p-4 border-r border-slate-800 z-40 fixed md:static -translate-x-full md:translate-x-0 overflow-hidden">
         <div class="w-full">
@@ -88,12 +110,12 @@
                     <i data-lucide="file-warning" class="w-4 h-4 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
                     <span class="sidebar-text-element">F003 Builder</span>
                 </button>
-                <!-- Menu Cek Pengiriman Barang dengan Popup Konfirmasi -->
+                <!-- Menu Cek Pengiriman Barang -->
                 <a href="#" onclick="openCekPengiriman(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="truck" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
                     <span class="sidebar-text-element">Cek Pengiriman Barang</span>
                 </a>
-                <!-- Menu Baru: Cek Barcode dengan Popup Konfirmasi -->
+                <!-- Menu Cek Barcode -->
                 <a href="#" onclick="openCekBarcode(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="scan-barcode" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
                     <span class="sidebar-text-element">Cek Barcode</span>
@@ -395,6 +417,7 @@
     <script>
         const API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=119812050&single=true&output=csv';
         let allFiles = []; let accessibleFiles = []; let currentPath = []; let currentViewLayout = 'grid'; let isSidebarCollapsed = false;
+        let pendingUrl = ''; let pendingPassword = '';
         
         const userDatabase = {
             'admin': 'admin', 'bm agus': 'BM', 'bm didik': 'BM', 'bm galih': 'BM',
@@ -428,22 +451,43 @@
             lucide.createIcons();
         }
 
-        // Fungsi Pop-up Konfirmasi untuk Cek Pengiriman Barang
-        function openCekPengiriman(event) {
-            event.preventDefault();
-            const pesan = "Catat, silahkan login lagi untuk akses menu ini\npassword : jabarjatengjuara";
-            if (confirm(pesan)) {
-                window.open("https://www.jawara26.biz.id/2026/04/cek-pengiriman-barang-dm-candra.html", "_blank");
+        // Fungsi Menampilkan Modal Custom Password
+        function showPasswordModal(password, url) {
+            pendingPassword = password;
+            pendingUrl = url;
+            document.getElementById('modalPasswordText').innerText = password;
+            document.getElementById('copyBtnText').innerText = 'Copy';
+            document.getElementById('passwordModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function copyModalPassword() {
+            navigator.clipboard.writeText(pendingPassword).then(() => {
+                const btnText = document.getElementById('copyBtnText');
+                btnText.innerText = 'Tersalin!';
+                setTimeout(() => {
+                    btnText.innerText = 'Copy';
+                }, 2000);
+            });
+        }
+
+        function confirmAndOpenLink() {
+            document.getElementById('passwordModal').classList.add('hidden');
+            if (pendingUrl) {
+                window.open(pendingUrl, '_blank');
             }
         }
 
-        // Fungsi Pop-up Konfirmasi untuk Cek Barcode
+        // Trigger Menu Cek Pengiriman Barang
+        function openCekPengiriman(event) {
+            event.preventDefault();
+            showPasswordModal('jabarjatengjuara', 'https://www.jawara26.biz.id/2026/04/cek-pengiriman-barang-dm-candra.html');
+        }
+
+        // Trigger Menu Cek Barcode
         function openCekBarcode(event) {
             event.preventDefault();
-            const pesan = "Catat, silahkan login lagi untuk akses menu ini\npassword : cekskujawara";
-            if (confirm(pesan)) {
-                window.open("https://sku.jawara26.biz.id", "_blank");
-            }
+            showPasswordModal('cekskujawara', 'https://sku.jawara26.biz.id');
         }
 
         function switchView(view) {
