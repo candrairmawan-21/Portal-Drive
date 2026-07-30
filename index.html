@@ -58,11 +58,9 @@
     <!-- ================= CUSTOM PASSWORD MODAL POPUP ================= -->
     <div id="passwordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9998] p-4 hidden">
         <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-slate-100 p-6 text-center relative">
-            <!-- Tombol Close (X) di Pojok Kanan Atas -->
             <button onclick="closePasswordModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
-
             <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <i data-lucide="key-round" class="w-6 h-6"></i>
             </div>
@@ -116,17 +114,17 @@
                     <span class="sidebar-text-element">F003 Builder</span>
                 </button>
                 <!-- Menu Cek Pengiriman Barang -->
-                <a href="#" onclick="openCekPengiriman(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
+                <a href="#" id="menu-cek-pengiriman" onclick="openCekPengiriman(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="truck" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
                     <span class="sidebar-text-element">Cek Pengiriman Barang</span>
                 </a>
                 <!-- Menu Cek Barcode -->
-                <a href="#" onclick="openCekBarcode(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
+                <a href="#" id="menu-cek-barcode" onclick="openCekBarcode(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="scan-barcode" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
                     <span class="sidebar-text-element">Cek Barcode</span>
                 </a>
                 <!-- Menu Cek Data SKU -->
-                <a href="#" onclick="openCekDataSKU(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
+                <a href="#" id="menu-cek-sku" onclick="openCekDataSKU(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="search" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
                     <span class="sidebar-text-element">Cek Data SKU</span>
                 </a>
@@ -430,7 +428,8 @@
         let pendingUrl = ''; let pendingPassword = '';
         
         const userDatabase = {
-            'admin': 'admin', 'bm agus': 'BM', 'bm didik': 'BM', 'bm galih': 'BM',
+            'admin': 'admin', 'guest': 'guest',
+            'bm agus': 'BM', 'bm didik': 'BM', 'bm galih': 'BM',
             'abm anas': 'ABM', 'abm bayu': 'ABM', 'abm ika': 'ABM', 'abm adinda': 'ABM',
             'abm ridho': 'ABM', 'abm fachri': 'ABM', 'abm gading': 'ABM', 'abm wildan': 'ABM', 'abm satria': 'ABM',
             'jc2017': 'staff', 'jc8001': 'staff', 'jc2021': 'staff', 'jc1029': 'staff', 'jc1020': 'staff',
@@ -461,7 +460,6 @@
             lucide.createIcons();
         }
 
-        // Fungsi Menampilkan Modal Custom Password
         function showPasswordModal(password, url) {
             pendingPassword = password;
             pendingUrl = url;
@@ -488,27 +486,40 @@
             }
         }
 
-        // Fungsi Menutup Modal Password (Cancel / Close)
         function closePasswordModal() {
             document.getElementById('passwordModal').classList.add('hidden');
         }
 
-        // Trigger Menu Cek Pengiriman Barang
         function openCekPengiriman(event) {
             event.preventDefault();
             showPasswordModal('jabarjatengjuara', 'https://www.jawara26.biz.id/2026/04/cek-pengiriman-barang-dm-candra.html');
         }
 
-        // Trigger Menu Cek Barcode
         function openCekBarcode(event) {
             event.preventDefault();
             showPasswordModal('cekskujawara', 'https://sku.jawara26.biz.id');
         }
 
-        // Trigger Menu Cek Data SKU
         function openCekDataSKU(event) {
             event.preventDefault();
             showPasswordModal('cekdatasku', 'https://cari.jawara26.biz.id/');
+        }
+
+        // PEMBATASAN AKSES KHUSUS GUEST
+        function applyGuestRestrictions() {
+            const role = sessionStorage.getItem('portalRole');
+            const hiddenForGuest = [
+                'menu-files', 'menu-dashboard', 'menu-sales',
+                'menu-cek-pengiriman', 'menu-cek-barcode', 'menu-cek-sku'
+            ];
+            
+            hiddenForGuest.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (role === 'guest') el.classList.add('hidden');
+                    else el.classList.remove('hidden');
+                }
+            });
         }
 
         function switchView(view) {
@@ -594,10 +605,8 @@
             lucide.createIcons(); renderPortal();
         }
 
-        // Helper Ikon Pintar Berdasarkan Keyword Nama Folder / File
         function getIconByKategori(kategori, itemName = '') {
             const text = ((kategori || '') + ' ' + (itemName || '')).toLowerCase();
-            
             if (text.includes('manpower') || text.includes('hr') || text.includes('karyawan') || text.includes('staff') || text.includes('team')) {
                 return { name: 'users', bg: 'bg-indigo-50 text-indigo-600 border-indigo-100' };
             }
@@ -668,10 +677,11 @@
             
             if (userDatabase.hasOwnProperty(inputUser)) {
                 errorText.classList.add('hidden');
+                const userRole = userDatabase[inputUser];
                 
                 sessionStorage.setItem('portalLoggedIn', 'true');
                 sessionStorage.setItem('portalUser', inputUser);
-                sessionStorage.setItem('portalRole', userDatabase[inputUser]);
+                sessionStorage.setItem('portalRole', userRole);
                 
                 document.getElementById('loginOverlay').remove();
                 document.getElementById('mainBody').classList.remove('overflow-hidden');
@@ -680,8 +690,15 @@
                     renderLoggedInUser();
                 }
                 
+                applyGuestRestrictions();
                 fetchData();
-                switchView('files');
+
+                // KHUSUS GUEST: Langsung diarahkan ke F003 Builder
+                if (userRole === 'guest') {
+                    switchView('damage');
+                } else {
+                    switchView('files');
+                }
             } else { 
                 errorText.classList.remove('hidden'); 
             }
@@ -794,18 +811,20 @@
             const overlay = document.getElementById('loginOverlay');
             const mainBody = document.getElementById('mainBody');
             const isLoggedIn = sessionStorage.getItem('portalLoggedIn');
+            const role = sessionStorage.getItem('portalRole');
 
             if (isLoggedIn) {
                 if (overlay) overlay.remove(); 
                 if (mainBody) mainBody.classList.remove('overflow-hidden');
                 
                 if (typeof renderLoggedInUser === "function") renderLoggedInUser();
+                applyGuestRestrictions();
                 fetchData();
 
                 const urlParams = new URLSearchParams(window.location.search);
-                const requestedView = urlParams.get('view') || sessionStorage.getItem('lastActiveView') || 'files';
+                const requestedView = urlParams.get('view') || sessionStorage.getItem('lastActiveView') || (role === 'guest' ? 'damage' : 'files');
                 
-                switchView(requestedView);
+                switchView(role === 'guest' ? 'damage' : requestedView);
             } else {
                 if (overlay) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
             }
