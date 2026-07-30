@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dateInput.value = today;
         }
         
-        // --- TAMBAHKAN KODE INI ---
         const storeCodeInput = document.getElementById('f003-store-code');
         if (storeCodeInput) {
             storeCodeInput.addEventListener('input', function() {
@@ -23,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // 1. Inject tombol folder khusus di halaman F003 Builder (tidak akan muncul di login)
+        // 1. Inject tombol folder (otomatis HIDE jika login sebagai GUEST)
         injectFolderButton();
 
         // 2. Pastikan baris tabel ter-render dengan aman
@@ -36,6 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function injectFolderButton() {
+    // CEK MODE GUEST: Jika user login sebagai guest, batalkan memunculkan tombol folder
+    const userRole = sessionStorage.getItem('portalRole');
+    if (userRole === 'guest') return;
+
     if (document.getElementById('f003-folder-btn')) return;
     
     // Cari judul utama halaman F003 Builder secara spesifik
@@ -49,7 +52,6 @@ function injectFolderButton() {
         }
     }
     
-    // Jika teks judul tersebut TIDAK ADA (artinya sedang di halaman login/halaman lain), batalkan!
     if (!targetElement) return;
 
     const btnContainer = document.createElement('div');
@@ -61,7 +63,6 @@ function injectFolderButton() {
         </a>
     `;
     
-    // Letakkan tepat di atas judul form F003 Builder
     targetElement.parentNode.insertBefore(btnContainer, targetElement);
     
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -265,7 +266,7 @@ function finishRow(e, rowNum) {
 }
 
 function handleSubRowKeydown(event, rowNum) {
-    if (event.key === 'Enter' || event.keyCode === 13) {
+    if (event.key === 'Enter' || e.keyCode === 13) {
         event.preventDefault();
     }
 }
@@ -373,7 +374,12 @@ async function generateF003Excel() {
         
         if (items.length === 0) { alert("Belum ada barang!"); throw new Error("Kosong"); }
 
-        const payloadString = JSON.stringify({ storeCode, storeName, sendDate, items });
+        // Cek Role Pengguna saat ini (apakah guest atau staff biasa)
+        const userRole = sessionStorage.getItem('portalRole') || 'staff';
+        const isGuest = userRole === 'guest';
+
+        // Sisipkan info userRole ke dalam payload yang dikirim ke Apps Script
+        const payloadString = JSON.stringify({ storeCode, storeName, sendDate, userRole, items });
         
         const response = await fetch(scriptUrl, {
             method: "POST",
@@ -386,16 +392,19 @@ async function generateF003Excel() {
         const result = await response.json();
 
         if (result.status === "success") {
-            // -- LOGIKA AUTO DOWNLOAD DI SINI --
-            // Jika Apps Script mengembalikan result.downloadUrl atau result.url,
-            // kita gunakan elemen <a> tersembunyi untuk mentrigger unduhan otomatis
             const targetUrl = result.downloadUrl || result.url;
+            
+            // Format Nama File Unduhan (Jika guest maka ada imbuhan '(guest)')
+            const fileNameDownload = isGuest 
+                ? `F003_Damage_${storeCode}_${sendDate} (guest).xlsx`
+                : `F003_Damage_${storeCode}_${sendDate}.xlsx`;
+
             if (targetUrl) {
                 try {
                     const downloadLink = document.createElement('a');
                     downloadLink.href = targetUrl;
                     downloadLink.target = '_blank';
-                    downloadLink.download = `F003_Damage_${storeCode}.xlsx`; // Sugesti nama file
+                    downloadLink.download = fileNameDownload;
                     document.body.appendChild(downloadLink);
                     downloadLink.click();
                     document.body.removeChild(downloadLink);
