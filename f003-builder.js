@@ -266,7 +266,7 @@ function finishRow(e, rowNum) {
 }
 
 function handleSubRowKeydown(event, rowNum) {
-    if (event.key === 'Enter' || e.keyCode === 13) {
+    if (event.key === 'Enter' || event.keyCode === 13) {
         event.preventDefault();
     }
 }
@@ -364,7 +364,7 @@ async function generateF003Excel() {
                 newReceiptDate: document.getElementById(`new-receipt-date-${i}`)?.value || "",
                 expiryDate: document.getElementById(`expiry-date-${i}`)?.value || "",
                 serialNumber: document.getElementById(`serial-number-${i}`)?.value || "",
-                oldReceiptDate: document.getElementById(`old-receipt-date-${i}`)?.value || "",
+                oldReceiptDate: document.getElementById(`old-receipt-date-${i}`)? .value || "",
                 oldReceiptNo: document.getElementById(`old-receipt-no-${i}`)?.value || "",
                 custName: document.getElementById(`cust-name-${i}`)?.value || "",
                 custPhone: document.getElementById(`cust-phone-${i}`)?.value || "",
@@ -374,11 +374,7 @@ async function generateF003Excel() {
         
         if (items.length === 0) { alert("Belum ada barang!"); throw new Error("Kosong"); }
 
-        // Cek Role Pengguna saat ini (apakah guest atau staff biasa)
         const userRole = sessionStorage.getItem('portalRole') || 'staff';
-        const isGuest = userRole === 'guest';
-
-        // Sisipkan info userRole ke dalam payload yang dikirim ke Apps Script
         const payloadString = JSON.stringify({ storeCode, storeName, sendDate, userRole, items });
         
         const response = await fetch(scriptUrl, {
@@ -392,16 +388,13 @@ async function generateF003Excel() {
         const result = await response.json();
 
         if (result.status === "success") {
-            const userRole = sessionStorage.getItem('portalRole') || 'staff';
-            
             if (userRole === 'guest') {
-                // KHUSUS GUEST: Tampilkan link pendek Google Sheet agar mudah disalin ke Desktop
+                // KHUSUS GUEST: Munculkan prompt link pendek Google Sheet yang bisa disalin
                 const shortLink = result.shortUrl || result.url;
                 prompt("SUKSES! Salin link Google Sheet ini untuk dibuka di komputer/desktop:", shortLink);
             } else {
-                // UNTUK STAFF / ADMIN: Tetap mendownload file Excel secara otomatis seperti biasa
+                // UNTUK STAFF / ADMIN: Tetap download file Excel seperti biasa
                 const targetUrl = result.downloadUrl || result.url;
-                
                 const fileNameDownload = `F003_Damage_${storeCode}_${sendDate}.xlsx`;
 
                 if (targetUrl) {
@@ -422,13 +415,6 @@ async function generateF003Excel() {
                 if (confirm(`SUKSES!\nFile berhasil dibuat dan mulai diunduh.\nKlik OK untuk membuka/melakukan pengecekan link secara manual.`)) {
                     if (targetUrl) window.open(targetUrl, '_blank');
                 }
-            }
-        } else {
-            alert("Gagal memproses di server: " + result.message);
-        }
-            
-            if (confirm(`SUKSES!\nFile berhasil dibuat dan mulai diunduh.\nKlik OK untuk membuka/melakukan pengecekan link secara manual.`)) {
-                if (targetUrl) window.open(targetUrl, '_blank');
             }
         } else {
             alert("Gagal memproses di server: " + result.message);
