@@ -1,22 +1,33 @@
 let f003RowCount = 0;
 
-document.addEventListener('DOMContentLoaded', () => {
+// Inkuiri aman untuk memastikan inisialisasi tabel berjalan sempurna
+window.addEventListener('DOMContentLoaded', () => {
+    initF003Builder();
+});
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(initF003Builder, 50);
+}
+
+function initF003Builder() {
     try {
         const dateInput = document.getElementById('f003-date');
-        if(dateInput) {
+        if(dateInput && !dateInput.value) {
             const today = new Date().toISOString().split('T')[0];
             dateInput.value = today;
         }
         
         const storeCodeInput = document.getElementById('f003-store-code');
-        if (storeCodeInput) {
+        if (storeCodeInput && !storeCodeInput.hasAttribute('data-initialized')) {
+            storeCodeInput.setAttribute('data-initialized', 'true');
             storeCodeInput.addEventListener('input', function() {
                 this.value = this.value.toUpperCase();
             });
         }
         
         const storeNameInput = document.getElementById('f003-store-name');
-        if (storeNameInput) {
+        if (storeNameInput && !storeNameInput.hasAttribute('data-initialized')) {
+            storeNameInput.setAttribute('data-initialized', 'true');
             storeNameInput.addEventListener('input', function() {
                 this.value = this.value.toUpperCase();
             });
@@ -27,21 +38,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 2. Pastikan baris tabel ter-render dengan aman
         ensureTableStructure();
-        addF003Row();
+        
+        const tbody = document.getElementById('f003-tbody');
+        if (tbody && tbody.children.length === 0) {
+            f003RowCount = 0;
+            addF003Row();
+        }
     } catch (err) {
         console.error("Initialization Error:", err);
-        try { addF003Row(); } catch(e) {}
+        try { if(document.getElementById('f003-tbody')?.children.length === 0) addF003Row(); } catch(e) {}
     }
-});
+}
 
 function injectFolderButton() {
-    // CEK MODE GUEST: Jika user login sebagai guest, batalkan memunculkan tombol folder
     const userRole = sessionStorage.getItem('portalRole');
     if (userRole === 'guest') return;
 
     if (document.getElementById('f003-folder-btn')) return;
     
-    // Cari judul utama halaman F003 Builder secara spesifik
     const headings = document.querySelectorAll('h2, h3, .font-bold, div');
     let targetElement = null;
     
@@ -64,7 +78,6 @@ function injectFolderButton() {
     `;
     
     targetElement.parentNode.insertBefore(btnContainer, targetElement);
-    
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -364,7 +377,7 @@ async function generateF003Excel() {
                 newReceiptDate: document.getElementById(`new-receipt-date-${i}`)?.value || "",
                 expiryDate: document.getElementById(`expiry-date-${i}`)?.value || "",
                 serialNumber: document.getElementById(`serial-number-${i}`)?.value || "",
-                oldReceiptDate: document.getElementById(`old-receipt-date-${i}`)? .value || "",
+                oldReceiptDate: document.getElementById(`old-receipt-date-${i}`)?.value || "",
                 oldReceiptNo: document.getElementById(`old-receipt-no-${i}`)?.value || "",
                 custName: document.getElementById(`cust-name-${i}`)?.value || "",
                 custPhone: document.getElementById(`cust-phone-${i}`)?.value || "",
@@ -389,11 +402,11 @@ async function generateF003Excel() {
 
         if (result.status === "success") {
             if (userRole === 'guest') {
-                // KHUSUS GUEST: Munculkan prompt link pendek Google Sheet yang bisa disalin
+                // KHUSUS GUEST: Tampilkan prompt link pendek agar bisa disalin ke desktop
                 const shortLink = result.shortUrl || result.url;
                 prompt("SUKSES! Salin link Google Sheet ini untuk dibuka di komputer/desktop:", shortLink);
             } else {
-                // UNTUK STAFF / ADMIN: Tetap download file Excel seperti biasa
+                // UNTUK STAFF / ADMIN: Tetap download file Excel secara otomatis seperti biasa
                 const targetUrl = result.downloadUrl || result.url;
                 const fileNameDownload = `F003_Damage_${storeCode}_${sendDate}.xlsx`;
 
