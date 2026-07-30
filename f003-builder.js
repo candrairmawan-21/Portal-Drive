@@ -275,7 +275,7 @@ function finishRow(e, rowNum) {
 }
 
 function handleSubRowKeydown(event, rowNum) {
-    if (event.key === 'Enter' || event.keyCode === 13) {
+    if (event.key === 'Enter' || e.keyCode === 13) {
         event.preventDefault();
     }
 }
@@ -346,6 +346,105 @@ async function generateF003Excel() {
 
     if (!storeCode || !storeName) { alert("Isi Store Code & Store Name!"); return; }
     
+    let items = [];
+    let index = 1;
+    
+    // --- VALIDASI MANDATORY FIELD BERDASARKAN KATEGORI ---
+    for (let i = 1; i <= f003RowCount; i++) {
+        const trMain = document.getElementById(`row-main-${i}`);
+        if (!trMain) continue; 
+        
+        const barcode = document.getElementById(`barcode-${i}`)?.value.trim() || "";
+        const kategori = document.getElementById(`kategori-${i}`)?.value || "";
+        const alasan = document.getElementById(`alasan-${i}`)?.value || "";
+
+        // Pastikan baris yang terisi minimal barcode/kategori divalidasi
+        if (!barcode && !kategori && !alasan) continue; 
+
+        if (!barcode) {
+            alert(`Baris #${index}: Barcode / SKU belum diisi!`);
+            document.getElementById(`barcode-${i}`)?.focus();
+            return;
+        }
+        if (!kategori) {
+            alert(`Baris #${index}: Kategori belum dipilih!`);
+            document.getElementById(`kategori-${i}`)?.focus();
+            return;
+        }
+        if (!alasan) {
+            alert(`Baris #${index}: Alasan rusak belum dipilih!`);
+            document.getElementById(`alasan-${i}`)?.focus();
+            return;
+        }
+
+        // Cek Mandatory Field untuk Kolom Dinamis Berdasarkan Kategori
+        if (kategori === 'DDR') {
+            const invoiceNo = document.getElementById(`invoice-no-${i}`)?.value.trim() || "";
+            if (!invoiceNo) {
+                alert(`Baris #${index} (Kategori DDR): Kolom "Invoice No." wajib diisi!`);
+                document.getElementById(`invoice-no-${i}`)?.focus();
+                return;
+            }
+        } 
+        else if (kategori === 'DMC' || kategori === 'DMW') {
+            const ctmReceipt = document.getElementById(`ctm-receipt-${i}`)?.value.trim() || "";
+            const newDate = document.getElementById(`new-receipt-date-${i}`)?.value.trim() || "";
+            const oldDate = document.getElementById(`old-receipt-date-${i}`)?.value.trim() || "";
+            const oldNo = document.getElementById(`old-receipt-no-${i}`)?.value.trim() || "";
+            const custName = document.getElementById(`cust-name-${i}`)?.value.trim() || "";
+            const custPhone = document.getElementById(`cust-phone-${i}`)?.value.trim() || "";
+
+            if (!ctmReceipt || !newDate || !oldDate || !oldNo || !custName || !custPhone) {
+                alert(`Baris #${index} (Kategori ${kategori}): Semua kolom tambahan (CTM Receipt, Tanggal, No Nota Lama, Nama & No HP Customer) wajib diisi lengkap!`);
+                // Fokus ke elemen pertama yang kosong di sub-row
+                if (!ctmReceipt) document.getElementById(`ctm-receipt-${i}`).focus();
+                else if (!newDate) document.getElementById(`new-receipt-date-${i}`).focus();
+                else if (!oldDate) document.getElementById(`old-receipt-date-${i}`).focus();
+                else if (!oldNo) document.getElementById(`old-receipt-no-${i}`).focus();
+                else if (!custName) document.getElementById(`cust-name-${i}`).focus();
+                else if (!custPhone) document.getElementById(`cust-phone-${i}`).focus();
+                return;
+            }
+
+            if (kategori === 'DMW') {
+                const serialNum = document.getElementById(`serial-number-${i}`)?.value.trim() || "";
+                if (!serialNum) {
+                    alert(`Baris #${index} (Kategori DMW): Kolom "Serial Number" wajib diisi!`);
+                    document.getElementById(`serial-number-${i}`)?.focus();
+                    return;
+                }
+            }
+        } 
+        else if (kategori === 'DMP' || kategori === 'DPI' || kategori === '2DMP') {
+            const expiryDate = document.getElementById(`expiry-date-${i}`)?.value.trim() || "";
+            if (!expiryDate) {
+                alert(`Baris #${index} (Kategori ${kategori}): Kolom "Expiry Date" wajib diisi!`);
+                document.getElementById(`expiry-date-${i}`)?.focus();
+                return;
+            }
+        }
+
+        items.push({
+            no: index++,
+            barcode: barcode,
+            qty: document.getElementById(`qty-${i}`)?.value || "1",
+            kategori: kategori,
+            alasan: alasan,
+            invoiceNo: document.getElementById(`invoice-no-${i}`)?.value || "",
+            ctmReceipt: document.getElementById(`ctm-receipt-${i}`)?.value || "",
+            newReceiptDate: document.getElementById(`new-receipt-date-${i}`)?.value || "",
+            expiryDate: document.getElementById(`expiry-date-${i}`)?.value || "",
+            serialNumber: document.getElementById(`serial-number-${i}`)?.value || "",
+            oldReceiptDate: document.getElementById(`old-receipt-date-${i}`)?.value || "",
+            oldReceiptNo: document.getElementById(`old-receipt-no-${i}`)?.value || "",
+            custName: document.getElementById(`cust-name-${i}`)?.value || "",
+            custPhone: document.getElementById(`cust-phone-${i}`)?.value || "",
+            photoBase64: document.getElementById(`preview-${i}`)?.getAttribute('data-base64') || ""
+        });
+    }
+    
+    if (items.length === 0) { alert("Belum ada data barang yang valid untuk diproses!"); return; }
+
     const btnGenerate = document.querySelector('button[onclick="generateF003Excel()"]');
     const originalText = btnGenerate.innerHTML;
     btnGenerate.disabled = true;
@@ -355,34 +454,6 @@ async function generateF003Excel() {
     const scriptUrl = "https://script.google.com/macros/s/AKfycbyGg_4yU44ZetFlNCbsA2vpNaTHZITLd1od7XX_0R2_Cg34py9qMbN0OFX-BwFdDftVDA/exec";
 
     try {
-        let items = [];
-        let index = 1;
-        
-        for (let i = 1; i <= f003RowCount; i++) {
-            const trMain = document.getElementById(`row-main-${i}`);
-            if (!trMain) continue; 
-            
-            items.push({
-                no: index++,
-                barcode: document.getElementById(`barcode-${i}`)?.value || "",
-                qty: document.getElementById(`qty-${i}`)?.value || "0",
-                kategori: document.getElementById(`kategori-${i}`)?.value || "",
-                alasan: document.getElementById(`alasan-${i}`)?.value || "",
-                invoiceNo: document.getElementById(`invoice-no-${i}`)?.value || "",
-                ctmReceipt: document.getElementById(`ctm-receipt-${i}`)?.value || "",
-                newReceiptDate: document.getElementById(`new-receipt-date-${i}`)?.value || "",
-                expiryDate: document.getElementById(`expiry-date-${i}`)?.value || "",
-                serialNumber: document.getElementById(`serial-number-${i}`)?.value || "",
-                oldReceiptDate: document.getElementById(`old-receipt-date-${i}`)?.value || "",
-                oldReceiptNo: document.getElementById(`old-receipt-no-${i}`)?.value || "",
-                custName: document.getElementById(`cust-name-${i}`)?.value || "",
-                custPhone: document.getElementById(`cust-phone-${i}`)?.value || "",
-                photoBase64: document.getElementById(`preview-${i}`)?.getAttribute('data-base64') || ""
-            });
-        }
-        
-        if (items.length === 0) { alert("Belum ada barang!"); throw new Error("Kosong"); }
-
         const userRole = sessionStorage.getItem('portalRole') || 'staff';
         const payloadString = JSON.stringify({ storeCode, storeName, sendDate, userRole, items });
         
@@ -406,7 +477,7 @@ async function generateF003Excel() {
             alert("Gagal memproses di server: " + result.message);
         }
     } catch (error) {
-        if(error.message !== "Kosong") alert("Kesalahan jaringan: " + error.message);
+        alert("Kesalahan jaringan: " + error.message);
     } finally {
         btnGenerate.innerHTML = originalText;
         btnGenerate.disabled = false;
