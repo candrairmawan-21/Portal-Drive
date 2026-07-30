@@ -331,7 +331,7 @@ function previewPhoto(input, rowId) {
 
 async function generateF003Excel() {
     const storeCode = document.getElementById('f003-store-code').value.trim().toUpperCase();
-const storeName = document.getElementById('f003-store-name').value.trim().toUpperCase();
+    const storeName = document.getElementById('f003-store-name').value.trim().toUpperCase();
     const sendDate = document.getElementById('f003-date').value;
 
     if (!storeCode || !storeName) { alert("Isi Store Code & Store Name!"); return; }
@@ -386,8 +386,27 @@ const storeName = document.getElementById('f003-store-name').value.trim().toUppe
         const result = await response.json();
 
         if (result.status === "success") {
-            if (confirm(`SUKSES!\nFile berhasil dibuat.\nKlik OK untuk membuka.`)) {
-                window.open(result.url, '_blank');
+            // -- LOGIKA AUTO DOWNLOAD DI SINI --
+            // Jika Apps Script mengembalikan result.downloadUrl atau result.url,
+            // kita gunakan elemen <a> tersembunyi untuk mentrigger unduhan otomatis
+            const targetUrl = result.downloadUrl || result.url;
+            if (targetUrl) {
+                try {
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = targetUrl;
+                    downloadLink.target = '_blank';
+                    downloadLink.download = `F003_Damage_${storeCode}.xlsx`; // Sugesti nama file
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                } catch (e) {
+                    console.warn("Gagal auto-download, membuka di tab baru...", e);
+                    window.open(targetUrl, '_blank');
+                }
+            }
+            
+            if (confirm(`SUKSES!\nFile berhasil dibuat dan mulai diunduh.\nKlik OK untuk membuka/melakukan pengecekan link secara manual.`)) {
+                if (targetUrl) window.open(targetUrl, '_blank');
             }
         } else {
             alert("Gagal memproses di server: " + result.message);
