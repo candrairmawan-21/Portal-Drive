@@ -1,6 +1,5 @@
 let f003RowCount = 0;
 
-// Inkuiri aman untuk memastikan inisialisasi tabel berjalan sempurna
 window.addEventListener('DOMContentLoaded', () => {
     initF003Builder();
 });
@@ -33,7 +32,7 @@ function initF003Builder() {
             });
         }
         
-        // 1. Inject tombol folder (otomatis HIDE jika login sebagai GUEST)
+        // 1. Inject tombol folder (muncul untuk semua role termasuk guest)
         injectFolderButton();
 
         // 2. Pastikan baris tabel ter-render dengan aman
@@ -51,9 +50,6 @@ function initF003Builder() {
 }
 
 function injectFolderButton() {
-    const userRole = sessionStorage.getItem('portalRole');
-    if (userRole === 'guest') return;
-
     if (document.getElementById('f003-folder-btn')) return;
     
     const headings = document.querySelectorAll('h2, h3, .font-bold, div');
@@ -401,34 +397,11 @@ async function generateF003Excel() {
         const result = await response.json();
 
         if (result.status === "success") {
-            if (userRole === 'guest') {
-                // KHUSUS GUEST: Tampilkan prompt link pendek agar bisa disalin ke desktop
-                const shortLink = result.shortUrl || result.url;
-                prompt("SUKSES! Salin link Google Sheet ini untuk dibuka di komputer/desktop:", shortLink);
-            } else {
-                // UNTUK STAFF / ADMIN: Tetap download file Excel secara otomatis seperti biasa
-                const targetUrl = result.downloadUrl || result.url;
-                const fileNameDownload = `F003_Damage_${storeCode}_${sendDate}.xlsx`;
-
-                if (targetUrl) {
-                    try {
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = targetUrl;
-                        downloadLink.target = '_blank';
-                        downloadLink.download = fileNameDownload;
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        document.body.removeChild(downloadLink);
-                    } catch (e) {
-                        console.warn("Gagal auto-download, membuka di tab baru...", e);
-                        window.open(targetUrl, '_blank');
-                    }
-                }
-                
-                if (confirm(`SUKSES!\nFile berhasil dibuat dan mulai diunduh.\nKlik OK untuk membuka/melakukan pengecekan link secara manual.`)) {
-                    if (targetUrl) window.open(targetUrl, '_blank');
-                }
+            const targetUrl = result.url;
+            if (targetUrl) {
+                window.open(targetUrl, '_blank');
             }
+            alert("SUKSES!\nFile berhasil dibuat dan dibuka di tab baru.");
         } else {
             alert("Gagal memproses di server: " + result.message);
         }
