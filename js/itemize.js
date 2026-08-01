@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const sectionAnalisa = document.getElementById("section-itemize");
   const pageTitle = document.getElementById("pageTitle");
 
-  // Fungsi untuk menampilkan seksi Itemize dan menyimpan state ke localStorage
   function openItemizeView() {
     document.querySelectorAll("main[id^='section-']").forEach((sec) => {
       sec.classList.add("hidden");
@@ -17,16 +16,13 @@ document.addEventListener("DOMContentLoaded", () => {
       pageTitle.innerText = "Itemize - Analisa Anomali Scan";
     }
 
-    // Simpan status aktif ke memori browser agar tidak hilang saat refresh
     localStorage.setItem("activePortalMenu", "itemize");
   }
 
-  // Cek saat halaman dimuat: apakah sebelumnya user berada di menu Itemize?
   if (localStorage.getItem("activePortalMenu") === "itemize") {
     openItemizeView();
   }
 
-  // 1. Navigasi Side Panel
   if (navBtn && sectionAnalisa) {
     navBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -41,16 +37,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Jika user mengklik menu lain di sidebar, hapus memori activePortalMenu
   document.querySelectorAll("aside nav button, aside nav a").forEach((menuItem) => {
-    if (menuItem.id !== "nav-itemize") {
+    if (menuItem.id !== "nav-itemize" && menuItem.id !== "nav-analyze-dropdown") {
       menuItem.addEventListener("click", () => {
-        localStorage.removeItem("activePortalMenu");
+        if (!menuItem.closest("#analyzeSubMenu")) {
+          localStorage.removeItem("activePortalMenu");
+        }
       });
     }
   });
 
-  // 2. Event Listener Tombol Proses Analisa
   const btnProses = document.getElementById("btn-proses-analisa");
   const statusText = document.getElementById("status-analisa");
 
@@ -98,7 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Logika Analisa, Summary, & Export Excel
   function prosesDanDownloadExcel(namaToko, textDb, textScan) {
     const barisDb = textDb.trim().split("\n");
     const dbMap = {}; 
@@ -107,7 +102,6 @@ document.addEventListener("DOMContentLoaded", () => {
     barisDb.forEach((line) => {
       if (!line.trim()) return;
       const cols = line.split(",").map((i) => i.trim());
-      
       const sku = cols[0] || "";
       const alamat = cols[1] || "-";
       const harga = cols[2] || "-";
@@ -116,9 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (sku) {
         dbMap[sku] = { sku, alamat, harga, qty, deskripsi };
-        if (qty > 0) {
-          totalSkuDbValid++;
-        }
+        if (qty > 0) totalSkuDbValid++;
       }
     });
 
@@ -223,18 +215,12 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
 
     const workbook = XLSX.utils.book_new();
-
     const ws1 = XLSX.utils.json_to_sheet(sheet1Data);
     XLSX.utils.book_append_sheet(workbook, ws1, "Hasil Scan");
 
     const ws2 = XLSX.utils.json_to_sheet(
       sheet2Data.length ? sheet2Data : [{ 
-        SKU: "-", 
-        Alamat: "-", 
-        Harga: "-", 
-        "Qty System": "-", 
-        Deskripsi: "-", 
-        "Keterangan Anomali": "Tidak Ada Anomali" 
+        SKU: "-", Alamat: "-", Harga: "-", "Qty System": "-", Deskripsi: "-", "Keterangan Anomali": "Tidak Ada Anomali" 
       }]
     );
     XLSX.utils.book_append_sheet(workbook, ws2, "Anomali");
