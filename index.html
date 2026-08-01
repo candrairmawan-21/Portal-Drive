@@ -449,35 +449,36 @@
             </div>
         </main>
 
-        <!-- SEKSI 5: ITEMIZE (SUB-MENU ANALYZE) -->
-        <main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
-            <div class="mb-6">
-                <h2 class="text-2xl font-black text-slate-800">Itemize - Analisa Anomali Scan</h2>
-                <p class="text-sm font-semibold text-slate-500 mt-1">Upload file Database .txt dan Hasil Scan .txt untuk memproses laporan anomali otomatis ke Excel.</p>
-            </div>
+        <!-- SEKSI 5: ITEMIZE (ANALISA ANOMALI SCAN) -->
+<main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
+    <div class="mb-6">
+        <h2 class="text-2xl font-black text-slate-800">Itemize - Analisa Anomali Scan</h2>
+        <p class="text-sm font-semibold text-slate-500 mt-1">Upload file Database .txt dan File Hasil Scan (.txt atau .xlsx/.xls) untuk memproses laporan anomali otomatis.</p>
+    </div>
 
-            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nama Toko</label>
-                    <input type="text" id="nama-toko-input" placeholder="Contoh: SLSQ" class="w-full text-sm text-slate-700 border border-slate-200 rounded-2xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
-                </div>
+    <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
+        <div class="mb-5">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nama Toko</label>
+            <input type="text" id="nama-toko-input" placeholder="Contoh: SLSQ" class="w-full text-sm text-slate-700 border border-slate-200 rounded-2xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
+        </div>
 
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
-                    <input type="file" id="file-db-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                </div>
+        <div class="mb-5">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
+            <input type="file" id="file-db-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+        </div>
 
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Hasil Scan (.txt)</label>
-                    <input type="file" id="file-scan-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                </div>
+        <div class="mb-6">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Hasil Scan (.txt atau .xlsx / .xls)</label>
+            <p class="text-[11px] text-slate-400 mb-2 font-medium">Jika Excel (.xlsx/.xls): Kolom A = SKU, Kolom B = Alamat. Jika .txt: Format bawaan sebelumnya.</p>
+            <input type="file" id="file-scan-input" accept=".txt, .xlsx, .xls" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+        </div>
 
-                <button id="btn-proses-analisa" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Proses & Download Excel (.xlsx)
-                </button>
-                
-                <p id="status-analisa" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
-            </div>
+        <button id="btn-proses-analisa" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Proses & Download Excel (.xlsx)
+        </button>
+        
+        <p id="status-analisa" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
+    </div>
         </main>
 
         <!-- SEKSI 6: FAST MOVING SKU FOR TF (SUB-MENU ANALYZE) -->
