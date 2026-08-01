@@ -33,8 +33,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnProses) {
     btnProses.addEventListener("click", async () => {
+      const namaTokoInput = document.getElementById("nama-toko-input").value.trim();
       const fileDbInput = document.getElementById("file-db-txt").files[0];
       const fileScanInput = document.getElementById("file-scan-txt").files[0];
+
+      if (!namaTokoInput) {
+        alert("Harap masukkan Nama Toko terlebih dahulu!");
+        return;
+      }
 
       if (!fileDbInput || !fileScanInput) {
         alert("Harap upload kedua file .txt terlebih dahulu!");
@@ -48,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const textDb = await bacaFileTeks(fileDbInput);
         const textScan = await bacaFileTeks(fileScanInput);
 
-        prosesDanDownloadExcel(textDb, textScan);
+        prosesDanDownloadExcel(namaTokoInput, textDb, textScan);
         
         statusText.innerText = "Berhasil! File Excel sedang didownload.";
         statusText.style.color = "green";
@@ -69,12 +75,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Logika Analisa & Export Excel Sesuai Aturan Baru
-  function prosesDanDownloadExcel(textDb, textScan) {
+  // Logika Analisa, Summary, & Export Excel
+  function prosesDanDownloadExcel(namaToko, textDb, textScan) {
     // A. Parse File Database (9 Kolom)
-    // Kolom 1 = SKU, Kolom 2 = Alamat, Kolom 3 = Harga, Kolom 4 = Qty System, Kolom 9 = Deskripsi
     const barisDb = textDb.trim().split("\n");
     const dbMap = {}; // SKU -> { sku, alamat, harga, qty, deskripsi }
+    let totalSkuDbValid = 0; // Total SKU sistem dengan Qty > 0 (untuk basis akurasi)
 
     barisDb.forEach((line) => {
       if (!line.trim()) return;
@@ -84,16 +90,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const alamat = cols[1] || "-";
       const harga = cols[2] || "-";
       const qty = parseFloat(cols[3]) || 0;
-      const deskripsi = cols[8] || "-"; // Indeks ke-8 adalah kolom ke-9
+      const deskripsi = cols[8] || "-";
 
       if (sku) {
-        dbMap[sku] = {
-          sku,
-          alamat,
-          harga,
-          qty,
-          deskripsi
-        };
+        dbMap[sku] = { sku, alamat, harga, qty, deskripsi };
+        if (qty > 0) {
+          totalSkuDbValid++;
+        }
       }
     });
 
@@ -122,9 +125,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const sheet2Data = [];
     const scannedSkus = new Set(Object.keys(scanSkuToAlamatMap));
 
-    // 1. SKU Belum di Scan (Short): SKU di Database dengan Qty System > 0, tapi tidak ada di file hasil scan
+    let countShort = 0;
+    let countExtra = 0;
+    let countDoubleAlamat = 0;
+
+    // 1. SKU Belum di Scan (Short)
     Object.values(dbMap).forEach((item) => {
       if (item.qty > 0 && !scannedSkus.has(item.sku)) {
+        countShort++;
         sheet2Data.push({
           SKU: item.sku,
           Alamat: item.alamat,
@@ -134,16 +142,16 @@ document.addEventListener("DOMContentLoaded", () => {
           "Keterangan Anomali": "SKU Short"
         });
       }
-      // Catatan: SKU di database yang qty system 0 dan tidak ada di list scan diabaikan (sesuai instruksi)
     });
 
-    // 2. SKU Extra & Double Alamat berdasarkan File Scan
+    // 2. SKU Extra & Double Alamat
     Object.entries(scanSkuToAlamatMap).forEach(([sku, alamatSet]) => {
       const inDb = !!dbMap[sku];
       
-      // SKU Extra Kondisi A: SKU ada di file hasil scan, tetapi tidak ada di Database
+      // SKU Extra Kondisi A (Tidak ada di DB) atau Kondisi B (Qty System = 0)
       if (!inDb) {
         alamatSet.forEach((alm) => {
+          countExtra++;
           sheet2Data.push({
             SKU: sku,
             Alamat: alm,
@@ -154,9 +162,9 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         });
       } else {
-        // SKU Extra Kondisi B: SKU ada di Database tetapi tercatat memiliki Qty System = 0 (dan ditemukan di scan)
         if (dbMap[sku].qty === 0) {
           alamatSet.forEach((alm) => {
+            countExtra++;
             sheet2Data.push({
               SKU: sku,
               Alamat: alm,
@@ -169,9 +177,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // Double Alamat: SKU yang sama hasil scan muncul di 2 atau lebih alamat berbeda
+      // Double Alamat
       if (alamatSet.size > 1) {
         alamatSet.forEach((alm) => {
+          countDoubleAlamat++;
           sheet2Data.push({
             SKU: sku,
             Alamat: alm,
@@ -184,6 +193,24 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+    // --- PERHITUNGAN AKURASI ---
+    // Akurasi dihitung berdasarkan seberapa bersih dari temuan short & extra dibanding total SKU sistem
+    let totalAnomaliItem = countShort + countExtra;
+    let akurasiVal = 100;
+    if (totalSkuDbValid > 0) {
+      let selisih = totalSkuDbValid - totalAnomaliItem;
+      akurasiVal = selisih > 0 ? (selisih / totalSkuDbValid) * 100 : 0;
+    }
+    const akurasiFormatted = akurasiVal.toFixed(2) + "%";
+
+    // --- SHEET 3: SUMMARY ---
+    const sheet3Data = [
+      { Metric: "Total SKU Short (Belum di Scan)", Jumlah: countShort },
+      { Metric: "Total SKU Extra", Jumlah: countExtra },
+      { Metric: "Total SKU Double Alamat", Jumlah: countDoubleAlamat },
+      { Metric: "Akurasi Stock Opname / Scan", Jumlah: akurasiFormatted }
+    ];
+
     // --- GENERATE EXCEL VIA SHEETJS ---
     const workbook = XLSX.utils.book_new();
 
@@ -191,7 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const ws1 = XLSX.utils.json_to_sheet(sheet1Data);
     XLSX.utils.book_append_sheet(workbook, ws1, "Hasil Scan");
 
-    // Sheet 2: Anomali (Hanya kolom SKU, Alamat, Harga, Qty System, Deskripsi, Keterangan Anomali)
+    // Sheet 2: Anomali
     const ws2 = XLSX.utils.json_to_sheet(
       sheet2Data.length ? sheet2Data : [{ 
         SKU: "-", 
@@ -204,7 +231,17 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     XLSX.utils.book_append_sheet(workbook, ws2, "Anomali");
 
+    // Sheet 3: Summary
+    const ws3 = XLSX.utils.json_to_sheet(sheet3Data);
+    XLSX.utils.book_append_sheet(workbook, ws3, "Summary");
+
+    // Format Nama File: nama toko_itemize_tanggal.xlsx
+    const tanggalHariIni = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    // Bersihkan karakter aneh pada nama toko agar aman jadi nama file
+    const safeNamaToko = namaToko.replace(/[^a-zA-Z0-9-_ ]/g, "").trim();
+    const filename = `${safeNamaToko}_itemize_${tanggalHariIni}.xlsx`;
+
     // Download file Excel
-    XLSX.writeFile(workbook, "Hasil_Analisa_Anomali.xlsx");
+    XLSX.writeFile(workbook, filename);
   }
 });
