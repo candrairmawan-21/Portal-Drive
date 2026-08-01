@@ -103,8 +103,8 @@ function openCekDataSKU(event) {
 const attitudeTranslations = {
     en: "Remember that our handbook said : Attitude is more important than the past, than education, than money, than circumstances, than what people do or say. It is more important than appearance, giftedness or skill",
     id: "Ingatlah bahwa buku panduan kita mengatakan: Sikap jauh lebih penting daripada masa lalu, daripada pendidikan, daripada uang, daripada keadaan, daripada apa yang orang lakukan atau katakan. Sikap lebih penting daripada penampilan, bakat, atau keterampilan.",
-    su: "Inget yén buku panduan urang nyarios: Sikap langkung penting tibatan jaman baheula, tibatan pendidikan, tibatan artos, tibatan kaayaan, tibatan naon anu dilakukeun atanapi diucapkeun ku jalma. Éta langkung penting tibatan penampilan, bakat, atanapi katerampilan.",
-    jv: "Elinga menawa buku pandhuan kita ngendika: Sikap luwih penting tinimbang biyen, tinimbang pendhidhikan, tinimbang dhuwit, tinimbang kahanan, tinimbang apa sing ditindakake utawa diomongake wong. Sikap luwih penting tinimbang penampilan, bakat, utawa katrampilan."
+    su: "Inget yén buku panduan urang nyarios: Sikap langkung penting tibatan emutan jaman baheula, tibatan pendidikan, tibatan artos, tibatan kaayaan, tibatan naon anu dilakukeun atanapi diucapkeun ku jalma. Éta langkung penting tibatan penampilan, bakat, atanapi katerampilan.",
+    jv: "Elinga, jarene buku pandhuan kita: Sikap kuwi luwih penting tinimbang biyen, tinimbang sekolah, tinimbang dhuwit, tinimbang kahanan, utawa apa sing dilakoni lan diomongake wong liyo. Sikap kuwi luwih penting tinimbang penampilan, bakat, utawa keahlian."
 };
 
 function changeAttitudeLanguage(lang) {
