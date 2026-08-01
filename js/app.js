@@ -1,6 +1,5 @@
 /* ==========================================================================
    1. KONFIGURASI API & DATA GLOBAL PORTAL
-   Ubah tautan API Google Sheet File Manager pada variabel API_URL ini.
    ========================================================================== */
 const API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=119812050&single=true&output=csv';
 let allFiles = []; 
@@ -25,7 +24,6 @@ const userDatabase = {
 
 /* ==========================================================================
    2. SISTEM NAVIGASI & SIDEBAR CONTROLLER
-   Fungsi di bawah mengatur interaksi sidebar saat direntangkan atau ditarik.
    ========================================================================== */
 function toggleSidebarCollapse() {
     const sidebar = document.getElementById('sidebarMenu');
@@ -100,7 +98,42 @@ function openCekDataSKU(event) {
 }
 
 /* ==========================================================================
-   4. SISTEM PERPINDAHAN HALAMAN & OTORISASI GUEST
+   4. HANDBOOK ATTITUDE POP-UP & AUTO-TRANSLATE (INDONESIA, SUNDA, JAWA)
+   ========================================================================== */
+const attitudeTranslations = {
+    id: "Ingatlah bahwa buku panduan kita mengatakan: Sikap jauh lebih penting daripada masa lalu, daripada pendidikan, daripada uang, daripada keadaan, daripada apa yang orang lakukan atau katakan. Sikap lebih penting daripada penampilan, bakat, atau keterampilan.",
+    su: "Inget yén buku panduan urang nyarios: Sikap langkung penting tibatan jaman baheula, tibatan pendidikan, tibatan artos, tibatan kaayaan, tibatan naon anu dilakukeun atanapi diucapkeun ku jalma. Éta langkung penting tibatan penampilan, bakat, atanapi katerampilan.",
+    jv: "Elinga menawa buku pandhuan kita ngendika: Sikap luwih penting tinimbang biyen, tinimbang pendhidhikan, tinimbang dhuwit, tinimbang kahanan, tinimbang apa sing ditindakake utawa diomongake wong. Sikap luwih penting tinimbang penampilan, bakat, utawa katrampilan."
+};
+
+function changeAttitudeLanguage(lang) {
+    const textElement = document.getElementById('attitudeQuoteText');
+    if (textElement && attitudeTranslations[lang]) {
+        textElement.innerText = `"${attitudeTranslations[lang]}"`;
+    }
+}
+
+function showAttitudeModal() {
+    const modal = document.getElementById('attitudeModal');
+    if (modal) {
+        const select = document.getElementById('attitudeLangSelect');
+        if (select) select.value = 'id';
+        changeAttitudeLanguage('id');
+
+        modal.classList.remove('hidden');
+        lucide.createIcons();
+    }
+}
+
+function closeAttitudeModal() {
+    const modal = document.getElementById('attitudeModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+/* ==========================================================================
+   5. SISTEM PERPINDAHAN HALAMAN & OTORISASI GUEST
    ========================================================================== */
 function applyGuestRestrictions() {
     const role = sessionStorage.getItem('portalRole');
@@ -127,7 +160,7 @@ function switchView(view) {
         if(el) el.classList.add('hidden');
     });
               
-    // Reset warna tombol navigasi utama/standar
+    // Reset warna tombol navigasi standar
     const standardButtons = ['files', 'dashboard', 'sales', 'damage'];
     standardButtons.forEach(id => {
         const btnId = id === 'damage' ? 'nav-damage' : 'menu-' + id;
@@ -232,7 +265,7 @@ function switchView(view) {
 }
 
 /* ==========================================================================
-   5. LOGIKA FILE MANAGER & DATA PARSING DARI GOOGLE SHEET
+   6. LOGIKA FILE MANAGER & DATA PARSING DARI GOOGLE SHEET
    ========================================================================== */
 function parseCSV(text) {
     let lines = text.split('\n');
@@ -414,7 +447,7 @@ function toggleViewLayout() {
 }
 
 /* ==========================================================================
-   6. SISTEM AUTENTIKASI & PENDENGAR AKSI EVENT LISTENERS
+   7. SISTEM AUTENTIKASI & PENDENGAR AKSI EVENT LISTENERS
    ========================================================================== */
 function logoutPortal() {
     sessionStorage.clear();
@@ -441,6 +474,9 @@ document.getElementById('loginForm')?.addEventListener('submit', function(e) {
         if (typeof renderLoggedInUser === "function") renderLoggedInUser();
         applyGuestRestrictions();
         fetchData();
+
+        // Tampilkan pop-up handbook attitude setelah berhasil login
+        showAttitudeModal();
 
         if (userRole === 'guest') switchView('damage');
         else switchView('files');
