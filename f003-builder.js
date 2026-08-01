@@ -69,7 +69,7 @@ function injectFolderButton() {
     btnContainer.innerHTML = `
         <a id="f003-folder-btn" href="https://drive.google.com/drive/folders/1EICp9CwKRLeVEieO-DOvi-FWLuFfcslU" target="_blank" 
            style="background-color: #d97706; color: white;" class="inline-flex items-center gap-2 hover:bg-amber-700 text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-colors">
-            <i data-lucide="folder-open" class="w-4 h-4"></i> Klik disini untuk lihat folder nya
+            <i data-lucide="folder-open" class="w-4 h-4"></i> Klik disini untuk lihat folder hasilnya
         </a>
     `;
     
