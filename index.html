@@ -5,30 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Midnorth Data Portal</title>
     <link rel="icon" type="image/png" href="midnorth java (1).png">
+    
+    <!-- Dependensi Pihak Ketiga (Tailwind, Lucide Icons, Chart.js, Excel & FileSaver) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;450;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Library ExcelJS & FileSaver untuk F003 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <style>
-    html { font-size: 13.5px; /* Mengubah ukuran dasar font seluruh webapp */ }
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
-    .skeleton {
-        background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-        background-size: 200% 100%;
-        animation: loading 1.5s infinite;
-    }
-    @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .hover-lift { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease; }
-    .hover-lift:hover { transform: translateY(-4px); }
-    .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-</style>
+    
+    <!-- Menghubungkan Style Khusus -->
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="min-h-screen text-slate-800 antialiased selection:bg-amber-500 selection:text-white overflow-hidden flex" id="mainBody">
 
-    <!-- ================= LOGIN PAGE OVERLAY ================= -->
+    <!-- =========================================================
+         MODAL 1: OVERLAY LOGIN PORTAL
+         ========================================================= -->
     <div id="loginOverlay" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-[9999] p-4 transition-all duration-500">
         <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 p-8 text-center">
             <div class="flex justify-center mb-5">
@@ -56,7 +49,9 @@
         </div>
     </div>
 
-    <!-- ================= CUSTOM PASSWORD MODAL POPUP ================= -->
+    <!-- =========================================================
+         MODAL 2: KONFIRMASI PASSWORD AKSES EKSTERNAL
+         ========================================================= -->
     <div id="passwordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9998] p-4 hidden">
         <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-slate-100 p-6 text-center relative">
             <button onclick="closePasswordModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition">
@@ -81,7 +76,9 @@
         </div>
     </div>
 
-    <!-- ================= SIDEBAR MENU ================= -->
+    <!-- =========================================================
+         NAVIGASI: SIDEBAR UTAMA & FOOTER
+         ========================================================= -->
     <aside id="sidebarMenu" class="w-64 sidebar-transition bg-slate-900 text-slate-400 h-screen flex-shrink-0 flex flex-col justify-between p-4 border-r border-slate-800 z-40 fixed md:static -translate-x-full md:translate-x-0 overflow-hidden">
         <div class="w-full">
             <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6 header-container">
@@ -114,17 +111,16 @@
                     <i data-lucide="file-warning" class="w-4 h-4 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
                     <span class="sidebar-text-element">F003 Builder</span>
                 </button>
-                <!-- Menu Cek Pengiriman Barang -->
+                
+                <!-- Tautan Aplikasi Eksternal -->
                 <a href="#" id="menu-cek-pengiriman" onclick="openCekPengiriman(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="truck" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
                     <span class="sidebar-text-element">Cek Pengiriman Barang</span>
                 </a>
-                <!-- Menu Cek Barcode -->
                 <a href="#" id="menu-cek-barcode" onclick="openCekBarcode(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="scan-barcode" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
                     <span class="sidebar-text-element">Cek Barcode</span>
                 </a>
-                <!-- Menu Cek Data SKU -->
                 <a href="#" id="menu-cek-sku" onclick="openCekDataSKU(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="search" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
                     <span class="sidebar-text-element">Cek Data SKU</span>
@@ -133,14 +129,13 @@
         </div>
 
         <div class="border-t border-slate-800 pt-4">
-            <!-- Trademark Footer di Sidebar -->
-<div class="mt-4 pt-3 border-t border-slate-800/60 text-center sidebar-text-element">
-    <p class="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
-        Engineered by <span class="text-amber-500 font-extrabold">Irmawan Labs</span>
-    </p>
-    <p class="text-[9px] text-slate-600 font-medium mt-0.5">© 2026 Irmawan Labs. All Rights Reserved.</p>
-</div>
-            <button onclick="logoutPortal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-rose-400 hover:bg-rose-500/10 transition-all whitespace-nowrap">
+            <div class="mt-4 pt-3 border-t border-slate-800/60 text-center sidebar-text-element">
+                <p class="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                    Engineered by <span class="text-amber-500 font-extrabold">Irmawan Labs</span>
+                </p>
+                <p class="text-[9px] text-slate-600 font-medium mt-0.5">© 2026 Irmawan Labs. All Rights Reserved.</p>
+            </div>
+            <button onclick="logoutPortal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-rose-400 hover:bg-rose-500/10 transition-all whitespace-nowrap mt-2">
                 <i data-lucide="log-out" class="w-4 h-4 flex-shrink-0"></i> 
                 <span class="sidebar-text-element">Keluar Portal</span>
             </button>
@@ -149,7 +144,9 @@
 
     <div id="sidebarBackdrop" onclick="toggleSidebarMobile()" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
-    <!-- ================= MAIN CONTENT WINDOW ================= -->
+    <!-- =========================================================
+         AREA KERJA UTAMA & HEADER
+         ========================================================= -->
     <div class="flex-1 flex flex-col h-screen overflow-y-auto w-full relative">
         <header class="bg-white/70 backdrop-blur-xl shadow-sm sticky top-0 z-20 border-b border-slate-200/50">
             <div class="container mx-auto px-6 py-4 flex justify-between items-center gap-4">
@@ -373,7 +370,7 @@
             </div>
         </main>
 
-        <!-- SEKSI 4: F003 Builder -->
+        <!-- SEKSI 4: F003 BUILDER (FORM PENGAJUAN DAMAGE) -->
         <main id="section-damage" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="mb-6">
                 <h2 class="text-2xl font-black text-slate-800">Form Pengajuan Damage Items</h2>
@@ -429,433 +426,10 @@
         </main>
     </div>
 
-    <!-- SCRIPT UTAMA PORTAL MANAGER -->
-    <script>
-        const API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=119812050&single=true&output=csv';
-        let allFiles = []; let accessibleFiles = []; let currentPath = []; let currentViewLayout = 'grid'; let isSidebarCollapsed = false;
-        let pendingUrl = ''; let pendingPassword = '';
-        
-        const userDatabase = {
-            'admin': 'admin', 'guest': 'guest',
-            'bm agus': 'BM', 'bm didik': 'BM', 'bm galih': 'BM',
-            'abm anas': 'ABM', 'abm bayu': 'ABM', 'abm ika': 'ABM', 'abm adinda': 'ABM',
-            'abm ridho': 'ABM', 'abm fachri': 'ABM', 'abm gading': 'ABM', 'abm wildan': 'ABM', 'abm satria': 'ABM',
-            'jc2017': 'staff', 'jc8001': 'staff', 'jc2021': 'staff', 'jc1029': 'staff', 'jc1020': 'staff',
-            'jc3001': 'staff', 'jc2001': 'staff', 'jc2008': 'staff', 'jc5005': 'staff', 'jc6003': 'staff',
-            'jc2012': 'staff', 'jc1014': 'staff', 'jc2018': 'staff', 'jc4006': 'staff', 'jc8005': 'staff',
-            'jc3003': 'staff', 'jc1005': 'staff', 'jc5002': 'staff', 'jc1012': 'staff', 'jc2002': 'staff',
-            'jc5003': 'staff', 'jc8006': 'staff', 'jc2016': 'staff', 'jc1027': 'staff', 'jc8004': 'staff'
-        };
-
-        function toggleSidebarCollapse() {
-            const sidebar = document.getElementById('sidebarMenu');
-            const textElements = document.querySelectorAll('.sidebar-text-element');
-            const icon = document.getElementById('collapseBtnIcon');
-
-            isSidebarCollapsed = !isSidebarCollapsed;
-
-            if (isSidebarCollapsed) {
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-20');
-                textElements.forEach(el => el.classList.add('hidden'));
-                icon.setAttribute('data-lucide', 'chevron-right');
-            } else {
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-64');
-                textElements.forEach(el => el.classList.remove('hidden'));
-                icon.setAttribute('data-lucide', 'chevron-left');
-            }
-            lucide.createIcons();
-        }
-
-        function showPasswordModal(password, url) {
-            pendingPassword = password;
-            pendingUrl = url;
-            document.getElementById('modalPasswordText').innerText = password;
-            document.getElementById('copyBtnText').innerText = 'Copy';
-            document.getElementById('passwordModal').classList.remove('hidden');
-            lucide.createIcons();
-        }
-
-        function copyModalPassword() {
-            navigator.clipboard.writeText(pendingPassword).then(() => {
-                const btnText = document.getElementById('copyBtnText');
-                btnText.innerText = 'Tersalin!';
-                setTimeout(() => {
-                    btnText.innerText = 'Copy';
-                }, 2000);
-            });
-        }
-
-        function confirmAndOpenLink() {
-            document.getElementById('passwordModal').classList.add('hidden');
-            if (pendingUrl) {
-                window.open(pendingUrl, '_blank');
-            }
-        }
-
-        function closePasswordModal() {
-            document.getElementById('passwordModal').classList.add('hidden');
-        }
-
-        function openCekPengiriman(event) {
-            event.preventDefault();
-            showPasswordModal('jabarjatengjuara', 'https://www.jawara26.biz.id/2026/04/cek-pengiriman-barang-dm-candra.html');
-        }
-
-        function openCekBarcode(event) {
-            event.preventDefault();
-            showPasswordModal('cekskujawara', 'https://sku.jawara26.biz.id');
-        }
-
-        function openCekDataSKU(event) {
-            event.preventDefault();
-            showPasswordModal('cekdatasku', 'https://cari.jawara26.biz.id/');
-        }
-
-        // PEMBATASAN AKSES KHUSUS GUEST
-        function applyGuestRestrictions() {
-            const role = sessionStorage.getItem('portalRole');
-            const hiddenForGuest = [
-                'menu-files', 'menu-dashboard', 'menu-sales',
-                'menu-cek-pengiriman', 'menu-cek-barcode', 'menu-cek-sku'
-            ];
-            
-            hiddenForGuest.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    if (role === 'guest') el.classList.add('hidden');
-                    else el.classList.remove('hidden');
-                }
-            });
-        }
-
-        function switchView(view) {
-            sessionStorage.setItem('lastActiveView', view); 
-
-            const allSections = ['files', 'dashboard', 'sales', 'damage'];
-            allSections.forEach(id => {
-                const el = document.getElementById('section-' + id);
-                if(el) el.classList.add('hidden');
-            });
-                      
-            allSections.forEach(id => {
-                const btnId = id === 'damage' ? 'nav-damage' : 'menu-' + id;
-                const btn = document.getElementById(btnId);
-                
-                if(btn) {
-                    btn.classList.remove('bg-amber-500', 'text-white', 'bg-slate-800/50');
-                    btn.classList.add('text-slate-400');
-                    
-                    const icon = btn.querySelector('i');
-                    if (icon && id === 'damage') icon.classList.remove('text-amber-500');
-                }
-            });
-
-            const title = document.getElementById('pageTitle');
-            const fileTools = document.getElementById('fileTools');
-
-            if (view === 'dashboard') {
-                document.getElementById('section-dashboard').classList.remove('hidden');
-                document.getElementById('menu-dashboard').classList.remove('text-slate-400');
-                document.getElementById('menu-dashboard').classList.add('bg-amber-500', 'text-white');
-                title.innerText = "Performa UPT Dashboard";
-                if(fileTools) fileTools.classList.add('invisible');
-                if (typeof fetchDashboardData === "function") fetchDashboardData();
-                
-                // Tambahkan kode ini agar animasi chart UPT muncul kembali
-                setTimeout(() => {
-                    if (window.bmChartInstance && typeof window.bmChartInstance.update === 'function') {
-                        window.bmChartInstance.update();
-                    }
-                }, 200);
-                
-            } else if (view === 'sales') {
-                document.getElementById('section-sales').classList.remove('hidden');
-                document.getElementById('menu-sales').classList.remove('text-slate-400');
-                document.getElementById('menu-sales').classList.add('bg-amber-500', 'text-white');
-                title.innerText = "Sales Target Dashboard";
-                if(fileTools) fileTools.classList.add('invisible');
-                if (typeof fetchSalesData === "function") fetchSalesData();
-                
-                // Tambahkan kode ini agar animasi chart sales muncul kembali
-                setTimeout(() => {
-                    if (window.salesTargetChartInstance && typeof window.salesTargetChartInstance.update === 'function') {
-                        window.salesTargetChartInstance.update();
-                    }
-                }, 200);
-                
-            } else if (view === 'damage') {
-                document.getElementById('section-damage').classList.remove('hidden');
-                document.getElementById('nav-damage').classList.remove('text-slate-400');
-                document.getElementById('nav-damage').classList.add('bg-slate-800/50', 'text-white');
-                
-                const icon = document.getElementById('nav-damage').querySelector('i');
-                if (icon) icon.classList.add('text-amber-500');
-                
-                title.innerText = "F003 Builder";
-                if(fileTools) fileTools.classList.add('invisible');
-                
-            } else {
-                document.getElementById('section-files').classList.remove('hidden');
-                document.getElementById('menu-files').classList.remove('text-slate-400');
-                document.getElementById('menu-files').classList.add('bg-amber-500', 'text-white');
-                title.innerText = "File Manager";
-                if(fileTools) fileTools.classList.remove('invisible');
-            }
-
-            if(window.innerWidth < 768) toggleSidebarMobile();
-        }
-
-        function toggleSidebarMobile() {
-            const sidebar = document.getElementById('sidebarMenu');
-            const backdrop = document.getElementById('sidebarBackdrop');
-            sidebar.classList.toggle('-translate-x-full');
-            backdrop.classList.toggle('hidden');
-        }
-
-        window.addEventListener('popstate', function(event) {
-            if (sessionStorage.getItem('portalLoggedIn') === 'true' && currentPath.length > 0) {
-                currentPath.pop(); renderPortal();
-            }
-        });
-
-        function toggleViewLayout() {
-            const icon = document.getElementById('viewToggleIcon');
-            currentViewLayout = (currentViewLayout === 'grid') ? 'list' : 'grid';
-            icon.setAttribute('data-lucide', currentViewLayout === 'grid' ? 'layout-list' : 'layout-grid');
-            lucide.createIcons(); renderPortal();
-        }
-
-        function getIconByKategori(kategori, itemName = '') {
-            const text = ((kategori || '') + ' ' + (itemName || '')).toLowerCase();
-            if (text.includes('manpower') || text.includes('hr') || text.includes('karyawan') || text.includes('staff') || text.includes('team')) {
-                return { name: 'users', bg: 'bg-indigo-50 text-indigo-600 border-indigo-100' };
-            }
-            if (text.includes('sales') || text.includes('monitoring') || text.includes('target') || text.includes('revenue') || text.includes('finance')) {
-                return { name: 'trending-up', bg: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
-            }
-            if (text.includes('damage') || text.includes('f003') || text.includes('rusak') || text.includes('retur')) {
-                return { name: 'file-warning', bg: 'bg-rose-50 text-rose-600 border-rose-100' };
-            }
-            if (text.includes('excel') || text.includes('sheet') || text.includes('xls') || text.includes('rekap') || text.includes('template')) {
-                return { name: 'file-spreadsheet', bg: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
-            }
-            if (text.includes('pdf') || text.includes('sop') || text.includes('panduan') || text.includes('doc')) {
-                return { name: 'file-text', bg: 'bg-rose-50 text-rose-600 border-rose-100' };
-            }
-            if (text.includes('folder') || text.includes('drive')) {
-                return { name: 'folder-open', bg: 'bg-amber-50 text-amber-600 border-amber-100' };
-            }
-            return { name: 'folder', bg: 'bg-slate-50 text-slate-600 border-slate-200' };
-        }
-
-        function parseCSV(text) {
-            let lines = text.split('\n');
-            let headers = lines[0].split(',').map(h => h.replace(/["\r]/g, "").trim());
-            let result = [];
-            for (let i = 1; i < lines.length; i++) {
-                if (!lines[i]) continue;
-                let row = []; let inQuotes = false; let currentStr = "";
-                for (let char of lines[i]) {
-                    if (char === '"') { inQuotes = !inQuotes; } 
-                    else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; } 
-                    else { currentStr += char; }
-                }
-                row.push(currentStr.trim()); let obj = {};
-                headers.forEach((header, index) => { obj[header] = row[index] ? row[index].replace(/[\r"]/g, "") : ""; });
-                result.push(obj);
-            }
-            return result;
-        }
-
-        async function fetchData() {
-            try {
-                const response = await fetch(API_URL);
-                const csvText = await response.text();
-                allFiles = parseCSV(csvText);
-                filterAndRender(); 
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
-
-        function filterAndRender() {
-            const loggedInUser = sessionStorage.getItem('portalUser') || localStorage.getItem('username') || '';
-            accessibleFiles = allFiles.filter(file => {
-                if (loggedInUser === 'admin') return true;
-                const fileTargetUser = file.Username ? file.Username.trim().toLowerCase() : '';
-                if (fileTargetUser === '') return true;
-                if (fileTargetUser === 'abm') return loggedInUser.startsWith('abm') || loggedInUser.startsWith('bm');
-                return (fileTargetUser === loggedInUser);
-            });
-            history.pushState({ pathDepth: 0 }, ""); renderPortal();
-        }
-
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const inputUser = document.getElementById('usernameInput').value.trim().toLowerCase();
-            const errorText = document.getElementById('loginError');
-            
-            if (userDatabase.hasOwnProperty(inputUser)) {
-                errorText.classList.add('hidden');
-                const userRole = userDatabase[inputUser];
-                
-                sessionStorage.setItem('portalLoggedIn', 'true');
-                sessionStorage.setItem('portalUser', inputUser);
-                sessionStorage.setItem('portalRole', userRole);
-                
-                document.getElementById('loginOverlay').remove();
-                document.getElementById('mainBody').classList.remove('overflow-hidden');
-                
-                if (typeof renderLoggedInUser === "function") {
-                    renderLoggedInUser();
-                }
-                
-                applyGuestRestrictions();
-                fetchData();
-
-                // KHUSUS GUEST: Langsung diarahkan ke F003 Builder
-                if (userRole === 'guest') {
-                    switchView('damage');
-                } else {
-                    switchView('files');
-                }
-            } else { 
-                errorText.classList.remove('hidden'); 
-            }
-        });
-
-        function renderPortal() {
-            const grid = document.getElementById('portalGrid');
-            const noResults = document.getElementById('noResults');
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            renderBreadcrumbs(); grid.innerHTML = '';
-
-            if (currentViewLayout === 'list') { 
-                grid.className = "flex flex-col gap-3 w-full animate-[fadeIn_0.2s_ease-out]"; 
-            } else { 
-                grid.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 animate-[fadeIn_0.3s_ease-out]"; 
-            }
-
-            if (searchTerm) {
-                const filtered = accessibleFiles.filter(f => (f.Nama && f.Nama.toLowerCase().includes(searchTerm)));
-                if(filtered.length === 0) { noResults.classList.remove('hidden'); return; }
-                noResults.classList.add('hidden'); renderFilesOnly(filtered, grid); lucide.createIcons(); return;
-            }
-
-            const currentFolderStr = currentPath.join(' / ');
-            let SubFolders = new Set(); let filesInThisFolder = [];
-
-            accessibleFiles.forEach(file => {
-                const itemFolderStr = file.Folder ? file.Folder.trim() : '';
-                if (currentPath.length === 0) {
-                    if (!itemFolderStr) { filesInThisFolder.push(file); } else { SubFolders.add(itemFolderStr.split(' / ')[0]); }
-                } else {
-                    if (itemFolderStr === currentFolderStr) { filesInThisFolder.push(file); } 
-                    else if (itemFolderStr.startsWith(currentFolderStr + ' / ')) {
-                        let remainder = itemFolderStr.substring((currentFolderStr + ' / ').length);
-                        SubFolders.add(remainder.split(' / ')[0]);
-                    }
-                }
-            });
-
-            if (SubFolders.size === 0 && filesInThisFolder.length === 0) { noResults.classList.remove('hidden'); return; }
-            noResults.classList.add('hidden');
-
-            SubFolders.forEach(folderName => {
-                if(!folderName) return;
-                const folderIcon = getIconByKategori('', folderName);
-                
-                if (currentViewLayout === 'list') {
-                    grid.innerHTML += `<div onclick="navigateToFolder('${folderName}')" class="bg-white rounded-2xl border border-slate-200/60 p-4 flex items-center justify-between cursor-pointer hover:bg-amber-50/10 transition-all group"><div class="flex items-center gap-4"><div class="bg-amber-500/10 text-amber-600 p-2.5 rounded-xl flex items-center justify-center"><i data-lucide="folder" class="w-5 h-5 fill-current"></i></div><div><h3 class="font-extrabold text-slate-700 text-sm group-hover:text-amber-600 transition-colors">${folderName}</h3></div></div><i data-lucide="chevron-right" class="w-4 h-4 text-slate-300"></i></div>`;
-                } else {
-                    grid.innerHTML += `<div onclick="navigateToFolder('${folderName}')" class="group bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-amber-400/60 transition-all flex items-center gap-3 cursor-pointer">
-                        <div class="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 group-hover:scale-105 ${folderIcon.bg}">
-                            <i data-lucide="${folderIcon.name}" class="w-5 h-5"></i>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <h3 class="text-xs font-black text-slate-800 truncate group-hover:text-amber-600 transition-colors">${folderName}</h3>
-                            <p class="text-[10px] text-slate-400 font-medium truncate mt-0.5">Folder Direktori</p>
-                        </div>
-                        <div class="text-slate-300 group-hover:text-amber-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                        </div>
-                    </div>`;
-                }
-            });
-
-            renderFilesOnly(filesInThisFolder, grid); lucide.createIcons();
-        }
-
-        function renderFilesOnly(files, container) {
-            files.forEach(file => {
-                if(!file.Nama) return; 
-                const iconConf = getIconByKategori(file.Kategori, file.Nama);
-                if (currentViewLayout === 'list') {
-                    container.innerHTML += `<div onclick="window.open('${file.Link || '#'}', '_blank')" class="bg-white rounded-2xl border border-slate-200/50 p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-all group"><div class="flex items-center gap-4 text-left min-w-0 flex-1"><div class="${iconConf.bg} p-2.5 rounded-xl border flex items-center justify-center flex-shrink-0"><i data-lucide="${iconConf.name}" class="w-5 h-5"></i></div><div class="min-w-0 flex-1"><h3 class="text-sm font-extrabold text-slate-800 truncate group-hover:text-amber-600" title="${file.Nama}">${file.Nama}</h3></div></div><i data-lucide="external-link" class="w-4 h-4 text-slate-300"></i></div>`;
-                } else {
-                    container.innerHTML += `<div onclick="window.open('${file.Link || '#'}', '_blank')" class="group bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-amber-400/60 transition-all flex items-center gap-3 cursor-pointer relative">
-                        <div class="w-9 h-9 rounded-lg flex items-center justify-center border shrink-0 group-hover:scale-105 ${iconConf.bg}">
-                            <i data-lucide="${iconConf.name}" class="w-5 h-5"></i>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <h3 class="text-xs font-black text-slate-800 truncate group-hover:text-amber-600 transition-colors" title="${file.Nama}">${file.Nama}</h3>
-                            <p class="text-[10px] text-slate-400 font-medium truncate mt-0.5">${file.Kategori || 'Dokumen'}</p>
-                        </div>
-                        <div class="text-slate-300 group-hover:text-amber-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                        </div>
-                    </div>`;
-                }
-            });
-        }
-
-        function renderBreadcrumbs() {
-            const container = document.getElementById('breadcrumbs');
-            let html = `<span class="cursor-pointer font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1" onclick="jumpToBreadcrumb(-1)"><i data-lucide="home" class="w-3.5 h-3.5"></i> Home</span>`;
-            currentPath.forEach((folder, index) => { html += ` <span class="text-slate-300"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></span> <span class="cursor-pointer text-slate-500 font-semibold" onclick="jumpToBreadcrumb(${index})">${folder}</span>`; });
-            container.innerHTML = html;
-        }
-
-        function navigateToFolder(name) { currentPath.push(name); history.pushState({ pathDepth: currentPath.length }, ""); renderPortal(); }
-        function jumpToBreadcrumb(index) { currentPath = currentPath.slice(0, index + 1); history.pushState({ pathDepth: currentPath.length }, ""); renderPortal(); }
-
-        document.getElementById('searchInput').addEventListener('input', renderPortal);
-
-        function logoutPortal() {
-            sessionStorage.clear();
-            localStorage.clear();
-            window.location.href = 'index.html';
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const overlay = document.getElementById('loginOverlay');
-            const mainBody = document.getElementById('mainBody');
-            const isLoggedIn = sessionStorage.getItem('portalLoggedIn');
-            const role = sessionStorage.getItem('portalRole');
-
-            if (isLoggedIn) {
-                if (overlay) overlay.remove(); 
-                if (mainBody) mainBody.classList.remove('overflow-hidden');
-                
-                if (typeof renderLoggedInUser === "function") renderLoggedInUser();
-                applyGuestRestrictions();
-                fetchData();
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const requestedView = urlParams.get('view') || sessionStorage.getItem('lastActiveView') || (role === 'guest' ? 'damage' : 'files');
-                
-                switchView(role === 'guest' ? 'damage' : requestedView);
-            } else {
-                if (overlay) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-            }
-        });
-    </script>
-    
-    <!-- Script Pendukung Eksternal -->
-    <script src="dashboard.js"></script>
-    <script src="sales-dashboard.js"></script>
-    <script src="f003-builder.js"></script>
+    <!-- Pemuatan Kumpulan Skrip Logika (Modular) -->
+    <script src="js/app.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/sales-dashboard.js"></script>
+    <script src="js/f003-builder.js"></script>
 </body>
 </html>
