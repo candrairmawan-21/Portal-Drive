@@ -123,7 +123,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // B. Hapus Kolom: L(11), K(10), I(8), G(6), F(5), E(4), D(3), B(1)
-    // Dihapus dari index terbesar ke terkecil agar tidak menggeser index kolom sebelumnya
     const colsToRemove = [11, 10, 8, 6, 5, 4, 3, 1];
     data = data.map(row => {
       let newRow = [...row];
@@ -170,7 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // F. Hapus Baris Kosong jika Kolom B dan C Kosong (Kolom B = index 1, Kolom C = index 2)
+    // F. Hapus Baris Kosong jika Kolom B dan C Kosong
     for (let i = data.length - 1; i >= 1; i--) {
       let row = data[i];
       let colB = row[1] !== undefined ? String(row[1]).trim() : "";
@@ -186,7 +185,6 @@ document.addEventListener("DOMContentLoaded", () => {
       data[0][1] = "DESCRIPTION";
       data[0][2] = "QTY";
       data[0][3] = "NET_SALES";
-      // Kolom 4 = DEPT_CODE, Kolom 5 = DEPT_NAME
     }
 
     // ====================================
@@ -206,8 +204,10 @@ document.addEventListener("DOMContentLoaded", () => {
       sheet1Rows.push(row);
     }
 
-    // Sheet 2: Analisa Top 150 SKU dengan Qty Terjual Terbanyak & Qty System Database 0 s.d. 5 pcs
+    // Sheet 2: Analisa Rata-rata Penjagaan Stok 7 Hari ke Depan
     let analysisList = [];
+    const DAYS_PERIOD = 90; // Asumsi 3 bulan = 90 hari
+
     for (let i = 1; i < data.length; i++) {
       let row = data[i];
       let sku = row[0] !== undefined ? String(row[0]).trim() : "";
@@ -219,36 +219,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (sku) {
         let qtySys = sku in dbMap ? dbMap[sku] : 0;
-        analysisList.push({
-          sku: sku,
-          description: desc,
-          qtyTerjual: qtyTerjual,
-          netSales: netSales,
-          deptCode: deptCodeVal,
-          deptName: deptNameVal,
-          qtySystem: qtySys
-        });
+        let avgDaily = qtyTerjual / DAYS_PERIOD; // Rata-rata terjual per hari
+        let needed7Days = avgDaily * 7;          // Kebutuhan stok untuk 7 hari
+
+        // Logika: Jika stok sistem < kebutuhan 7 hari, berarti KURANG (tampilkan)
+        // Jika stok sistem >= kebutuhan 7 hari, berarti CUKUP (skip)
+        if (qtySys < needed7Days) {
+          let kekurangan = needed7Days - qtySys;
+          analysisList.push({
+            sku: sku,
+            description: desc,
+            qtyTerjual: qtyTerjual,
+            netSales: netSales,
+            deptCode: deptCodeVal,
+            deptName: deptNameVal,
+            qtySystem: qtySys,
+            avgDaily: avgDaily,
+            needed7Days: needed7Days,
+            kekurangan: kekurangan
+          });
+        }
       }
     }
 
-    // Urutkan berdasarkan Qty Terjual terbanyak (Descending)
-    analysisList.sort((a, b) => b.qtyTerjual - a.qtyTerjual);
+    // Urutkan berdasarkan kekurangan stok terbanyak (Defisit terbesar)
+    analysisList.sort((a, b) => b.kekurangan - a.kekurangan);
 
-    // Ambil 150 teratas
-    let top150 = analysisList.slice(0, 150);
-
-    // Filter SKU yang Qty System database-nya antara 0 sampai 5 pcs (0 <= qtySys <= 5)
-    let filteredFastMoving = top150.filter(item => item.qtySystem >= 0 && item.qtySystem <= 5);
-
-    let sheet2Formatted = filteredFastMoving.map((item, idx) => ({
+    let sheet2Formatted = analysisList.map((item, idx) => ({
       "No": idx + 1,
       "SKU": item.sku,
       "DESCRIPTION": item.description,
-      "QTY TERJUAL": item.qtyTerjual,
-      "NET SALES": item.netSales,
+      "QTY TERJUAL (3 BLN)": item.qtyTerjual,
+      "AVG / HARI": parseFloat(item.avgDaily.toFixed(2)),
+      "QTY SYSTEM (DB)": item.qtySystem,
+      "KEBUTUHAN 7 HARI": Math.ceil(item.needed7Days),
+      "DEFISIT / KEKURANGAN": Math.ceil(item.kekurangan),
       "DEPT CODE": item.deptCode,
-      "DEPT NAME": item.deptName,
-      "QTY SYSTEM (DB)": item.qtySystem
+      "DEPT NAME": item.deptName
     }));
 
     // Buat Workbook Excel baru
@@ -258,9 +265,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const ws1 = XLSX.utils.aoa_to_sheet(sheet1Rows);
     XLSX.utils.book_append_sheet(newWorkbook, ws1, "Data Penjualan Rapi");
 
-    // Sheet 2: Analisa Fast Moving SKU for TF
+    // Sheet 2: Analisa Stok Kurang dari 7 Hari
     const ws2 = XLSX.utils.json_to_sheet(sheet2Formatted.length > 0 ? sheet2Formatted : [{
-      "Info": "Tidak ada SKU yang memenuhi kriteria (Top 150 & Qty System 0-5)"
+      "Info": "Semua SKU memiliki stok yang cukup untuk 7 hari ke depan."
     }]);
     XLSX.utils.book_append_sheet(newWorkbook, ws2, "Fast Moving TF");
 
