@@ -89,15 +89,14 @@
         <p class="text-xs text-slate-400 font-medium mb-4">Pesan penting untuk seluruh anggota tim</p>
         
         <!-- Pilihan Bahasa Auto-Translate -->
-        <div class="flex justify-end mb-3">
-            <select id="attitudeLangSelect" onchange="changeAttitudeLanguage(this.value)" class="text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-amber-500 text-slate-700 cursor-pointer">
-                <option value="id">🇮🇩 Bahasa Indonesia</option>
-                <option value="en">🇬🇧 English</option>
-                <option value="es">🇪🇸 Español</option>
-                <option value="zh">🇨🇳 中文</option>
-                <option value="ja">🇯🇵 日本語</option>
-            </select>
-        </div>
+        <!-- Pilihan Bahasa Auto-Translate (Indonesia, Sunda, Jawa) -->
+<div class="flex justify-end mb-3">
+    <select id="attitudeLangSelect" onchange="changeAttitudeLanguage(this.value)" class="text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-amber-500 text-slate-700 cursor-pointer">
+        <option value="id">🇮🇩 Bahasa Indonesia</option>
+        <option value="su">🟢 Basa Sunda</option>
+        <option value="jv">🟠 Basa Jawa (Ngoko/Krama)</option>
+    </select>
+</div>
 
         <!-- Kotak Teks Pesan -->
         <div class="bg-amber-50/60 border border-amber-100 rounded-2xl p-4 sm:p-5 mb-6 text-left shadow-inner">
