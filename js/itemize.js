@@ -1,22 +1,36 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Navigasi Side Panel
   const navBtn = document.getElementById("nav-itemize");
   const sectionAnalisa = document.getElementById("section-itemize");
   const pageTitle = document.getElementById("pageTitle");
 
+  // Fungsi untuk menampilkan seksi Itemize dan menyimpan state ke localStorage
+  function openItemizeView() {
+    document.querySelectorAll("main[id^='section-']").forEach((sec) => {
+      sec.classList.add("hidden");
+    });
+    
+    if (sectionAnalisa) {
+      sectionAnalisa.classList.remove("hidden");
+    }
+
+    if (pageTitle) {
+      pageTitle.innerText = "Itemize - Analisa Anomali Scan";
+    }
+
+    // Simpan status aktif ke memori browser agar tidak hilang saat refresh
+    localStorage.setItem("activePortalMenu", "itemize");
+  }
+
+  // Cek saat halaman dimuat: apakah sebelumnya user berada di menu Itemize?
+  if (localStorage.getItem("activePortalMenu") === "itemize") {
+    openItemizeView();
+  }
+
+  // 1. Navigasi Side Panel
   if (navBtn && sectionAnalisa) {
     navBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      
-      document.querySelectorAll("main[id^='section-']").forEach((sec) => {
-        sec.classList.add("hidden");
-      });
-      
-      sectionAnalisa.classList.remove("hidden");
-
-      if (pageTitle) {
-        pageTitle.innerText = "Itemize - Analisa Anomali Scan";
-      }
+      openItemizeView();
 
       const sidebarMenu = document.getElementById("sidebarMenu");
       const sidebarBackdrop = document.getElementById("sidebarBackdrop");
@@ -26,6 +40,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Jika user mengklik menu lain di sidebar, hapus memori activePortalMenu
+  document.querySelectorAll("aside nav button, aside nav a").forEach((menuItem) => {
+    if (menuItem.id !== "nav-itemize") {
+      menuItem.addEventListener("click", () => {
+        localStorage.removeItem("activePortalMenu");
+      });
+    }
+  });
 
   // 2. Event Listener Tombol Proses Analisa
   const btnProses = document.getElementById("btn-proses-analisa");
@@ -77,10 +100,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Logika Analisa, Summary, & Export Excel
   function prosesDanDownloadExcel(namaToko, textDb, textScan) {
-    // A. Parse File Database (9 Kolom)
     const barisDb = textDb.trim().split("\n");
-    const dbMap = {}; // SKU -> { sku, alamat, harga, qty, deskripsi }
-    let totalSkuDbValid = 0; // Total SKU sistem dengan Qty > 0 (untuk basis akurasi)
+    const dbMap = {}; 
+    let totalSkuDbValid = 0; 
 
     barisDb.forEach((line) => {
       if (!line.trim()) return;
@@ -100,10 +122,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // B. Parse File Scan: Kode Menu (0), Alamat (1), SKU (2)
     const barisScan = textScan.trim().split("\n");
     const scanList = [];
-    const scanSkuToAlamatMap = {}; // SKU -> Set(Alamat)
+    const scanSkuToAlamatMap = {}; 
 
     barisScan.forEach((line) => {
       if (!line.trim()) return;
@@ -118,10 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // --- SHEET 1: HASIL SCAN ---
     const sheet1Data = scanList;
-
-    // --- SHEET 2: ANOMALI ---
     const sheet2Data = [];
     const scannedSkus = new Set(Object.keys(scanSkuToAlamatMap));
 
@@ -129,7 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let countExtra = 0;
     let countDoubleAlamat = 0;
 
-    // 1. SKU Belum di Scan (Short)
     Object.values(dbMap).forEach((item) => {
       if (item.qty > 0 && !scannedSkus.has(item.sku)) {
         countShort++;
@@ -144,11 +161,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // 2. SKU Extra & Double Alamat
     Object.entries(scanSkuToAlamatMap).forEach(([sku, alamatSet]) => {
       const inDb = !!dbMap[sku];
       
-      // SKU Extra Kondisi A (Tidak ada di DB) atau Kondisi B (Qty System = 0)
       if (!inDb) {
         alamatSet.forEach((alm) => {
           countExtra++;
@@ -177,7 +192,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // Double Alamat
       if (alamatSet.size > 1) {
         alamatSet.forEach((alm) => {
           countDoubleAlamat++;
@@ -193,8 +207,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // --- PERHITUNGAN AKURASI ---
-    // Akurasi dihitung berdasarkan seberapa bersih dari temuan short & extra dibanding total SKU sistem
     let totalAnomaliItem = countShort + countExtra;
     let akurasiVal = 100;
     if (totalSkuDbValid > 0) {
@@ -203,7 +215,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const akurasiFormatted = akurasiVal.toFixed(2) + "%";
 
-    // --- SHEET 3: SUMMARY ---
     const sheet3Data = [
       { Metric: "Total SKU Short (Belum di Scan)", Jumlah: countShort },
       { Metric: "Total SKU Extra", Jumlah: countExtra },
@@ -211,14 +222,11 @@ document.addEventListener("DOMContentLoaded", () => {
       { Metric: "Akurasi Stock Opname / Scan", Jumlah: akurasiFormatted }
     ];
 
-    // --- GENERATE EXCEL VIA SHEETJS ---
     const workbook = XLSX.utils.book_new();
 
-    // Sheet 1: Hasil Scan
     const ws1 = XLSX.utils.json_to_sheet(sheet1Data);
     XLSX.utils.book_append_sheet(workbook, ws1, "Hasil Scan");
 
-    // Sheet 2: Anomali
     const ws2 = XLSX.utils.json_to_sheet(
       sheet2Data.length ? sheet2Data : [{ 
         SKU: "-", 
@@ -231,17 +239,13 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     XLSX.utils.book_append_sheet(workbook, ws2, "Anomali");
 
-    // Sheet 3: Summary
     const ws3 = XLSX.utils.json_to_sheet(sheet3Data);
     XLSX.utils.book_append_sheet(workbook, ws3, "Summary");
 
-    // Format Nama File: nama toko_itemize_tanggal.xlsx
-    const tanggalHariIni = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
-    // Bersihkan karakter aneh pada nama toko agar aman jadi nama file
+    const tanggalHariIni = new Date().toISOString().split("T")[0];
     const safeNamaToko = namaToko.replace(/[^a-zA-Z0-9-_ ]/g, "").trim();
     const filename = `${safeNamaToko}_itemize_${tanggalHariIni}.xlsx`;
 
-    // Download file Excel
     XLSX.writeFile(workbook, filename);
   }
 });
