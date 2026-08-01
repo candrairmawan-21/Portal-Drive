@@ -72,7 +72,6 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const textDb = await bacaFileTeks(fileDbInput);
         
-        // Deteksi jenis file scan (.txt atau .xlsx/.xls)
         let scanParsedData = [];
         const fileName = fileScanInput.name.toLowerCase();
 
@@ -109,15 +108,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Fungsi helper untuk mengecek apakah string murni berisi deretan angka-angka (Validasi SKU)
   function isValidNumericSku(skuStr) {
     if (!skuStr) return false;
-    // Regex untuk memastikan string hanya terdiri dari angka (tanpa huruf/simbol)
     const cleaned = String(skuStr).trim();
     return /^\d+$/.test(cleaned);
   }
 
-  // Parse Scan .txt: Kode Menu (0), Alamat (1), SKU (2)
   function parseScanTxt(textScan) {
     const barisScan = textScan.trim().split("\n");
     const result = [];
@@ -128,7 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const alamatScan = cols[1] || "-";
       const sku = cols[2] || "";
 
-      // Validasi SKU wajib angka (jika bukan angka, reject/abaikan)
       if (isValidNumericSku(sku)) {
         result.push({ sku: sku, alamat: alamatScan });
       }
@@ -137,7 +132,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return result;
   }
 
-  // Parse Scan Excel (.xlsx / .xls): Kolom A = SKU (index 0), Kolom B = Alamat (index 1)
   function parseScanExcel(arrayBuffer) {
     const workbook = XLSX.read(arrayBuffer, { type: "array" });
     const firstSheetName = workbook.SheetNames[0];
@@ -146,18 +140,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const result = [];
 
     rawData.forEach((row, idx) => {
-      // Lewati baris pertama jika diasumsikan sebagai header teks (misal tertulis "SKU")
       if (idx === 0) {
         const val0 = String(row[0] || "").trim().toLowerCase();
         if (val0 === "sku" || val0 === "code" || isNaN(val0)) {
-          return; // Skip header row
+          return; 
         }
       }
 
       const sku = row[0] !== undefined ? String(row[0]).trim() : "";
       const alamatScan = row[1] !== undefined ? String(row[1]).trim() : "-";
 
-      // Validasi SKU wajib angka (jika bukan angka, reject/abaikan)
       if (isValidNumericSku(sku)) {
         result.push({ sku: sku, alamat: alamatScan });
       }
@@ -166,9 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return result;
   }
 
-  // Logika Analisa, Summary, & Export Excel
   function prosesDanDownloadExcel(namaToko, textDb, scanParsedData) {
-    // A. Parse File Database (9 Kolom)
     const barisDb = textDb.trim().split("\n");
     const dbMap = {}; 
     let totalSkuDbValid = 0; 
@@ -185,13 +175,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (sku) {
         dbMap[sku] = { sku, alamat, harga, qty, deskripsi };
-        if (qty > 0) {
+        if (qty !== 0) {
           totalSkuDbValid++;
         }
       }
     });
 
-    // B. Petakan data scan yang sudah tervalidasi angka
     const sheet1Data = [];
     const scanSkuToAlamatMap = {}; 
 
@@ -211,9 +200,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let countExtra = 0;
     let countDoubleAlamat = 0;
 
-    // 1. SKU Belum di Scan (Short)
+    // 1. SKU Short: SKU ada di database dengan Qty System != 0 (bisa positif atau negatif), tetapi tidak ditemukan di file scan
     Object.values(dbMap).forEach((item) => {
-      if (item.qty > 0 && !scannedSkus.has(item.sku)) {
+      if (item.qty !== 0 && !scannedSkus.has(item.sku)) {
         countShort++;
         sheet2Data.push({
           SKU: item.sku,
@@ -226,7 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // 2. SKU Extra & Double Alamat
+    // 2. SKU Extra & Double Alamat berdasarkan File Scan
     Object.entries(scanSkuToAlamatMap).forEach(([sku, alamatSet]) => {
       const inDb = !!dbMap[sku];
       
@@ -273,7 +262,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // --- PERHITUNGAN AKURASI ---
     let totalAnomaliItem = countShort + countExtra;
     let akurasiVal = 100;
     if (totalSkuDbValid > 0) {
@@ -282,7 +270,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const akurasiFormatted = akurasiVal.toFixed(2) + "%";
 
-    // --- SHEET 3: SUMMARY ---
     const sheet3Data = [
       { Metric: "Total SKU Short (Belum di Scan)", Jumlah: countShort },
       { Metric: "Total SKU Extra", Jumlah: countExtra },
@@ -290,7 +277,6 @@ document.addEventListener("DOMContentLoaded", () => {
       { Metric: "Akurasi Stock Opname / Scan", Jumlah: akurasiFormatted }
     ];
 
-    // --- GENERATE EXCEL VIA SHEETJS ---
     const workbook = XLSX.utils.book_new();
 
     const ws1 = XLSX.utils.json_to_sheet(sheet1Data);
