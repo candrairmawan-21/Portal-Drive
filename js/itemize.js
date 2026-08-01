@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnProses.addEventListener("click", async () => {
       const namaTokoInput = document.getElementById("nama-toko-input").value.trim();
       const fileDbInput = document.getElementById("file-db-txt").files[0];
-      const fileScanInput = document.getElementById("file-scan-txt").files[0];
+      const fileScanInput = document.getElementById("file-scan-input").files[0];
 
       if (!namaTokoInput) {
         alert("Harap masukkan Nama Toko terlebih dahulu!");
@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (!fileDbInput || !fileScanInput) {
-        alert("Harap upload kedua file .txt terlebih dahulu!");
+        alert("Harap upload file Database .txt dan File Hasil Scan terlebih dahulu!");
         return;
       }
 
@@ -71,9 +71,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         const textDb = await bacaFileTeks(fileDbInput);
-        const textScan = await bacaFileTeks(fileScanInput);
+        
+        // Deteksi jenis file scan (.txt atau .xlsx/.xls)
+        let scanParsedData = [];
+        const fileName = fileScanInput.name.toLowerCase();
 
-        prosesDanDownloadExcel(namaTokoInput, textDb, textScan);
+        if (fileName.endsWith(".txt")) {
+          const textScan = await bacaFileTeks(fileScanInput);
+          scanParsedData = parseScanTxt(textScan);
+        } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+          const scanBuffer = await fileScanInput.arrayBuffer();
+          scanParsedData = parseScanExcel(scanBuffer);
+        } else {
+          alert("Format file scan tidak didukung! Gunakan .txt, .xlsx, atau .xls");
+          statusText.innerText = "";
+          return;
+        }
+
+        prosesDanDownloadExcel(namaTokoInput, textDb, scanParsedData);
         
         statusText.innerText = "Berhasil! File Excel sedang didownload.";
         statusText.style.color = "green";
@@ -94,7 +109,66 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function prosesDanDownloadExcel(namaToko, textDb, textScan) {
+  // Fungsi helper untuk mengecek apakah string murni berisi deretan angka-angka (Validasi SKU)
+  function isValidNumericSku(skuStr) {
+    if (!skuStr) return false;
+    // Regex untuk memastikan string hanya terdiri dari angka (tanpa huruf/simbol)
+    const cleaned = String(skuStr).trim();
+    return /^\d+$/.test(cleaned);
+  }
+
+  // Parse Scan .txt: Kode Menu (0), Alamat (1), SKU (2)
+  function parseScanTxt(textScan) {
+    const barisScan = textScan.trim().split("\n");
+    const result = [];
+
+    barisScan.forEach((line) => {
+      if (!line.trim()) return;
+      const cols = line.split(",").map((i) => i.trim());
+      const alamatScan = cols[1] || "-";
+      const sku = cols[2] || "";
+
+      // Validasi SKU wajib angka (jika bukan angka, reject/abaikan)
+      if (isValidNumericSku(sku)) {
+        result.push({ sku: sku, alamat: alamatScan });
+      }
+    });
+
+    return result;
+  }
+
+  // Parse Scan Excel (.xlsx / .xls): Kolom A = SKU (index 0), Kolom B = Alamat (index 1)
+  function parseScanExcel(arrayBuffer) {
+    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    const result = [];
+
+    rawData.forEach((row, idx) => {
+      // Lewati baris pertama jika diasumsikan sebagai header teks (misal tertulis "SKU")
+      if (idx === 0) {
+        const val0 = String(row[0] || "").trim().toLowerCase();
+        if (val0 === "sku" || val0 === "code" || isNaN(val0)) {
+          return; // Skip header row
+        }
+      }
+
+      const sku = row[0] !== undefined ? String(row[0]).trim() : "";
+      const alamatScan = row[1] !== undefined ? String(row[1]).trim() : "-";
+
+      // Validasi SKU wajib angka (jika bukan angka, reject/abaikan)
+      if (isValidNumericSku(sku)) {
+        result.push({ sku: sku, alamat: alamatScan });
+      }
+    });
+
+    return result;
+  }
+
+  // Logika Analisa, Summary, & Export Excel
+  function prosesDanDownloadExcel(namaToko, textDb, scanParsedData) {
+    // A. Parse File Database (9 Kolom)
     const barisDb = textDb.trim().split("\n");
     const dbMap = {}; 
     let totalSkuDbValid = 0; 
@@ -102,6 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
     barisDb.forEach((line) => {
       if (!line.trim()) return;
       const cols = line.split(",").map((i) => i.trim());
+      
       const sku = cols[0] || "";
       const alamat = cols[1] || "-";
       const harga = cols[2] || "-";
@@ -110,28 +185,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (sku) {
         dbMap[sku] = { sku, alamat, harga, qty, deskripsi };
-        if (qty > 0) totalSkuDbValid++;
+        if (qty > 0) {
+          totalSkuDbValid++;
+        }
       }
     });
 
-    const barisScan = textScan.trim().split("\n");
-    const scanList = [];
+    // B. Petakan data scan yang sudah tervalidasi angka
+    const sheet1Data = [];
     const scanSkuToAlamatMap = {}; 
 
-    barisScan.forEach((line) => {
-      if (!line.trim()) return;
-      const cols = line.split(",").map((i) => i.trim());
-      const alamatScan = cols[1] || "-";
-      const sku = cols[2] || "";
-
-      if (sku) {
-        scanList.push({ SKU: sku });
-        if (!scanSkuToAlamatMap[sku]) scanSkuToAlamatMap[sku] = new Set();
-        scanSkuToAlamatMap[sku].add(alamatScan);
+    scanParsedData.forEach((item) => {
+      sheet1Data.push({ SKU: item.sku });
+      if (!scanSkuToAlamatMap[item.sku]) {
+        scanSkuToAlamatMap[item.sku] = new Set();
       }
+      scanSkuToAlamatMap[item.sku].add(item.alamat);
     });
 
-    const sheet1Data = scanList;
+    // --- SHEET 2: ANOMALI ---
     const sheet2Data = [];
     const scannedSkus = new Set(Object.keys(scanSkuToAlamatMap));
 
@@ -139,6 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let countExtra = 0;
     let countDoubleAlamat = 0;
 
+    // 1. SKU Belum di Scan (Short)
     Object.values(dbMap).forEach((item) => {
       if (item.qty > 0 && !scannedSkus.has(item.sku)) {
         countShort++;
@@ -153,6 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+    // 2. SKU Extra & Double Alamat
     Object.entries(scanSkuToAlamatMap).forEach(([sku, alamatSet]) => {
       const inDb = !!dbMap[sku];
       
@@ -199,6 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+    // --- PERHITUNGAN AKURASI ---
     let totalAnomaliItem = countShort + countExtra;
     let akurasiVal = 100;
     if (totalSkuDbValid > 0) {
@@ -207,6 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const akurasiFormatted = akurasiVal.toFixed(2) + "%";
 
+    // --- SHEET 3: SUMMARY ---
     const sheet3Data = [
       { Metric: "Total SKU Short (Belum di Scan)", Jumlah: countShort },
       { Metric: "Total SKU Extra", Jumlah: countExtra },
@@ -214,13 +290,20 @@ document.addEventListener("DOMContentLoaded", () => {
       { Metric: "Akurasi Stock Opname / Scan", Jumlah: akurasiFormatted }
     ];
 
+    // --- GENERATE EXCEL VIA SHEETJS ---
     const workbook = XLSX.utils.book_new();
+
     const ws1 = XLSX.utils.json_to_sheet(sheet1Data);
     XLSX.utils.book_append_sheet(workbook, ws1, "Hasil Scan");
 
     const ws2 = XLSX.utils.json_to_sheet(
       sheet2Data.length ? sheet2Data : [{ 
-        SKU: "-", Alamat: "-", Harga: "-", "Qty System": "-", Deskripsi: "-", "Keterangan Anomali": "Tidak Ada Anomali" 
+        SKU: "-", 
+        Alamat: "-", 
+        Harga: "-", 
+        "Qty System": "-", 
+        Deskripsi: "-", 
+        "Keterangan Anomali": "Tidak Ada Anomali" 
       }]
     );
     XLSX.utils.book_append_sheet(workbook, ws2, "Anomali");
