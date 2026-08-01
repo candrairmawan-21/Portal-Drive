@@ -434,32 +434,38 @@
         </main>
 
         <!-- SEKSI 5: ITEMIZE (ANALISA ANOMALI SCAN) -->
-        <main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
-            <div class="mb-6">
-                <h2 class="text-2xl font-black text-slate-800">Itemize - Analisa Anomali Scan</h2>
-                <p class="text-sm font-semibold text-slate-500 mt-1">Upload file Database .txt dan Hasil Scan .txt untuk memproses laporan anomali otomatis ke Excel.</p>
-            </div>
+<main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
+    <div class="mb-6">
+        <h2 class="text-2xl font-black text-slate-800">Itemize - Analisa Anomali Scan</h2>
+        <p class="text-sm font-semibold text-slate-500 mt-1">Upload file Database .txt dan Hasil Scan .txt untuk memproses laporan anomali otomatis ke Excel.</p>
+    </div>
 
-            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
-                    <p class="text-xs text-slate-400 mb-2">Format baris: SKU, Alamat, Qty System, Barcode, Deskripsi</p>
-                    <input type="file" id="file-db-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                </div>
+    <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
+        <!-- TAMBAHAN: Input Nama Toko -->
+        <div class="mb-5">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nama Toko</label>
+            <input type="text" id="nama-toko-input" placeholder="Contoh: Toko Cabang Utama" class="w-full text-sm text-slate-700 border border-slate-200 rounded-2xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
+        </div>
 
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Hasil Scan (.txt)</label>
-                    <p class="text-xs text-slate-400 mb-2">Format baris: Kode Menu, Alamat, SKU</p>
-                    <input type="file" id="file-scan-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                </div>
+        <div class="mb-5">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
+            <p class="text-xs text-slate-400 mb-2">Format baris: SKU, Alamat, Harga, Qty System, ..., Deskripsi (9 Kolom)</p>
+            <input type="file" id="file-db-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+        </div>
 
-                <button id="btn-proses-analisa" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Proses & Download Excel (.xlsx)
-                </button>
-                
-                <p id="status-analisa" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
-            </div>
-        </main>
+        <div class="mb-6">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Hasil Scan (.txt)</label>
+            <p class="text-xs text-slate-400 mb-2">Format baris: Kode Menu, Alamat, SKU</p>
+            <input type="file" id="file-scan-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+        </div>
+
+        <button id="btn-proses-analisa" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Proses & Download Excel (.xlsx)
+        </button>
+        
+        <p id="status-analisa" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
+    </div>
+</main>
     </div>
 
     <!-- Pemuatan Kumpulan Skrip Logika (Modular) -->
