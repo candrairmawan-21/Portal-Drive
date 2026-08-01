@@ -115,26 +115,29 @@
                 </button>
                 
                 <!-- MENU UTAMA: ANALYZE (COLLAPSE / DROPDOWN) -->
-                <div class="space-y-1">
-                    <button id="nav-analyze-dropdown" class="w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800/70 hover:text-white transition-all group">
-                        <div class="flex items-center gap-3">
-                            <i data-lucide="pie-chart" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
-                            <span class="sidebar-text-element">Analyze</span>
-                        </div>
-                        <i data-lucide="chevron-down" id="analyzeChevron" class="w-4 h-4 transition-transform duration-200"></i>
-                    </button>
-                    <!-- Sub-menu Container -->
-                    <div id="analyzeSubMenu" class="pl-4 space-y-1 hidden">
-                        <button id="nav-itemize" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all group">
-                            <i data-lucide="list-checks" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
-                            <span class="sidebar-text-element">Itemize</span>
-                        </button>
-                        <button id="nav-fast-moving" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all group">
-                            <i data-lucide="zap" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
-                            <span class="sidebar-text-element">Fast moving sku for TF</span>
-                        </button>
-                    </div>
-                </div>
+<div class="space-y-1">
+    <button id="nav-analyze-dropdown" class="w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800/70 hover:text-white transition-all group">
+        <div class="flex items-center gap-3">
+            <i data-lucide="pie-chart" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
+            <span class="sidebar-text-element flex items-center gap-2">
+                Analyze 
+                <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Beta</span>
+            </span>
+        </div>
+        <i data-lucide="chevron-down" id="analyzeChevron" class="w-4 h-4 transition-transform duration-200"></i>
+    </button>
+    <!-- Sub-menu Container -->
+    <div id="analyzeSubMenu" class="pl-4 space-y-1 hidden">
+        <button id="nav-itemize" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all group">
+            <i data-lucide="list-checks" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
+            <span class="sidebar-text-element">Itemize</span>
+        </button>
+        <button id="nav-fast-moving" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all group">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
+            <span class="sidebar-text-element">Fast moving sku for TF</span>
+        </button>
+    </div>
+</div>
                 
                 <!-- Tautan Aplikasi Eksternal -->
                 <a href="#" id="menu-cek-pengiriman" onclick="openCekPengiriman(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
@@ -449,11 +452,22 @@
             </div>
         </main>
 
-        <!-- SEKSI 5: ITEMIZE (ANALISA ANOMALI SCAN) -->
+        <!-- SEKSI 5: ITEMIZE (SUB-MENU ANALYZE) -->
 <main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
-    <div class="mb-6">
-        <h2 class="text-2xl font-black text-slate-800">Itemize - Analisa Anomali Scan</h2>
-        <p class="text-sm font-semibold text-slate-500 mt-1">Upload file Database .txt dan File Hasil Scan (.txt atau .xlsx/.xls) untuk memproses laporan anomali otomatis.</p>
+    <div class="mb-6 max-w-2xl">
+        <div class="flex items-center gap-2 mb-1">
+            <h2 class="text-2xl font-black text-slate-800">Itemize - Analisa Anomali Scan</h2>
+            <span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">Beta</span>
+        </div>
+        <p class="text-sm font-semibold text-slate-500">Upload file Database .txt dan File Hasil Scan (.txt atau .xlsx/.xls) untuk memproses laporan anomali otomatis.</p>
+        
+        <!-- Kotak Peringatan / Disclaimer Beta -->
+        <div class="mt-3 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-start gap-3">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5"></i>
+            <p class="text-xs text-amber-900 font-medium leading-relaxed">
+                <strong>Catatan Pengujian (Beta):</strong> Fitur analisa ini masih dalam tahap pengembangan dan penyesuaian. Hasil analisa dapat berbeda atau tidak akurat dan memerlukan validasi lebih lanjut.
+            </p>
+        </div>
     </div>
 
     <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
@@ -479,38 +493,49 @@
         
         <p id="status-analisa" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
     </div>
-        </main>
+</main>
 
         <!-- SEKSI 6: FAST MOVING SKU FOR TF (SUB-MENU ANALYZE) -->
-        <main id="section-fast-moving" class="container mx-auto px-6 py-8 flex-1 hidden">
-            <div class="mb-6">
-                <h2 class="text-2xl font-black text-slate-800">Fast Moving SKU for TF</h2>
-                <p class="text-sm font-semibold text-slate-500 mt-1">Upload file Database .txt dan File Penjualan .xlsx/.xls untuk menghasilkan analisa transfer barang.</p>
-            </div>
+<main id="section-fast-moving" class="container mx-auto px-6 py-8 flex-1 hidden">
+    <div class="mb-6 max-w-2xl">
+        <div class="flex items-center gap-2 mb-1">
+            <h2 class="text-2xl font-black text-slate-800">Fast moving sku for TF</h2>
+            <span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">Beta</span>
+        </div>
+        <p class="text-sm font-semibold text-slate-500">Upload file Database .txt dan File Penjualan .xlsx/.xls untuk menghasilkan analisa transfer barang.</p>
+        
+        <!-- Kotak Peringatan / Disclaimer Beta -->
+        <div class="mt-3 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-start gap-3">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5"></i>
+            <p class="text-xs text-amber-900 font-medium leading-relaxed">
+                <strong>Catatan Pengujian (Beta):</strong> Fitur analisa ini masih dalam tahap pengembangan dan penyesuaian. Hasil analisa dapat berbeda atau tidak akurat dan memerlukan validasi lebih lanjut.
+            </p>
+        </div>
+    </div>
 
-            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nama Toko</label>
-                    <input type="text" id="nama-toko-fm" placeholder="Contoh: SLSQ" class="w-full text-sm text-slate-700 border border-slate-200 rounded-2xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
-                </div>
+    <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
+        <div class="mb-5">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nama Toko</label>
+            <input type="text" id="nama-toko-fm" placeholder="Contoh: SLSQ" class="w-full text-sm text-slate-700 border border-slate-200 rounded-2xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
+        </div>
 
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
-                    <input type="file" id="file-db-fm" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                </div>
+        <div class="mb-5">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
+            <input type="file" id="file-db-fm" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+        </div>
 
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Penjualan (.xlsx / .xls)</label>
-                    <input type="file" id="file-sales-fm" accept=".xlsx, .xls" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                </div>
+        <div class="mb-6">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Penjualan (.xlsx / .xls)</label>
+            <input type="file" id="file-sales-fm" accept=".xlsx, .xls" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+        </div>
 
-                <button id="btn-proses-fm" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="zap" class="w-4 h-4"></i> Proses & Download Fast Moving Excel (.xlsx)
-                </button>
-                
-                <p id="status-fm" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
-            </div>
-        </main>
+        <button id="btn-proses-fm" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+            <i data-lucide="zap" class="w-4 h-4"></i> Proses & Download Fast Moving Excel (.xlsx)
+        </button>
+        
+        <p id="status-fm" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
+    </div>
+</main>
     </div>
 
     <!-- Pemuatan Kumpulan Skrip Logika (Modular) -->
