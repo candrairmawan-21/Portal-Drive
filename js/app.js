@@ -121,13 +121,15 @@ function applyGuestRestrictions() {
 function switchView(view) {
     sessionStorage.setItem('lastActiveView', view); 
 
-    const allSections = ['files', 'dashboard', 'sales', 'damage'];
+    const allSections = ['files', 'dashboard', 'sales', 'damage', 'itemize', 'fast-moving'];
     allSections.forEach(id => {
         const el = document.getElementById('section-' + id);
         if(el) el.classList.add('hidden');
     });
               
-    allSections.forEach(id => {
+    // Reset warna tombol navigasi utama/standar
+    const standardButtons = ['files', 'dashboard', 'sales', 'damage'];
+    standardButtons.forEach(id => {
         const btnId = id === 'damage' ? 'nav-damage' : 'menu-' + id;
         const btn = document.getElementById(btnId);
         
@@ -137,6 +139,18 @@ function switchView(view) {
             
             const icon = btn.querySelector('i');
             if (icon && id === 'damage') icon.classList.remove('text-amber-500');
+        }
+    });
+
+    // Reset warna sub-menu Analyze
+    const analyzeSubBtns = ['nav-itemize', 'nav-fast-moving'];
+    analyzeSubBtns.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if(btn) {
+            btn.classList.remove('bg-amber-500', 'text-white');
+            btn.classList.add('text-slate-400');
+            const icon = btn.querySelector('i');
+            if(icon) icon.classList.remove('text-amber-500');
         }
     });
 
@@ -182,6 +196,30 @@ function switchView(view) {
         title.innerText = "F003 Builder";
         if(fileTools) fileTools.classList.add('invisible');
         
+    } else if (view === 'itemize') {
+        document.getElementById('section-itemize').classList.remove('hidden');
+        const itemizeBtn = document.getElementById('nav-itemize');
+        if(itemizeBtn) {
+            itemizeBtn.classList.remove('text-slate-400');
+            itemizeBtn.classList.add('bg-amber-500', 'text-white');
+            const icon = itemizeBtn.querySelector('i');
+            if(icon) icon.classList.add('text-amber-500');
+        }
+        title.innerText = "Itemize - Analisa Anomali Scan";
+        if(fileTools) fileTools.classList.add('invisible');
+
+    } else if (view === 'fast-moving') {
+        document.getElementById('section-fast-moving').classList.remove('hidden');
+        const fmBtn = document.getElementById('nav-fast-moving');
+        if(fmBtn) {
+            fmBtn.classList.remove('text-slate-400');
+            fmBtn.classList.add('bg-amber-500', 'text-white');
+            const icon = fmBtn.querySelector('i');
+            if(icon) icon.classList.add('text-amber-500');
+        }
+        title.innerText = "Fast moving sku for TF";
+        if(fileTools) fileTools.classList.add('invisible');
+
     } else {
         document.getElementById('section-files').classList.remove('hidden');
         document.getElementById('menu-files').classList.remove('text-slate-400');
@@ -425,6 +463,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainBody = document.getElementById('mainBody');
     const isLoggedIn = sessionStorage.getItem('portalLoggedIn');
     const role = sessionStorage.getItem('portalRole');
+
+    // Pengontrol Dropdown Menu Utama "Analyze" di Sidebar
+    const analyzeDropdownBtn = document.getElementById('nav-analyze-dropdown');
+    const analyzeSubMenu = document.getElementById('analyzeSubMenu');
+    const analyzeChevron = document.getElementById('analyzeChevron');
+
+    if (analyzeDropdownBtn && analyzeSubMenu) {
+        analyzeDropdownBtn.addEventListener('click', () => {
+            analyzeSubMenu.classList.toggle('hidden');
+            analyzeChevron.classList.toggle('rotate-180');
+        });
+    }
 
     if (isLoggedIn) {
         if (overlay) overlay.remove(); 
