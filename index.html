@@ -114,7 +114,7 @@
                     <span class="sidebar-text-element">F003 Builder</span>
                 </button>
                 
-                <!-- MENU BARU: ITEMIZE (Tanpa onclick inline agar di-handle penuh oleh itemize.js) -->
+                <!-- MENU BARU: ITEMIZE -->
                 <button id="nav-itemize" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800/50 hover:text-white transition-all group">
                     <i data-lucide="list-checks" class="w-4 h-4 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
                     <span class="sidebar-text-element">Itemize</span>
@@ -382,7 +382,7 @@
         <main id="section-damage" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="mb-6">
                 <h2 class="text-2xl font-black text-slate-800">Form Pengajuan Damage Items</h2>
-                <p class="text-sm font-semibold text-slate-500 mt-1">Gunakan scanner untuk input SKU. Bukti foto akan otomatis masuk ke file Excel.</p>
+                <p class="text-sm font-semibold text-slate-500 mt-1">Gunakan scanner PDT untuk input SKU. Bukti foto akan otomatis masuk ke file Excel.</p>
             </div>
 
             <div id="damage-form-container" class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm">
@@ -434,36 +434,35 @@
         </main>
 
         <!-- SEKSI 5: ITEMIZE (ANALISA ANOMALI SCAN) -->
-<main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
-    <div class="mb-6">
-        <h2 class="text-2xl font-black text-slate-800">Itemize - Analisa Anomali Scan</h2>
-        <p class="text-sm font-semibold text-slate-500 mt-1">Upload file Database .txt dan Hasil Scan .txt untuk memproses laporan anomali otomatis ke Excel.</p>
-    </div>
+        <main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
+            <div class="mb-6">
+                <h2 class="text-2xl font-black text-slate-800">Itemize - Analisa Anomali Scan</h2>
+                <p class="text-sm font-semibold text-slate-500 mt-1">Upload file Database .txt dan Hasil Scan .txt untuk memproses laporan anomali otomatis ke Excel.</p>
+            </div>
 
-    <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
-        <!-- TAMBAHAN: Input Nama Toko -->
-        <div class="mb-5">
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nama Toko</label>
-            <input type="text" id="nama-toko-input" placeholder="Contoh: SLSQ" class="w-full text-sm text-slate-700 border border-slate-200 rounded-2xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
-        </div>
+            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
+                <div class="mb-5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nama Toko</label>
+                    <input type="text" id="nama-toko-input" placeholder="Contoh: SLSQ" class="w-full text-sm text-slate-700 border border-slate-200 rounded-2xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
+                </div>
 
-        <div class="mb-5">
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
-            <input type="file" id="file-db-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-        </div>
+                <div class="mb-5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
+                    <input type="file" id="file-db-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+                </div>
 
-        <div class="mb-6">
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Hasil Scan (.txt)</label>
-            <input type="file" id="file-scan-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-        </div>
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Hasil Scan (.txt)</label>
+                    <input type="file" id="file-scan-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+                </div>
 
-        <button id="btn-proses-analisa" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
-            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Proses & Download Excel (.xlsx)
-        </button>
-        
-        <p id="status-analisa" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
-    </div>
-</main>
+                <button id="btn-proses-analisa" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Proses & Download Excel (.xlsx)
+                </button>
+                
+                <p id="status-analisa" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
+            </div>
+        </main>
     </div>
 
     <!-- Pemuatan Kumpulan Skrip Logika (Modular) -->
