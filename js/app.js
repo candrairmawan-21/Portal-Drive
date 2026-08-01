@@ -98,9 +98,10 @@ function openCekDataSKU(event) {
 }
 
 /* ==========================================================================
-   4. HANDBOOK ATTITUDE POP-UP & AUTO-TRANSLATE (INDONESIA, SUNDA, JAWA)
+   4. HANDBOOK ATTITUDE POP-UP & 4 PILIHAN BAHASA (EN, ID, SU, JV)
    ========================================================================== */
 const attitudeTranslations = {
+    en: "Remember that our handbook said : Attitude is more important than the past, than education, than money, than circumstances, than what people do or say. It is more important than appearance, giftedness or skill",
     id: "Ingatlah bahwa buku panduan kita mengatakan: Sikap jauh lebih penting daripada masa lalu, daripada pendidikan, daripada uang, daripada keadaan, daripada apa yang orang lakukan atau katakan. Sikap lebih penting daripada penampilan, bakat, atau keterampilan.",
     su: "Inget yén buku panduan urang nyarios: Sikap langkung penting tibatan jaman baheula, tibatan pendidikan, tibatan artos, tibatan kaayaan, tibatan naon anu dilakukeun atanapi diucapkeun ku jalma. Éta langkung penting tibatan penampilan, bakat, atanapi katerampilan.",
     jv: "Elinga menawa buku pandhuan kita ngendika: Sikap luwih penting tinimbang biyen, tinimbang pendhidhikan, tinimbang dhuwit, tinimbang kahanan, tinimbang apa sing ditindakake utawa diomongake wong. Sikap luwih penting tinimbang penampilan, bakat, utawa katrampilan."
@@ -116,9 +117,10 @@ function changeAttitudeLanguage(lang) {
 function showAttitudeModal() {
     const modal = document.getElementById('attitudeModal');
     if (modal) {
+        // Set default bahasa ke English (original) saat pertama kali muncul
         const select = document.getElementById('attitudeLangSelect');
-        if (select) select.value = 'id';
-        changeAttitudeLanguage('id');
+        if (select) select.value = 'en';
+        changeAttitudeLanguage('en');
 
         modal.classList.remove('hidden');
         lucide.createIcons();
