@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (WIB FILTER & SUPERIOR DASHBOARD)
+   MODUL MONITORING TUGAS & INBOX (WIB FILTER & SMART USER CLASSIFICATION)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 let allMonitoringTasks = [];
@@ -50,7 +50,7 @@ async function fetchMonitoringData() {
 }
 
 /* ==========================================================================
-   ROUTING TAMPILAN: ADMIN (SUPERIOR DASHBOARD) VS STAFF/ABM/BM (USER VIEW)
+   ROUTING TAMPILAN: ADMIN (SMART SUPERIOR DASHBOARD) VS USER
    ========================================================================== */
 function renderMonitoringTable() {
     const tbody = document.getElementById('monitoringTableBody');
@@ -59,29 +59,43 @@ function renderMonitoringTable() {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
 
-    // 1. JIKA ADMIN / SUPERIOR: Tampilkan Executive Progress Dashboard + Early Warning
+    // 1. JIKA ADMIN / SUPERIOR: Tampilkan Smart Superior Dashboard Berbasis Personal User
     if (userRole === 'admin' || loggedInUser === 'admin') {
         renderSuperiorDashboard(tbody);
         return;
     }
 
-    // 2. JIKA ABM / BM: Tampilkan Tabel Tugasan Pribadi seperti biasa
+    // 2. JIKA ABM / BM: Tampilkan Tabel Tugasan Pribadi
     renderUserTaskTable(tbody, loggedInUser, userRole);
 }
 
 /* ==========================================================================
-   TAMPILAN KHUSUS ADMIN / SUPERIOR: ANALISA & PROGRESS BERBASIS PRIORITAS
+   TAMPILAN KHUSUS ADMIN: KLASIFIKASI PINTAR BERDASARKAN USERNAME / JABATAN
    ========================================================================== */
 function renderSuperiorDashboard(tbody) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Helper untuk deteksi overdue (Pending dari hari sebelumnya)
+    // Helper untuk deteksi overdue akurat (bulanan/mingguan)
     const isOverdue = (task) => {
-        if (!task.Detail_Jadwal) return false;
-        const taskDate = new Date(task.Detail_Jadwal);
         const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
-        return !isDone && taskDate < today;
+        if (isDone) return false;
+        
+        const jenis = (task.Jenis_Tugas || '').toLowerCase().trim();
+        const jadwalStr = (task.Detail_Jadwal || '').trim();
+        if (!jadwalStr) return false;
+
+        let taskDate = null;
+        if (jenis.includes('bulanan')) {
+            const dayNum = parseInt(jadwalStr);
+            if (!isNaN(dayNum)) {
+                taskDate = new Date(today.getFullYear(), today.getMonth(), dayNum);
+            }
+        } else {
+            taskDate = new Date(jadwalStr);
+        }
+
+        return taskDate && !isNaN(taskDate.getTime()) && taskDate < today;
     };
 
     let tasks = [...allMonitoringTasks].filter(task => task.Jenis_Tugas && task.Jenis_Tugas.trim() !== '');
@@ -97,24 +111,40 @@ function renderSuperiorDashboard(tbody) {
         return;
     }
 
-    // Klasifikasi data untuk Prioritas
     const attentionList = tasks.filter(t => isOverdue(t));
-    const todayList = tasks.filter(t => !isOverdue(t) && isTaskForToday(t));
+    const todayList = tasks.filter(t => !isOverdue(t) && isTaskForToday(task));
     const doneList = tasks.filter(t => (t.Status || '').toLowerCase().trim() === 'selesai' || (t.Status || '').toLowerCase().trim() === 'done');
     const totalTasks = tasks.length;
     const overallPercentage = totalTasks > 0 ? Math.round((doneList.length / totalTasks) * 100) : 0;
 
-    // Kelompokkan data berdasarkan Target_User untuk Progress Bar Tim
-    const userSummary = {};
+    /* KECERDASAN SISTEM: Klasifikasi beban tugas & progress per Personal User (berdasarkan prefix jabatan abm/bm) */
+    const personalSummary = {};
     tasks.forEach(task => {
-        const target = (task.Target_User || 'Umum').toUpperCase().trim();
-        if (!userSummary[target]) userSummary[target] = { total: 0, completed: 0 };
+        let rawTarget = (task.Target_User || 'Umum').trim();
+        let targetKey = rawTarget.toLowerCase();
+        
+        if (!personalSummary[targetKey]) {
+            personalSummary[targetKey] = {
+                name: rawTarget,
+                roleCategory: targetKey.startsWith('bm') ? 'BM' : (targetKey.startsWith('abm') ? 'ABM' : 'Lainnya'),
+                total: 0,
+                completed: 0,
+                pending: 0,
+                tasksList: []
+            };
+        }
+
         const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
-        userSummary[target].total += 1;
-        if (isDone) userSummary[target].completed += 1;
+        personalSummary[targetKey].total += 1;
+        if (isDone) {
+            personalSummary[targetKey].completed += 1;
+        } else {
+            personalSummary[targetKey].pending += 1;
+        }
+        personalSummary[targetKey].tasksList.push({ ...task, isDone });
     });
 
-    // 1. Executive Summary & KPI Cards (Dilengkapi Kotak Perhatian / Overdue)
+    // 1. KPI Cards Superior
     let kpiHTML = `
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
         <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4 shadow-sm">
@@ -135,26 +165,31 @@ function renderSuperiorDashboard(tbody) {
         </div>
     </div>`;
 
-    // 2. Team Progress Bar Section (Analisa cepat performa tiap tim BM/ABM)
+    // 2. Personal Progress Cards (Menampilkan nama personal ABM / BM yang masih pending)
     let teamProgressHTML = `
     <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm mb-6 w-full">
         <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-2">
-            <i data-lucide="bar-chart-3" class="w-4 h-4 text-amber-500"></i> Progress Completion Per Tim
+            <i data-lucide="users" class="w-4 h-4 text-amber-500"></i> Progress Completion Per Personal Team (BM & ABM)
         </h4>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">`;
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">`;
 
-    Object.keys(userSummary).sort().forEach(roleName => {
-        const data = userSummary[roleName];
+    Object.keys(personalSummary).sort().forEach(key => {
+        const data = personalSummary[key];
         const percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
         let barColor = 'bg-rose-500';
         if (percentage >= 100) barColor = 'bg-emerald-500';
         else if (percentage >= 50) barColor = 'bg-amber-500';
 
         teamProgressHTML += `
-            <div class="bg-slate-50/70 p-3 rounded-xl border border-slate-100">
-                <div class="flex justify-between items-center text-xs font-bold text-slate-700 mb-1.5">
-                    <span>TIM ${roleName}</span>
-                    <span class="text-slate-500">${data.completed} / ${data.total} (${percentage}%)</span>
+            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center text-xs font-black text-slate-800 mb-1">
+                        <span class="uppercase text-amber-600">${data.name}</span>
+                        <span class="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600">${percentage}% Done</span>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mb-2">
+                        Pending: <strong class="${data.pending > 0 ? 'text-rose-600' : 'text-slate-700'}">${data.pending}</strong> | Selesai: ${data.completed} dari ${data.total}
+                    </div>
                 </div>
                 <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                     <div class="${barColor} h-full transition-all duration-500 rounded-full" style="width: ${percentage}%"></div>
@@ -163,7 +198,7 @@ function renderSuperiorDashboard(tbody) {
     });
     teamProgressHTML += `</div></div>`;
 
-    // 3. Render Tabel Terstruktur (Attention / Overdue di atas, diikuti tugas aktif)
+    // 3. Render Tabel Terstruktur Berdasarkan Personil
     const renderRow = (task, isUrgent = false) => {
         const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
         const progressWidth = isDone ? '100%' : '10%';
@@ -192,7 +227,7 @@ function renderSuperiorDashboard(tbody) {
                     </div>
                 </td>
                 <td class="py-3.5 px-4 text-xs font-semibold ${isUrgent ? 'text-rose-600 font-bold' : 'text-slate-500'}">
-                    ${isUrgent ? '⚠️ ' + task.Detail_Jadwal : task.Detail_Jadwal}
+                    ${isUrgent ? '⚠️ Tgl ' + task.Detail_Jadwal : 'Tgl ' + task.Detail_Jadwal}
                 </td>
                 <td class="py-3.5 px-4">
                     <p class="text-xs font-semibold text-slate-700 italic bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
@@ -206,35 +241,32 @@ function renderSuperiorDashboard(tbody) {
 
     let rowsHTML = '';
 
-    // Bagian 1: Perhatian / Overdue (Jika ada tugas tertunda dari hari sebelumnya)
     if (attentionList.length > 0) {
         rowsHTML += `
             <tr class="bg-rose-100/90 font-black text-rose-800 border-y border-rose-200">
                 <td colspan="7" class="py-2.5 px-4 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-600"></i> Perhatian Khusus: Tugas Terlambat / Belum Selesai dari Hari Sebelumnya (${attentionList.length})
+                    <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-600"></i> Perhatian Khusus: Tugas Terlambat / Belum Selesai (${attentionList.length})
                 </td>
             </tr>
         `;
         attentionList.forEach(task => { rowsHTML += renderRow(task, true); });
     }
 
-    // Bagian 2: Tugas Hari Ini / Sesuai Filter
     rowsHTML += `
         <tr class="bg-slate-100/80 font-black text-slate-700 border-y border-slate-200">
             <td colspan="7" class="py-2.5 px-4 text-xs uppercase tracking-wider">
-                📅 Daftar Tugas Berjalan (${todayList.length} Tugas Pending / Aktif)
+                📅 Daftar Tugas Berjalan & Aktif
             </td>
         </tr>
     `;
     
-    let activeTodayTasks = todayList.concat(doneList);
-    if (activeTodayTasks.length === 0) {
+    let activeTasks = todayList.concat(doneList);
+    if (activeTasks.length === 0) {
         rowsHTML += `<tr><td colspan="7" class="py-6 text-center text-slate-400 text-xs">Tidak ada tugas dalam kategori ini.</td></tr>`;
     } else {
-        activeTodayTasks.forEach(task => { rowsHTML += renderRow(task, false); });
+        activeTasks.forEach(task => { rowsHTML += renderRow(task, false); });
     }
 
-    // Sisipkan Dashboard Superior (KPI + Progress Bar) ke DOM di atas tabel
     const tableContainer = tbody.closest('table').parentElement;
     const existingSummary = document.getElementById('superiorSummaryContainer');
     if (existingSummary) existingSummary.remove();
