@@ -38,14 +38,25 @@ function changeInboxFilter(val) {
 }
 
 async function fetchMonitoringData() {
+    const tbody = document.getElementById('monitoringTableBody');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Memuat data monitoring...</td></tr>`;
+    }
+
     try {
         const response = await fetch(`${MONITORING_API_URL}&t=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const csvText = await response.text();
         allMonitoringTasks = parseCSV(csvText);
+        
         renderMonitoringTable();
         updateInboxBadge();
     } catch (error) {
         console.error('Gagal mengambil data monitoring tugas:', error);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-rose-500 font-bold">Gagal memuat data: ${error.message}. Periksa koneksi atau URL Spreadsheet Anda.</td></tr>`;
+        }
     }
 }
 
