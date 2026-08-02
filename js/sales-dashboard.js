@@ -6,11 +6,20 @@ let salesData = [];
 let salesChartInstance = null;
 let currentSalesChartMode = 'mtd'; 
 
+// GID sheet lengkap sesuai pembaruan Agustus 2026, September 2026, dan Oktober 2026
 const SHEET_GIDS = {
-    'Jul26': '1248782513', 'Jun26': '511605214', 'May26': '2012772985',
-    'Apr26': '544207481', 'Mar26': '90936589', 'Feb26': '472876079',
-    'Jan26': '171319040', 'Dec25': '236016326', 'Nov25': '564328385',
-    'Oct25': '0', 'Sep25': '0', 'Aug25': '0'
+    'Oct26': '1682478488', 
+    'Sep26': '432381843', 
+    'Aug26': '1766415704', 
+    'Jul26': '1248782513', 
+    'Jun26': '511605214', 
+    'May26': '2012772985',
+    'Apr26': '544207481', 
+    'Mar26': '90936589', 
+    'Feb26': '472876079',
+    'Jan26': '171319040', 
+    'Dec25': '236016326', 
+    'Nov25': '564328385'
 };
 
 /* ==========================================================================
@@ -20,6 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
     displayUpdateDate();
     initSalesSlicers();
     fetchSalesData();
+    if (typeof fetchDashboardData === "function" && (typeof dashboardData === 'undefined' || dashboardData.length === 0)) {
+        fetchDashboardData();
+    }
 });
 
 function displayUpdateDate() {
@@ -51,9 +63,13 @@ function initSalesSlicers() {
             let uniqueItems = new Set();
             if (typeof dashboardData !== 'undefined' && dashboardData.length > 0) {
                 dashboardData.forEach(item => {
-                    if (kategori === 'bm' && item.namaBM) uniqueItems.add(item.namaBM);
-                    if (kategori === 'abm' && item.namaABM) uniqueItems.add(item.namaABM);
-                    if (kategori === 'store' && item.namaStore) uniqueItems.add(item.namaStore);
+                    if (kategori === 'bm' && item.namaBM && item.namaBM !== "-") uniqueItems.add(item.namaBM.trim());
+                    if (kategori === 'abm' && item.namaABM && item.namaABM !== "-") uniqueItems.add(item.namaABM.trim());
+                    if (kategori === 'store' && item.namaStore && item.namaStore !== "-") uniqueItems.add(item.namaStore.trim());
+                });
+            } else {
+                salesData.forEach(item => {
+                    if (item.store) uniqueItems.add(item.store.trim());
                 });
             }
 
@@ -67,7 +83,7 @@ function initSalesSlicers() {
     slicerSpesifik.addEventListener('change', applySalesFilters);
     slicerBulan.addEventListener('change', () => {
         fetchSalesData();
-        fetchAndRenderUptSalesTable();
+        if (typeof fetchAndRenderUptSalesTable === "function") fetchAndRenderUptSalesTable();
     }); 
 }
 
@@ -80,7 +96,7 @@ async function fetchSalesData() {
 
     try {
         const selectedKey = document.getElementById('slicerBulanSales').value;
-        const gid = SHEET_GIDS[selectedKey] || '0';
+        const gid = SHEET_GIDS[selectedKey] || '1766415704';
         
         const finalUrl = `${SALES_BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`;
         const response = await fetch(finalUrl);
@@ -158,15 +174,19 @@ function applySalesFilters() {
     if (kategori !== 'all' && spesifik !== 'all') {
         const allowedStores = new Set();
         
-        if (typeof dashboardData !== 'undefined') {
+        if (typeof dashboardData !== 'undefined' && dashboardData.length > 0) {
             dashboardData.forEach(item => {
                 if (kategori === 'bm' && item.namaBM === spesifik) allowedStores.add(item.namaStore.toLowerCase().trim());
                 else if (kategori === 'abm' && item.namaABM === spesifik) allowedStores.add(item.namaStore.toLowerCase().trim());
                 else if (kategori === 'store' && item.namaStore === spesifik) allowedStores.add(item.namaStore.toLowerCase().trim());
             });
+        } else if (kategori === 'store') {
+            allowedStores.add(spesifik.toLowerCase().trim());
         }
 
-        filteredSales = salesData.filter(item => allowedStores.has(item.store.toLowerCase().trim()));
+        if (allowedStores.size > 0) {
+            filteredSales = salesData.filter(item => allowedStores.has(item.store.toLowerCase().trim()));
+        }
     }
 
     renderSalesSummaryFiltered(filteredSales);
@@ -368,7 +388,7 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
 
     try {
         const currentMonthKey = document.getElementById('slicerBulanSales').value;
-        const monthKeys = ['Jul26', 'Jun26', 'May26', 'Apr26', 'Mar26', 'Feb26', 'Jan26', 'Dec25', 'Nov25'];
+        const monthKeys = ['Oct26', 'Sep26', 'Aug26', 'Jul26', 'Jun26', 'May26', 'Apr26', 'Mar26', 'Feb26', 'Jan26', 'Dec25', 'Nov25'];
         
         let currentIndex = monthKeys.indexOf(currentMonthKey);
         if (currentIndex === -1) currentIndex = 0;
@@ -521,8 +541,8 @@ async function fetchAndRenderUptSalesTable() {
     if (!tbody) return;
 
     try {
-        const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Jul26';
-        const gid = SHEET_GIDS[selectedKey] || '1248782513';
+        const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Aug26';
+        const gid = SHEET_GIDS[selectedKey] || '1766415704';
         
         const finalUrl = `${SALES_BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`;
         const response = await fetch(finalUrl);
