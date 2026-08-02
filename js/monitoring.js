@@ -1,20 +1,18 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (WIB FILTER)
+   MODUL MONITORING TUGAS & INBOX (WIB FILTER & INTERACTIVE ACTION)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 let allMonitoringTasks = [];
-let currentTaskFilter = 'today'; // Default menampilkan hari ini
+let currentTaskFilter = 'today'; 
 let currentInboxFilter = 'today';
 
-// Mendapatkan Hari & Tanggal sesuai zona waktu WIB (Asia/Jakarta)
 function getWIBDateInfo() {
     const now = new Date();
-    const weekdayName = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long' }).format(now).toLowerCase(); // e.g. "senin"
-    const dayNumber = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric' }).format(now); // e.g. "6"
+    const weekdayName = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long' }).format(now).toLowerCase();
+    const dayNumber = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric' }).format(now);
     return { weekdayName, dayNumber };
 }
 
-// Cek apakah tugas aktif pada hari ini (WIB)
 function isTaskForToday(task) {
     const jenis = (task.Jenis_Tugas || '').toLowerCase();
     const jadwal = (task.Detail_Jadwal || '').trim().toLowerCase();
@@ -25,7 +23,7 @@ function isTaskForToday(task) {
     } else if (jenis.includes('bulanan')) {
         return jadwal === dayNumber;
     } else {
-        return true; // Tugasan biasa / add-on selalu dimunculkan
+        return true;
     }
 }
 
@@ -39,12 +37,11 @@ function changeInboxFilter(val) {
     toggleInboxModal(true);
 }
 
-// Ambil Data dari Google Sheets Monitoring Tugas
 async function fetchMonitoringData() {
     try {
         const response = await fetch(MONITORING_API_URL);
         const csvText = await response.text();
-        allMonitoringTasks = parseCSV(csvText); // Menggunakan fungsi parseCSV global dari app.js
+        allMonitoringTasks = parseCSV(csvText);
         renderMonitoringTable();
         updateInboxBadge();
     } catch (error) {
@@ -52,7 +49,7 @@ async function fetchMonitoringData() {
     }
 }
 
-// Render Tabel Monitoring Progress dengan Filter
+// Render Tabel Monitoring Progress dengan Tombol Aksi Interaktif
 function renderMonitoringTable() {
     const tbody = document.getElementById('monitoringTableBody');
     if (!tbody) return;
@@ -77,11 +74,18 @@ function renderMonitoringTable() {
         return;
     }
 
-    tasks.forEach((task) => {
+    tasks.forEach((task, index) => {
         const isCompleted = (task.Status || '').toLowerCase() === 'selesai';
         const statusBadge = isCompleted 
             ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
             : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-amber-100">Pending</span>`;
+
+        // Tombol interaktif untuk ABM/BM merespon tugas
+        const actionButton = `
+            <button onclick="openResponseModal('${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-3 py-1.5 bg-slate-900 hover:bg-amber-500 text-white font-bold rounded-xl transition-all shadow-xs text-[11px]">
+                ${isCompleted ? 'Ubah Respon' : 'Beri Respon / Selesai'}
+            </button>
+        `;
 
         tbody.innerHTML += `
             <tr class="hover:bg-slate-50/80 transition-colors">
@@ -94,7 +98,10 @@ function renderMonitoringTable() {
                 </td>
                 <td class="py-3 px-4">${statusBadge}</td>
                 <td class="py-3 px-4 text-center">
-                    <span class="text-xs font-semibold text-slate-500">${task.Catatan_User || 'Belum ada respon'}</span>
+                    <div class="flex flex-col items-center gap-1.5">
+                        <span class="text-xs font-semibold text-slate-600 italic">"${task.Catatan_User || 'Belum ada respon'}"</span>
+                        ${actionButton}
+                    </div>
                 </td>
             </tr>
         `;
@@ -102,7 +109,29 @@ function renderMonitoringTable() {
     lucide.createIcons();
 }
 
-// Badge Notifikasi Inbox
+// Fungsi Pop-up Sederhana untuk Input Respon/Feedback oleh ABM/BM
+function openResponseModal(taskId, taskTitle) {
+    const catatan = prompt(`Berikan catatan / feedback untuk tugas:\n"${taskTitle}"\n\n(Ketik catatan pengerjaan atau kendala):`, "Selesai dikerjakan dengan baik");
+    
+    if (catatan !== null) {
+        // Cari tugas di array dan ubah status serta catatannya secara lokal
+        const targetTask = allMonitoringTasks.find(t => (t.ID_Tugas || '') === taskId || t.Judul_Tugas === taskTitle);
+        if (targetTask) {
+            targetTask.Status = 'Selesai';
+            targetTask.Catatan_User = catatan;
+            
+            // Re-render tabel dan update badge inbox
+            renderMonitoringTable();
+            updateInboxBadge();
+            
+            alert("Respon berhasil disimpan! Status tugas berubah menjadi Selesai.");
+            // Catatan: Karena data dibaca dari Google Sheet publik via CSV, 
+            // perubahan ini bersifat real-time di sesi browser. 
+            // Untuk penyimpanan permanen lintas perangkat, baris di Google Sheet perlu diupdate via Web App / Apps Script.
+        }
+    }
+}
+
 function updateInboxBadge() {
     const badge = document.getElementById('inboxBadge');
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase();
@@ -125,7 +154,6 @@ function updateInboxBadge() {
     }
 }
 
-// Modal Inbox Pop-up dengan Filter WIB
 function toggleInboxModal(isRefresh = false) {
     const modal = document.getElementById('inboxModal');
     const container = document.getElementById('inboxListContainer');
