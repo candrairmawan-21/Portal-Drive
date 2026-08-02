@@ -1,12 +1,12 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (FIXED RENDERING & CLEAN BADGE COUNT)
+   MODUL MONITORING TUGAS & INBOX (SMART ASSIGNMENT & INTERACTIVE INBOX)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 let allMonitoringTasks = [];
 let currentTaskFilter = 'today'; 
 let currentInboxFilter = 'today';
 
-// Database Master Seluruh Tim (11 ABM & 3 BM + Fleksibel Bertambah)
+// Database Master Seluruh Tim (11 ABM & 3 BM)
 const SYSTEM_TEAM = [
     { username: 'bm agus', role: 'BM', name: 'BM Agus' },
     { username: 'bm didik', role: 'BM', name: 'BM Didik' },
@@ -158,7 +158,7 @@ function renderSuperiorDashboard(tbody) {
         tasks = tasks.filter(task => isTaskForToday(task));
     }
 
-    tbody.innerHTML = ''; // Bersihkan teks loading statis
+    tbody.innerHTML = '';
 
     if (tasks.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Tidak ada data tugasan untuk periode waktu ini.</td></tr>`;
@@ -341,7 +341,7 @@ window.toggleTaskCollapse = function(index) {
 }
 
 /* ==========================================================================
-   TAMPILAN USER BIASA & INBOX
+   TAMPILAN USER BIASA & INTERACTIVE INBOX POPUP (LONCENG)
    ========================================================================== */
 function renderUserTaskTable(tbody, loggedInUser, userRole) {
     const existingSummary = document.getElementById('superiorSummaryContainer');
@@ -357,7 +357,7 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
         tasks = tasks.filter(task => isTaskForToday(task));
     }
 
-    tbody.innerHTML = ''; // Bersihkan teks loading statis
+    tbody.innerHTML = '';
 
     if (tasks.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Tidak ada tugasan aktif untuk Anda.</td></tr>`;
@@ -411,7 +411,6 @@ function updateInboxBadge() {
         return;
     }
 
-    // Hitung hanya tugas pending yang benar-benar ditujukan untuk user yang sedang login
     const pendingCount = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const status = (task.Status || '').toLowerCase().trim();
@@ -431,4 +430,81 @@ function updateInboxBadge() {
     }
 }
 
-function toggleInboxModal() {}
+// RESTORED: Fungsi pop-up shortcut inbox lonceng
+function toggleInboxModal(isRefresh = false) {
+    const modal = document.getElementById('inboxModal');
+    const container = document.getElementById('inboxListContainer');
+    if (!modal || !container) return;
+
+    if (!modal.classList.contains('hidden') && !isRefresh) {
+        modal.classList.add('hidden');
+        return;
+    }
+
+    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
+    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
+
+    if (userRole === 'admin' || loggedInUser === 'admin') {
+        container.innerHTML = `
+            <div class="text-center py-6 px-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <i data-lucide="shield-check" class="w-8 h-8 text-amber-500 mx-auto mb-2"></i>
+                <p class="text-xs font-bold text-slate-700">Mode Pengawas (Superior)</p>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    Role Admin tidak memiliki tagihan tugas pending pribadi. Untuk memantau progres pengerjaan tugas seluruh tim BM & ABM, silakan buka menu <strong class="text-slate-600">Monitoring Tugas</strong>.
+                </p>
+                <button onclick="switchView('monitoring'); toggleInboxModal();" class="mt-3 px-4 py-2 bg-slate-900 hover:bg-amber-500 text-white text-[11px] font-bold rounded-xl transition-all">
+                    Buka Monitoring Tugas &rarr;
+                </button>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+        lucide.createIcons();
+        return;
+    }
+    
+    let activeTasks = allMonitoringTasks.filter(task => {
+        if (!task.Jenis_Tugas) return false;
+        const status = (task.Status || '').toLowerCase().trim();
+        if (status === 'selesai' || status === 'done') return false;
+
+        const assigned = getAssignedUsersForTask(task);
+        return assigned.some(u => u.username === loggedInUser);
+    });
+
+    if (currentInboxFilter === 'today') {
+        activeTasks = activeTasks.filter(task => isTaskForToday(task));
+    }
+
+    container.innerHTML = '';
+    if (activeTasks.length === 0) {
+        container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-medium">Tidak ada tugas pending untuk kriteria ini.</div>`;
+    } else {
+        activeTasks.forEach(task => {
+            const isToday = isTaskForToday(task);
+            const badgeWaktu = isToday 
+                ? `<span class="text-[9px] bg-emerald-500 text-white font-bold px-1.5 py-0.5 rounded">Hari Ini</span>` 
+                : `<span class="text-[9px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded">Overdue / Akumulasi</span>`;
+
+            container.innerHTML += `
+                <div class="bg-amber-50/50 border border-amber-100 p-3.5 rounded-2xl flex flex-col gap-2">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] font-extrabold uppercase bg-amber-500 text-white px-2 py-0.5 rounded-md">${task.Jenis_Tugas}</span>
+                            ${badgeWaktu}
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-bold">Jadwal: ${task.Detail_Jadwal}</span>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-black text-slate-800">${task.Judul_Tugas}</h4>
+                        <p class="text-[11px] text-slate-600 mt-0.5">${task.Deskripsi}</p>
+                    </div>
+                    <button onclick="switchView('monitoring'); toggleInboxModal();" class="self-end mt-1 px-3 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-amber-500 transition-all">
+                        Buka & Selesaikan &rarr;
+                    </button>
+                </div>
+            `;
+        });
+    }
+    modal.classList.remove('hidden');
+    lucide.createIcons();
+}
