@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (SMART ASSIGNMENT & INTERACTIVE INBOX)
+   MODUL MONITORING TUGAS & INBOX (SMART TEMPORAL ANALYZER & ACCURATE BADGE)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 let allMonitoringTasks = [];
@@ -22,26 +22,67 @@ const SYSTEM_TEAM = [
     { username: 'abm satria', role: 'ABM', name: 'ABM Satria' }
 ];
 
-function getWIBDateInfo() {
+/* ==========================================================================
+   SMART TEMPORAL ANALYZER: MEMBEDAKAN ON GOING, OVERDUE, DAN UPCOMING
+   ========================================================================== */
+function getIndonesianDayIndex(dayName) {
+    const map = { 'senin': 1, 'selasa': 2, 'rabu': 3, 'kamis': 4, 'jumat': 5, 'sabtu': 6, 'minggu': 7 };
+    return map[(dayName || '').toLowerCase().trim()] || 0;
+}
+
+function getCurrentIndonesianDayIndex() {
+    const d = new Date().getDay();
+    return d === 0 ? 7 : d; // Minggu = 7, Senin = 1, dst.
+}
+
+function getTaskTemporalStatus(task) {
+    const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
+    if (isDone) {
+        return { code: 'DONE', label: 'Selesai', colorClass: 'bg-emerald-500 text-white', isActionable: false };
+    }
+
+    const jenis = (task.Jenis_Tugas || '').toLowerCase().trim();
+    const jadwalStr = (task.Detail_Jadwal || '').trim().toLowerCase();
     const now = new Date();
-    const weekdayName = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long' }).format(now).toLowerCase();
-    const dayNumber = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric' }).format(now);
-    const dayOfWeek = now.getDay();
-    return { weekdayName, dayNumber, dayOfWeek };
+    const currentDayIdx = getCurrentIndonesianDayIndex();
+    const currentDateNum = now.getDate();
+
+    // 1. ANALISA TUGAS MINGGUAN
+    if (jenis.includes('mingguan')) {
+        const targetDayIdx = getIndonesianDayIndex(jadwalStr);
+        if (targetDayIdx === 0) {
+            return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
+        }
+        if (targetDayIdx === currentDayIdx) {
+            return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
+        } else if (targetDayIdx < currentDayIdx) {
+            return { code: 'OVERDUE', label: 'Overdue (Terlambat)', colorClass: 'bg-rose-500 text-white', isActionable: true };
+        } else {
+            return { code: 'UPCOMING', label: 'Jadwal Mendatang', colorClass: 'bg-slate-500 text-white', isActionable: false };
+        }
+    }
+
+    // 2. ANALISA TUGAS BULANAN (Misal: Tanggal "6")
+    if (jenis.includes('bulanan')) {
+        const targetDateNum = parseInt(jadwalStr);
+        if (!isNaN(targetDateNum)) {
+            if (targetDateNum === currentDateNum) {
+                return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
+            } else if (targetDateNum < currentDateNum) {
+                return { code: 'OVERDUE', label: 'Overdue (Terlambat)', colorClass: 'bg-rose-500 text-white', isActionable: true };
+            } else {
+                return { code: 'UPCOMING', label: 'Jadwal Mendatang', colorClass: 'bg-slate-500 text-white', isActionable: false };
+            }
+        }
+    }
+
+    // 3. ANALISA TUGAS HARIAN / LAINNYA
+    return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
 }
 
 function isTaskForToday(task) {
-    const jenis = (task.Jenis_Tugas || '').toLowerCase().trim();
-    const jadwal = (task.Detail_Jadwal || '').trim().toLowerCase();
-    const { weekdayName, dayNumber } = getWIBDateInfo();
-
-    if (jenis.includes('mingguan')) {
-        return jadwal === weekdayName;
-    } else if (jenis.includes('bulanan')) {
-        return jadwal === dayNumber;
-    } else {
-        return true;
-    }
+    const status = getTaskTemporalStatus(task);
+    return status.code === 'TODAY' || status.code === 'OVERDUE';
 }
 
 function changeTaskFilter(val) {
@@ -78,30 +119,22 @@ async function fetchMonitoringData() {
     }
 }
 
-/* ==========================================================================
-   SMART ASSIGNMENT HELPER
-   ========================================================================== */
 function getAssignedUsersForTask(task) {
     const target = (task.Target_User || '').toLowerCase().trim();
-    
-    if (target === 'abm') {
-        return SYSTEM_TEAM.filter(u => u.role === 'ABM');
-    } else if (target === 'bm') {
-        return SYSTEM_TEAM.filter(u => u.role === 'BM');
-    } else if (target === '' || target === 'umum') {
-        return SYSTEM_TEAM;
-    } else {
-        const found = SYSTEM_TEAM.find(u => u.username === target || u.name.toLowerCase() === target);
-        return found ? [found] : [{ username: target, role: 'CUSTOM', name: task.Target_User }];
-    }
+    if (target === 'abm') return SYSTEM_TEAM.filter(u => u.role === 'ABM');
+    if (target === 'bm') return SYSTEM_TEAM.filter(u => u.role === 'BM');
+    if (target === '' || target === 'umum') return SYSTEM_TEAM;
+    const found = SYSTEM_TEAM.find(u => u.username === target || u.name.toLowerCase() === target);
+    return found ? [found] : [{ username: target, role: 'CUSTOM', name: task.Target_User }];
 }
 
 function checkWeeklyResetAndKPI() {
-    const { dayOfWeek } = getWIBDateInfo();
+    const currentDayIdx = getCurrentIndonesianDayIndex();
     const lastResetWeek = localStorage.getItem('lastResetWeek');
     const currentWeekNum = Math.ceil(new Date().getDate() / 7);
 
-    if (dayOfWeek === 0 && lastResetWeek !== String(currentWeekNum)) {
+    // Hari Minggu = 7
+    if (currentDayIdx === 7 && lastResetWeek !== String(currentWeekNum)) {
         localStorage.setItem('lastResetWeek', String(currentWeekNum));
     }
 }
@@ -128,30 +161,6 @@ function renderMonitoringTable() {
    DASHBOARD SUPERIOR
    ========================================================================== */
 function renderSuperiorDashboard(tbody) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const isOverdue = (task) => {
-        const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
-        if (isDone) return false;
-        
-        const jenis = (task.Jenis_Tugas || '').toLowerCase().trim();
-        const jadwalStr = (task.Detail_Jadwal || '').trim();
-        if (!jadwalStr) return false;
-
-        let taskDate = null;
-        if (jenis.includes('bulanan')) {
-            const dayNum = parseInt(jadwalStr);
-            if (!isNaN(dayNum)) {
-                taskDate = new Date(today.getFullYear(), today.getMonth(), dayNum);
-            }
-        } else {
-            taskDate = new Date(jadwalStr);
-        }
-
-        return taskDate && !isNaN(taskDate.getTime()) && taskDate < today;
-    };
-
     let tasks = [...allMonitoringTasks].filter(task => task.Jenis_Tugas && task.Jenis_Tugas.trim() !== '');
 
     if (currentTaskFilter === 'today') {
@@ -167,9 +176,9 @@ function renderSuperiorDashboard(tbody) {
         return;
     }
 
-    const attentionList = tasks.filter(t => isOverdue(t));
-    const todayList = tasks.filter(t => !isOverdue(t) && isTaskForToday(t));
-    const doneList = tasks.filter(t => (t.Status || '').toLowerCase().trim() === 'selesai' || (t.Status || '').toLowerCase().trim() === 'done');
+    const attentionList = tasks.filter(t => getTaskTemporalStatus(t).code === 'OVERDUE');
+    const todayList = tasks.filter(t => getTaskTemporalStatus(t).code === 'TODAY');
+    const doneList = tasks.filter(t => getTaskTemporalStatus(t).code === 'DONE');
     const totalTasks = tasks.length;
     const overallPercentage = totalTasks > 0 ? Math.round((doneList.length / totalTasks) * 100) : 0;
 
@@ -180,7 +189,7 @@ function renderSuperiorDashboard(tbody) {
 
     tasks.forEach(task => {
         const assignedUsers = getAssignedUsersForTask(task);
-        const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
+        const isDone = getTaskTemporalStatus(task).code === 'DONE';
         
         assignedUsers.forEach(u => {
             if (!personalStats[u.username]) {
@@ -243,15 +252,17 @@ function renderSuperiorDashboard(tbody) {
 
     let rowsHTML = '';
 
-    const renderRowWithCollapse = (task, index, isUrgent = false) => {
-        const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
+    const renderRowWithCollapse = (task, index) => {
+        const statusObj = getTaskTemporalStatus(task);
+        const isDone = statusObj.code === 'DONE';
+        const isUrgent = statusObj.code === 'OVERDUE';
         const assignedUsers = getAssignedUsersForTask(task);
 
         const statusBadge = isDone 
             ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200/60 text-[11px]"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> DONE</span>`
             : (isUrgent 
                 ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-600 font-extrabold rounded-lg border border-rose-200/60 text-[11px]"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> OVERDUE</span>`
-                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> PENDING</span>`);
+                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ON GOING</span>`);
 
         let collapseHtml = assignedUsers.map(user => {
             const userDone = isDone; 
@@ -308,7 +319,7 @@ function renderSuperiorDashboard(tbody) {
 
     if (attentionList.length > 0) {
         rowsHTML += `<tr class="bg-rose-100/90 font-black text-rose-800 border-y border-rose-200"><td colspan="7" class="py-2.5 px-4 text-xs uppercase tracking-wider">⚠️ Perhatian Khusus: Tugas Terlambat / Overdue (${attentionList.length})</td></tr>`;
-        attentionList.forEach((task, idx) => { rowsHTML += renderRowWithCollapse(task, 'att-' + idx, true); });
+        attentionList.forEach((task, idx) => { rowsHTML += renderRowWithCollapse(task, 'att-' + idx); });
     }
 
     rowsHTML += `<tr class="bg-slate-100/80 font-black text-slate-700 border-y border-slate-200"><td colspan="7" class="py-2.5 px-4 text-xs uppercase tracking-wider">📅 Daftar Tugas Berjalan & Aktif</td></tr>`;
@@ -317,7 +328,7 @@ function renderSuperiorDashboard(tbody) {
     if (activeTasks.length === 0) {
         rowsHTML += `<tr><td colspan="7" class="py-6 text-center text-slate-400 text-xs">Tidak ada tugas dalam kategori ini.</td></tr>`;
     } else {
-        activeTasks.forEach((task, idx) => { rowsHTML += renderRowWithCollapse(task, 'act-' + idx, false); });
+        activeTasks.forEach((task, idx) => { rowsHTML += renderRowWithCollapse(task, 'act-' + idx); });
     }
 
     const tableContainer = tbody.closest('table').parentElement;
@@ -365,11 +376,12 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
     }
 
     tasks.forEach((task, index) => {
-        const isCompleted = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
+        const statusObj = getTaskTemporalStatus(task);
+        const isCompleted = statusObj.code === 'DONE';
         
         const statusBadge = isCompleted 
             ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
-            : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-amber-100">Pending</span>`;
+            : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-amber-100">Pending (${statusObj.label})</span>`;
 
         tbody.innerHTML += `
             <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50 bg-white">
@@ -401,6 +413,9 @@ function openResponseModal(taskId, taskTitle) {
     }
 }
 
+/* ==========================================================================
+   BADGE LONCENG: HANYA MENGHITUNG TUGAS HARI INI + OVERDUE (TANPA UPCOMING)
+   ========================================================================== */
 function updateInboxBadge() {
     const badge = document.getElementById('inboxBadge');
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
@@ -411,10 +426,11 @@ function updateInboxBadge() {
         return;
     }
 
+    // Hanya hitung tugas yang ACTIONABLE HARI INI (On Going / Overdue) untuk user yang login
     const pendingCount = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
-        const status = (task.Status || '').toLowerCase().trim();
-        if (status === 'selesai' || status === 'done') return false;
+        const temporal = getTaskTemporalStatus(task);
+        if (!temporal.isActionable) return false; // Abaikan tugas Selesai dan Upcoming!
 
         const assigned = getAssignedUsersForTask(task);
         return assigned.some(u => u.username === loggedInUser);
@@ -430,7 +446,6 @@ function updateInboxBadge() {
     }
 }
 
-// RESTORED: Fungsi pop-up shortcut inbox lonceng
 function toggleInboxModal(isRefresh = false) {
     const modal = document.getElementById('inboxModal');
     const container = document.getElementById('inboxListContainer');
@@ -464,8 +479,8 @@ function toggleInboxModal(isRefresh = false) {
     
     let activeTasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
-        const status = (task.Status || '').toLowerCase().trim();
-        if (status === 'selesai' || status === 'done') return false;
+        const temporal = getTaskTemporalStatus(task);
+        if (!temporal.isActionable) return false;
 
         const assigned = getAssignedUsersForTask(task);
         return assigned.some(u => u.username === loggedInUser);
@@ -480,10 +495,8 @@ function toggleInboxModal(isRefresh = false) {
         container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-medium">Tidak ada tugas pending untuk kriteria ini.</div>`;
     } else {
         activeTasks.forEach(task => {
-            const isToday = isTaskForToday(task);
-            const badgeWaktu = isToday 
-                ? `<span class="text-[9px] bg-emerald-500 text-white font-bold px-1.5 py-0.5 rounded">Hari Ini</span>` 
-                : `<span class="text-[9px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded">Overdue / Akumulasi</span>`;
+            const temporal = getTaskTemporalStatus(task);
+            const badgeWaktu = `<span class="text-[9px] ${temporal.colorClass} font-bold px-2 py-0.5 rounded-md">${temporal.label}</span>`;
 
             container.innerHTML += `
                 <div class="bg-amber-50/50 border border-amber-100 p-3.5 rounded-2xl flex flex-col gap-2">
