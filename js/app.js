@@ -11,7 +11,7 @@ let pendingUrl = '';
 let pendingPassword = '';
 
 const userDatabase = {
-    'admin': 'admin', 'guest': 'guest',
+    'candra': 'admin', 'guest': 'guest',
     'bm agus': 'BM', 'bm didik': 'BM', 'bm galih': 'BM',
     'abm anas': 'ABM', 'abm bayu': 'ABM', 'abm ika': 'ABM', 'abm adinda': 'ABM',
     'abm ridho': 'ABM', 'abm fachri': 'ABM', 'abm gading': 'ABM', 'abm wildan': 'ABM', 'abm satria': 'ABM',
