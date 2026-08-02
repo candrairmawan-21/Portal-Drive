@@ -151,7 +151,6 @@ function applyGuestRestrictions() {
         }
     });
 
-    // Batasi akses menu Monitoring Progress (Hanya Admin, BM, ABM)
     const menuMonitoring = document.getElementById('menu-monitoring');
     if (menuMonitoring) {
         if (role === 'staff' || role === 'guest') {
@@ -171,7 +170,6 @@ function switchView(view) {
         if(el) el.classList.add('hidden');
     });
               
-    // Reset warna tombol navigasi standar
     const standardButtons = ['files', 'dashboard', 'sales', 'damage', 'monitoring'];
     standardButtons.forEach(id => {
         let btnId;
@@ -190,7 +188,6 @@ function switchView(view) {
         }
     });
 
-    // Reset warna sub-menu Analyze
     const analyzeSubBtns = ['nav-itemize', 'nav-fast-moving'];
     analyzeSubBtns.forEach(btnId => {
         const btn = document.getElementById(btnId);
