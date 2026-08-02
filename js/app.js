@@ -470,6 +470,22 @@ function toggleViewLayout() {
     lucide.createIcons(); 
     renderPortal();
 }
+/* ==========================================================================
+   FUNGSI MENAMPILKAN SAPAAN USER & ROLE STATIS DI KANAN ATAS
+   ========================================================================== */
+function renderLoggedInUser() {
+    const displayEl = document.getElementById('userInfoDisplay');
+    if (!displayEl) return;
+
+    const loggedInUser = sessionStorage.getItem('portalUser') || 'User';
+    const userRole = sessionStorage.getItem('portalRole') || 'Guest';
+
+    displayEl.innerHTML = `
+        <i data-lucide="user-check" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
+        <span>Hi, <strong class="text-slate-800 capitalize">${loggedInUser}</strong> | Role Anda: <strong class="text-amber-600 uppercase">${userRole}</strong></span>
+    `;
+    lucide.createIcons();
+}
 
 /* ==========================================================================
    7. SISTEM AUTENTIKASI & PENDENGAR AKSI EVENT LISTENERS
