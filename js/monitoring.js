@@ -1,10 +1,9 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (SMART TEMPORAL ANALYZER & ACCURATE BADGE)
+   MODUL MONITORING TUGAS & INBOX (CLEAN INBOX POPUP - NO FILTER)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 let allMonitoringTasks = [];
 let currentTaskFilter = 'today'; 
-let currentInboxFilter = 'today';
 
 // Database Master Seluruh Tim (11 ABM & 3 BM)
 const SYSTEM_TEAM = [
@@ -22,9 +21,6 @@ const SYSTEM_TEAM = [
     { username: 'abm satria', role: 'ABM', name: 'ABM Satria' }
 ];
 
-/* ==========================================================================
-   SMART TEMPORAL ANALYZER: MEMBEDAKAN ON GOING, OVERDUE, DAN UPCOMING
-   ========================================================================== */
 function getIndonesianDayIndex(dayName) {
     const map = { 'senin': 1, 'selasa': 2, 'rabu': 3, 'kamis': 4, 'jumat': 5, 'sabtu': 6, 'minggu': 7 };
     return map[(dayName || '').toLowerCase().trim()] || 0;
@@ -32,7 +28,7 @@ function getIndonesianDayIndex(dayName) {
 
 function getCurrentIndonesianDayIndex() {
     const d = new Date().getDay();
-    return d === 0 ? 7 : d; // Minggu = 7, Senin = 1, dst.
+    return d === 0 ? 7 : d;
 }
 
 function getTaskTemporalStatus(task) {
@@ -47,13 +43,9 @@ function getTaskTemporalStatus(task) {
     const currentDayIdx = getCurrentIndonesianDayIndex();
     const currentDateNum = now.getDate();
 
-    // 1. ANALISA TUGAS MINGGUAN
     if (jenis.includes('mingguan')) {
         const targetDayIdx = getIndonesianDayIndex(jadwalStr);
-        if (targetDayIdx === 0) {
-            return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
-        }
-        if (targetDayIdx === currentDayIdx) {
+        if (targetDayIdx === 0 || targetDayIdx === currentDayIdx) {
             return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
         } else if (targetDayIdx < currentDayIdx) {
             return { code: 'OVERDUE', label: 'Overdue (Terlambat)', colorClass: 'bg-rose-500 text-white', isActionable: true };
@@ -62,7 +54,6 @@ function getTaskTemporalStatus(task) {
         }
     }
 
-    // 2. ANALISA TUGAS BULANAN (Misal: Tanggal "6")
     if (jenis.includes('bulanan')) {
         const targetDateNum = parseInt(jadwalStr);
         if (!isNaN(targetDateNum)) {
@@ -76,7 +67,6 @@ function getTaskTemporalStatus(task) {
         }
     }
 
-    // 3. ANALISA TUGAS HARIAN / LAINNYA
     return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
 }
 
@@ -88,11 +78,6 @@ function isTaskForToday(task) {
 function changeTaskFilter(val) {
     currentTaskFilter = val;
     renderMonitoringTable();
-}
-
-function changeInboxFilter(val) {
-    currentInboxFilter = val;
-    toggleInboxModal(true);
 }
 
 async function fetchMonitoringData() {
@@ -108,7 +93,6 @@ async function fetchMonitoringData() {
         const csvText = await response.text();
         allMonitoringTasks = parseCSV(csvText);
         
-        checkWeeklyResetAndKPI();
         renderMonitoringTable();
         updateInboxBadge();
     } catch (error) {
@@ -128,20 +112,6 @@ function getAssignedUsersForTask(task) {
     return found ? [found] : [{ username: target, role: 'CUSTOM', name: task.Target_User }];
 }
 
-function checkWeeklyResetAndKPI() {
-    const currentDayIdx = getCurrentIndonesianDayIndex();
-    const lastResetWeek = localStorage.getItem('lastResetWeek');
-    const currentWeekNum = Math.ceil(new Date().getDate() / 7);
-
-    // Hari Minggu = 7
-    if (currentDayIdx === 7 && lastResetWeek !== String(currentWeekNum)) {
-        localStorage.setItem('lastResetWeek', String(currentWeekNum));
-    }
-}
-
-/* ==========================================================================
-   ROUTING TAMPILAN
-   ========================================================================== */
 function renderMonitoringTable() {
     const tbody = document.getElementById('monitoringTableBody');
     if (!tbody) return;
@@ -157,9 +127,6 @@ function renderMonitoringTable() {
     renderUserTaskTable(tbody, loggedInUser, userRole);
 }
 
-/* ==========================================================================
-   DASHBOARD SUPERIOR
-   ========================================================================== */
 function renderSuperiorDashboard(tbody) {
     let tasks = [...allMonitoringTasks].filter(task => task.Jenis_Tugas && task.Jenis_Tugas.trim() !== '');
 
@@ -265,12 +232,11 @@ function renderSuperiorDashboard(tbody) {
                 : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ON GOING</span>`);
 
         let collapseHtml = assignedUsers.map(user => {
-            const userDone = isDone; 
             return `
                 <div class="flex items-center justify-between py-1.5 px-3 bg-white rounded-lg border border-slate-200/60 text-xs shadow-xs">
                     <span class="font-bold text-slate-700">${user.name}</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-black ${userDone ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
-                        ${userDone ? 'Selesai' : 'Pending'}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black ${isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                        ${isDone ? 'Selesai' : 'Pending'}
                     </span>
                 </div>
             `;
@@ -351,9 +317,6 @@ window.toggleTaskCollapse = function(index) {
     }
 }
 
-/* ==========================================================================
-   TAMPILAN USER BIASA & INTERACTIVE INBOX POPUP (LONCENG)
-   ========================================================================== */
 function renderUserTaskTable(tbody, loggedInUser, userRole) {
     const existingSummary = document.getElementById('superiorSummaryContainer');
     if (existingSummary) existingSummary.remove();
@@ -413,9 +376,6 @@ function openResponseModal(taskId, taskTitle) {
     }
 }
 
-/* ==========================================================================
-   BADGE LONCENG: HANYA MENGHITUNG TUGAS HARI INI + OVERDUE (TANPA UPCOMING)
-   ========================================================================== */
 function updateInboxBadge() {
     const badge = document.getElementById('inboxBadge');
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
@@ -426,11 +386,10 @@ function updateInboxBadge() {
         return;
     }
 
-    // Hanya hitung tugas yang ACTIONABLE HARI INI (On Going / Overdue) untuk user yang login
     const pendingCount = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const temporal = getTaskTemporalStatus(task);
-        if (!temporal.isActionable) return false; // Abaikan tugas Selesai dan Upcoming!
+        if (!temporal.isActionable) return false;
 
         const assigned = getAssignedUsersForTask(task);
         return assigned.some(u => u.username === loggedInUser);
@@ -446,6 +405,7 @@ function updateInboxBadge() {
     }
 }
 
+// TOGGLE INBOX MODAL (Filter "Semua Hari" Dihilangkan Total)
 function toggleInboxModal(isRefresh = false) {
     const modal = document.getElementById('inboxModal');
     const container = document.getElementById('inboxListContainer');
@@ -477,6 +437,7 @@ function toggleInboxModal(isRefresh = false) {
         return;
     }
     
+    // Hanya ambil tugas yang actionable (On Going & Overdue)
     let activeTasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const temporal = getTaskTemporalStatus(task);
@@ -485,10 +446,6 @@ function toggleInboxModal(isRefresh = false) {
         const assigned = getAssignedUsersForTask(task);
         return assigned.some(u => u.username === loggedInUser);
     });
-
-    if (currentInboxFilter === 'today') {
-        activeTasks = activeTasks.filter(task => isTaskForToday(task));
-    }
 
     container.innerHTML = '';
     if (activeTasks.length === 0) {
