@@ -123,12 +123,12 @@ function renderSuperiorDashboard(tbody) {
     }
 
     const attentionList = tasks.filter(t => isOverdue(t));
-    const todayList = tasks.filter(t => !isOverdue(t) && isTaskForToday(task));
+    const todayList = tasks.filter(t => !isOverdue(t) && isTaskForToday(t)); // Diperbaiki dari 'task' ke 't'
     const doneList = tasks.filter(t => (t.Status || '').toLowerCase().trim() === 'selesai' || (t.Status || '').toLowerCase().trim() === 'done');
     const totalTasks = tasks.length;
     const overallPercentage = totalTasks > 0 ? Math.round((doneList.length / totalTasks) * 100) : 0;
 
-    /* KECERDASAN SISTEM: Klasifikasi beban tugas & progress per Personal User (berdasarkan prefix jabatan abm/bm) */
+    /* KECERDASAN SISTEM: Klasifikasi beban tugas & progress per Personal User */
     const personalSummary = {};
     tasks.forEach(task => {
         let rawTarget = (task.Target_User || 'Umum').trim();
@@ -176,7 +176,7 @@ function renderSuperiorDashboard(tbody) {
         </div>
     </div>`;
 
-    // 2. Personal Progress Cards (Menampilkan nama personal ABM / BM yang masih pending)
+    // 2. Personal Progress Cards
     let teamProgressHTML = `
     <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm mb-6 w-full">
         <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-2">
@@ -318,7 +318,7 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
         
         const statusBadge = isCompleted 
             ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
-            : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-amber-100">Pending</span>`;
+            : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-emerald-100">Pending</span>`;
 
         const buttonClass = isCompleted
             ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs'
