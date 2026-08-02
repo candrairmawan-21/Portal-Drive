@@ -69,12 +69,12 @@ function renderMonitoringTable() {
     }
 
     if (tasks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400 font-medium">Tidak ada tugasan aktif untuk kriteria hari ini.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400 font-medium">Tidak ada tugasan aktif untuk kriteria ini.</td></tr>`;
         return;
     }
 
     tasks.forEach((task, index) => {
-        const isCompleted = (task.Status || '').toLowerCase().trim() === 'selesai';
+        const isCompleted = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
         
         const statusBadge = isCompleted 
             ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
@@ -138,13 +138,17 @@ function updateInboxBadge() {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
 
+    // Akumulasi SEMUA tugas yang masih 'Pending' (hari berjalan + hari sebelumnya yang belum selesai)
     const pendingCount = allMonitoringTasks.filter(task => {
-        if (!task.Jenis_Tugas || (task.Status || '').toLowerCase().trim() === 'selesai') return false;
+        if (!task.Jenis_Tugas) return false;
+        const status = (task.Status || '').toLowerCase().trim();
+        if (status === 'selesai' || status === 'done') return false;
+
         const isTarget = (userRole === 'admin' || loggedInUser === 'admin') 
             ? true 
             : ((task.Target_User || '').toLowerCase().trim() === loggedInUser || (task.Target_User || '').toLowerCase().trim() === userRole);
         
-        return isTarget && isTaskForToday(task);
+        return isTarget;
     }).length;
 
     if (badge) {
@@ -171,7 +175,10 @@ function toggleInboxModal(isRefresh = false) {
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
     
     let activeTasks = allMonitoringTasks.filter(task => {
-        if (!task.Jenis_Tugas || (task.Status || '').toLowerCase().trim() === 'selesai') return false;
+        if (!task.Jenis_Tugas) return false;
+        const status = (task.Status || '').toLowerCase().trim();
+        if (status === 'selesai' || status === 'done') return false;
+
         if (userRole === 'admin' || loggedInUser === 'admin') return true;
         const target = (task.Target_User || '').toLowerCase().trim();
         return target === loggedInUser || target === userRole;
@@ -183,13 +190,21 @@ function toggleInboxModal(isRefresh = false) {
 
     container.innerHTML = '';
     if (activeTasks.length === 0) {
-        container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-medium">Tidak ada tugas pending untuk kategori ini.</div>`;
+        container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-medium">Tidak ada tugas pending untuk kriteria ini.</div>`;
     } else {
         activeTasks.forEach(task => {
+            const isToday = isTaskForToday(task);
+            const badgeWaktu = isToday 
+                ? `<span class="text-[9px] bg-emerald-500 text-white font-bold px-1.5 py-0.5 rounded">Hari Ini</span>` 
+                : `<span class="text-[9px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded">Overdue / Akumulasi</span>`;
+
             container.innerHTML += `
                 <div class="bg-amber-50/50 border border-amber-100 p-3.5 rounded-2xl flex flex-col gap-2">
                     <div class="flex justify-between items-start">
-                        <span class="text-[10px] font-extrabold uppercase bg-amber-500 text-white px-2 py-0.5 rounded-md">${task.Jenis_Tugas}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] font-extrabold uppercase bg-amber-500 text-white px-2 py-0.5 rounded-md">${task.Jenis_Tugas}</span>
+                            ${badgeWaktu}
+                        </div>
                         <span class="text-[10px] text-slate-400 font-bold">Jadwal: ${task.Detail_Jadwal}</span>
                     </div>
                     <div>
@@ -197,7 +212,7 @@ function toggleInboxModal(isRefresh = false) {
                         <p class="text-[11px] text-slate-600 mt-0.5">${task.Deskripsi}</p>
                     </div>
                     <button onclick="switchView('monitoring'); toggleInboxModal();" class="self-end mt-1 px-3 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-amber-500 transition-all">
-                        Buka Menu Monitoring &rarr;
+                        Buka & Selesaikan &rarr;
                     </button>
                 </div>
             `;
