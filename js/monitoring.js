@@ -57,6 +57,7 @@ function renderMonitoringTable() {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
 
+    // Admin tetap bisa melihat SEMUA tugas tim di menu utama Monitoring Tugas
     let tasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         if (userRole === 'admin' || loggedInUser === 'admin') return true;
@@ -138,17 +139,23 @@ function updateInboxBadge() {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
 
-    // Akumulasi SEMUA tugas yang masih 'Pending' (hari berjalan + hari sebelumnya yang belum selesai)
+    // 1. KECUALIKAN ADMIN: Admin tidak memiliki notifikasi pending tugasan pribadi
+    if (userRole === 'admin' || loggedInUser === 'admin') {
+        if (badge) {
+            badge.innerText = '0';
+            badge.classList.add('hidden');
+        }
+        return;
+    }
+
+    // 2. AKUMULASI PENDING: Hitung semua tugas yang masih 'Pending' untuk role ABM/BM
     const pendingCount = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const status = (task.Status || '').toLowerCase().trim();
         if (status === 'selesai' || status === 'done') return false;
 
-        const isTarget = (userRole === 'admin' || loggedInUser === 'admin') 
-            ? true 
-            : ((task.Target_User || '').toLowerCase().trim() === loggedInUser || (task.Target_User || '').toLowerCase().trim() === userRole);
-        
-        return isTarget;
+        const target = (task.Target_User || '').toLowerCase().trim();
+        return target === loggedInUser || target === userRole;
     }).length;
 
     if (badge) {
@@ -173,13 +180,32 @@ function toggleInboxModal(isRefresh = false) {
 
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
+
+    // 1. JIKA ADMIN: Berikan pesan keterangan bahwa Admin adalah pengawas
+    if (userRole === 'admin' || loggedInUser === 'admin') {
+        container.innerHTML = `
+            <div class="text-center py-6 px-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <i data-lucide="shield-check" class="w-8 h-8 text-amber-500 mx-auto mb-2"></i>
+                <p class="text-xs font-bold text-slate-700">Mode Pengawas (Superior)</p>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    Role Admin tidak memiliki tagihan tugas pending pribadi. Untuk memantau progres pengerjaan tugas seluruh tim BM & ABM, silakan buka menu <strong class="text-slate-600">Monitoring Tugas</strong>.
+                </p>
+                <button onclick="switchView('monitoring'); toggleInboxModal();" class="mt-3 px-4 py-2 bg-slate-900 hover:bg-amber-500 text-white text-[11px] font-bold rounded-xl transition-all">
+                    Buka Monitoring Tugas &rarr;
+                </button>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+        lucide.createIcons();
+        return;
+    }
     
+    // 2. JIKA ABM/BM: Tampilkan daftar tugas pending
     let activeTasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const status = (task.Status || '').toLowerCase().trim();
         if (status === 'selesai' || status === 'done') return false;
 
-        if (userRole === 'admin' || loggedInUser === 'admin') return true;
         const target = (task.Target_User || '').toLowerCase().trim();
         return target === loggedInUser || target === userRole;
     });
