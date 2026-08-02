@@ -134,7 +134,24 @@ function closeAttitudeModal() {
 }
 
 /* ==========================================================================
-   5. SISTEM PERPINDAHAN HALAMAN & OTORISASI GUEST / ROLE RESTRICTIONS
+   5. FUNGSI MENAMPILKAN SAPAAN USER & ROLE STATIS DI KANAN ATAS
+   ========================================================================== */
+function renderLoggedInUser() {
+    const displayEl = document.getElementById('userInfoDisplay');
+    if (!displayEl) return;
+
+    const loggedInUser = sessionStorage.getItem('portalUser') || 'User';
+    const userRole = sessionStorage.getItem('portalRole') || 'Guest';
+
+    displayEl.innerHTML = `
+        <i data-lucide="user-check" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
+        <span>Hi, <strong class="text-slate-800 capitalize">${loggedInUser}</strong> | Role Anda: <strong class="text-amber-600 uppercase">${userRole}</strong></span>
+    `;
+    lucide.createIcons();
+}
+
+/* ==========================================================================
+   6. SISTEM PERPINDAHAN HALAMAN & OTORISASI GUEST / ROLE RESTRICTIONS
    ========================================================================== */
 function applyGuestRestrictions() {
     const role = sessionStorage.getItem('portalRole');
@@ -290,7 +307,7 @@ function switchView(view) {
 }
 
 /* ==========================================================================
-   6. LOGIKA FILE MANAGER & DATA PARSING DARI GOOGLE SHEET
+   7. LOGIKA FILE MANAGER & DATA PARSING DARI GOOGLE SHEET
    ========================================================================== */
 function parseCSV(text) {
     let lines = text.split('\n');
@@ -470,25 +487,9 @@ function toggleViewLayout() {
     lucide.createIcons(); 
     renderPortal();
 }
-/* ==========================================================================
-   FUNGSI MENAMPILKAN SAPAAN USER & ROLE STATIS DI KANAN ATAS
-   ========================================================================== */
-function renderLoggedInUser() {
-    const displayEl = document.getElementById('userInfoDisplay');
-    if (!displayEl) return;
-
-    const loggedInUser = sessionStorage.getItem('portalUser') || 'User';
-    const userRole = sessionStorage.getItem('portalRole') || 'Guest';
-
-    displayEl.innerHTML = `
-        <i data-lucide="user-check" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
-        <span>Hi, <strong class="text-slate-800 capitalize">${loggedInUser}</strong> | Role Anda: <strong class="text-amber-600 uppercase">${userRole}</strong></span>
-    `;
-    lucide.createIcons();
-}
 
 /* ==========================================================================
-   7. SISTEM AUTENTIKASI & PENDENGAR AKSI EVENT LISTENERS
+   8. SISTEM AUTENTIKASI & PENDENGAR AKSI EVENT LISTENERS
    ========================================================================== */
 function logoutPortal() {
     sessionStorage.clear();
@@ -512,7 +513,7 @@ document.getElementById('loginForm')?.addEventListener('submit', function(e) {
         document.getElementById('loginOverlay').remove();
         document.getElementById('mainBody').classList.remove('overflow-hidden');
         
-        if (typeof renderLoggedInUser === "function") renderLoggedInUser();
+        renderLoggedInUser();
         applyGuestRestrictions();
         fetchData();
         if (typeof fetchMonitoringData === "function") fetchMonitoringData();
@@ -556,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (overlay) overlay.remove(); 
         if (mainBody) mainBody.classList.remove('overflow-hidden');
         
-        if (typeof renderLoggedInUser === "function") renderLoggedInUser();
+        renderLoggedInUser();
         applyGuestRestrictions();
         fetchData();
         if (typeof fetchMonitoringData === "function") fetchMonitoringData();
