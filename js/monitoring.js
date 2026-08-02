@@ -14,7 +14,7 @@ function getWIBDateInfo() {
 }
 
 function isTaskForToday(task) {
-    const jenis = (task.Jenis_Tugas || '').toLowerCase();
+    const jenis = (task.Jenis_Tugas || '').toLowerCase().trim();
     const jadwal = (task.Detail_Jadwal || '').trim().toLowerCase();
     const { weekdayName, dayNumber } = getWIBDateInfo();
 
@@ -49,19 +49,18 @@ async function fetchMonitoringData() {
     }
 }
 
-// Render Tabel Monitoring Progress dengan Tombol Aksi Interaktif
 function renderMonitoringTable() {
     const tbody = document.getElementById('monitoringTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase();
-    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase();
+    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
+    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
 
     let tasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
-        if (userRole === 'admin') return true;
-        const target = (task.Target_User || '').toLowerCase();
+        if (userRole === 'admin' || loggedInUser === 'admin') return true;
+        const target = (task.Target_User || '').toLowerCase().trim();
         return target === loggedInUser || target === userRole;
     });
 
@@ -70,25 +69,30 @@ function renderMonitoringTable() {
     }
 
     if (tasks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">Tidak ada tugasan aktif untuk kriteria ini.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400 font-medium">Tidak ada tugasan aktif untuk kriteria hari ini.</td></tr>`;
         return;
     }
 
     tasks.forEach((task, index) => {
-        const isCompleted = (task.Status || '').toLowerCase() === 'selesai';
+        const isCompleted = (task.Status || '').toLowerCase().trim() === 'selesai';
+        
         const statusBadge = isCompleted 
             ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
             : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-amber-100">Pending</span>`;
 
-        // Tombol interaktif untuk ABM/BM merespon tugas
+        const buttonClass = isCompleted
+            ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs'
+            : 'bg-slate-900 hover:bg-amber-500 text-white shadow-xs';
+
         const actionButton = `
-            <button onclick="openResponseModal('${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-3 py-1.5 bg-slate-900 hover:bg-amber-500 text-white font-bold rounded-xl transition-all shadow-xs text-[11px]">
-                ${isCompleted ? 'Ubah Respon' : 'Beri Respon / Selesai'}
+            <button onclick="openResponseModal('${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-3.5 py-1.5 ${buttonClass} font-extrabold rounded-xl transition-all text-[11px] flex items-center justify-center gap-1.5 w-full">
+                <i data-lucide="${isCompleted ? 'check-circle-2' : 'play'}" class="w-3.5 h-3.5"></i>
+                ${isCompleted ? 'Selesai (Edit Remark)' : 'Selesaikan & Beri Remark'}
             </button>
         `;
 
         tbody.innerHTML += `
-            <tr class="hover:bg-slate-50/80 transition-colors">
+            <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-50">
                 <td class="py-3 px-4 font-bold text-slate-700">${task.Jenis_Tugas || '-'}</td>
                 <td class="py-3 px-4 text-slate-500 font-medium">${task.Detail_Jadwal || '-'}</td>
                 <td class="py-3 px-4 font-semibold text-slate-600 uppercase">${task.Target_User || '-'}</td>
@@ -96,12 +100,14 @@ function renderMonitoringTable() {
                     <p class="font-extrabold text-slate-800">${task.Judul_Tugas || '-'}</p>
                     <p class="text-[11px] text-slate-400 mt-0.5">${task.Deskripsi || '-'}</p>
                 </td>
-                <td class="py-3 px-4">${statusBadge}</td>
-                <td class="py-3 px-4 text-center">
-                    <div class="flex flex-col items-center gap-1.5">
-                        <span class="text-xs font-semibold text-slate-600 italic">"${task.Catatan_User || 'Belum ada respon'}"</span>
-                        ${actionButton}
-                    </div>
+                <td class="py-3 px-4">
+                    <p class="text-xs font-semibold text-slate-700 italic bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                        "${task.Catatan_User || 'Belum ada catatan'}"
+                    </p>
+                </td>
+                <td class="py-3 px-4 text-center">${statusBadge}</td>
+                <td class="py-3 px-4 text-center w-36">
+                    ${actionButton}
                 </td>
             </tr>
         `;
@@ -109,39 +115,36 @@ function renderMonitoringTable() {
     lucide.createIcons();
 }
 
-// Fungsi Pop-up Sederhana untuk Input Respon/Feedback oleh ABM/BM
 function openResponseModal(taskId, taskTitle) {
-    const catatan = prompt(`Berikan catatan / feedback untuk tugas:\n"${taskTitle}"\n\n(Ketik catatan pengerjaan atau kendala):`, "Selesai dikerjakan dengan baik");
+    const catatan = prompt(
+        `Berikan remark / catatan pengerjaan untuk tugas:\n"${taskTitle}"\n\n(Tugas akan ditandai Selesai dan warna tombol berubah Hijau):`,
+        "Selesai dikerjakan dengan baik"
+    );
     
     if (catatan !== null) {
-        // Cari tugas di array dan ubah status serta catatannya secara lokal
         const targetTask = allMonitoringTasks.find(t => (t.ID_Tugas || '') === taskId || t.Judul_Tugas === taskTitle);
         if (targetTask) {
             targetTask.Status = 'Selesai';
             targetTask.Catatan_User = catatan;
             
-            // Re-render tabel dan update badge inbox
             renderMonitoringTable();
             updateInboxBadge();
-            
-            alert("Respon berhasil disimpan! Status tugas berubah menjadi Selesai.");
-            // Catatan: Karena data dibaca dari Google Sheet publik via CSV, 
-            // perubahan ini bersifat real-time di sesi browser. 
-            // Untuk penyimpanan permanen lintas perangkat, baris di Google Sheet perlu diupdate via Web App / Apps Script.
         }
     }
 }
 
 function updateInboxBadge() {
     const badge = document.getElementById('inboxBadge');
-    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase();
-    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase();
+    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
+    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
 
     const pendingCount = allMonitoringTasks.filter(task => {
-        if (!task.Jenis_Tugas || (task.Status || '').toLowerCase() === 'selesai') return false;
-        if (userRole === 'admin') return true;
-        const target = (task.Target_User || '').toLowerCase();
-        return target === loggedInUser || target === userRole;
+        if (!task.Jenis_Tugas || (task.Status || '').toLowerCase().trim() === 'selesai') return false;
+        const isTarget = (userRole === 'admin' || loggedInUser === 'admin') 
+            ? true 
+            : ((task.Target_User || '').toLowerCase().trim() === loggedInUser || (task.Target_User || '').toLowerCase().trim() === userRole);
+        
+        return isTarget && isTaskForToday(task);
     }).length;
 
     if (badge) {
@@ -164,13 +167,13 @@ function toggleInboxModal(isRefresh = false) {
         return;
     }
 
-    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase();
-    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase();
+    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
+    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
     
     let activeTasks = allMonitoringTasks.filter(task => {
-        if (!task.Jenis_Tugas || (task.Status || '').toLowerCase() === 'selesai') return false;
-        if (userRole === 'admin') return true;
-        const target = (task.Target_User || '').toLowerCase();
+        if (!task.Jenis_Tugas || (task.Status || '').toLowerCase().trim() === 'selesai') return false;
+        if (userRole === 'admin' || loggedInUser === 'admin') return true;
+        const target = (task.Target_User || '').toLowerCase().trim();
         return target === loggedInUser || target === userRole;
     });
 
