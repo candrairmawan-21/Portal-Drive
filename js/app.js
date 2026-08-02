@@ -2,6 +2,8 @@
    1. KONFIGURASI API & DATA GLOBAL PORTAL
    ========================================================================== */
 const API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=119812050&single=true&output=csv';
+const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
+
 let allFiles = []; 
 let accessibleFiles = []; 
 let currentPath = []; 
@@ -9,6 +11,7 @@ let currentViewLayout = 'grid';
 let isSidebarCollapsed = false;
 let pendingUrl = ''; 
 let pendingPassword = '';
+let allMonitoringTasks = [];
 
 const userDatabase = {
     'admin': 'admin', 'guest': 'guest',
@@ -117,7 +120,6 @@ function changeAttitudeLanguage(lang) {
 function showAttitudeModal() {
     const modal = document.getElementById('attitudeModal');
     if (modal) {
-        // Set default bahasa ke English (original) saat pertama kali muncul
         const select = document.getElementById('attitudeLangSelect');
         if (select) select.value = 'en';
         changeAttitudeLanguage('en');
@@ -135,7 +137,7 @@ function closeAttitudeModal() {
 }
 
 /* ==========================================================================
-   5. SISTEM PERPINDAHAN HALAMAN & OTORISASI GUEST
+   5. SISTEM PERPINDAHAN HALAMAN & OTORISASI GUEST / ROLE RESTRICTIONS
    ========================================================================== */
 function applyGuestRestrictions() {
     const role = sessionStorage.getItem('portalRole');
@@ -151,21 +153,35 @@ function applyGuestRestrictions() {
             else el.classList.remove('hidden');
         }
     });
+
+    // Batasi akses menu Monitoring Progress (Hanya Admin, BM, ABM)
+    const menuMonitoring = document.getElementById('menu-monitoring');
+    if (menuMonitoring) {
+        if (role === 'staff' || role === 'guest') {
+            menuMonitoring.classList.add('hidden');
+        } else {
+            menuMonitoring.classList.remove('hidden');
+        }
+    }
 }
 
 function switchView(view) {
     sessionStorage.setItem('lastActiveView', view); 
 
-    const allSections = ['files', 'dashboard', 'sales', 'damage', 'itemize', 'fast-moving'];
+    const allSections = ['files', 'dashboard', 'sales', 'damage', 'monitoring', 'itemize', 'fast-moving'];
     allSections.forEach(id => {
         const el = document.getElementById('section-' + id);
         if(el) el.classList.add('hidden');
     });
               
     // Reset warna tombol navigasi standar
-    const standardButtons = ['files', 'dashboard', 'sales', 'damage'];
+    const standardButtons = ['files', 'dashboard', 'sales', 'damage', 'monitoring'];
     standardButtons.forEach(id => {
-        const btnId = id === 'damage' ? 'nav-damage' : 'menu-' + id;
+        let btnId;
+        if (id === 'damage') btnId = 'nav-damage';
+        else if (id === 'monitoring') btnId = 'menu-monitoring';
+        else btnId = 'menu-' + id;
+
         const btn = document.getElementById(btnId);
         
         if(btn) {
@@ -173,7 +189,7 @@ function switchView(view) {
             btn.classList.add('text-slate-400');
             
             const icon = btn.querySelector('i');
-            if (icon && id === 'damage') icon.classList.remove('text-amber-500');
+            if (icon && (id === 'damage' || id === 'monitoring')) icon.classList.remove('text-amber-500');
         }
     });
 
@@ -231,6 +247,19 @@ function switchView(view) {
         title.innerText = "F003 Builder";
         if(fileTools) fileTools.classList.add('invisible');
         
+    } else if (view === 'monitoring') {
+        document.getElementById('section-monitoring').classList.remove('hidden');
+        const monBtn = document.getElementById('menu-monitoring');
+        if(monBtn) {
+            monBtn.classList.remove('text-slate-400');
+            monBtn.classList.add('bg-amber-500', 'text-white');
+            const icon = monBtn.querySelector('i');
+            if(icon) icon.classList.add('text-amber-500');
+        }
+        title.innerText = "Monitoring Progress Tugasan Rutin";
+        if(fileTools) fileTools.classList.add('invisible');
+        fetchMonitoringData();
+
     } else if (view === 'itemize') {
         document.getElementById('section-itemize').classList.remove('hidden');
         const itemizeBtn = document.getElementById('nav-itemize');
@@ -297,6 +326,131 @@ async function fetchData() {
     } catch (error) {
         console.error('Error:', error);
     }
+}
+
+async function fetchMonitoringData() {
+    try {
+        const response = await fetch(MONITORING_API_URL);
+        const csvText = await response.text();
+        allMonitoringTasks = parseCSV(csvText);
+        renderMonitoringTable();
+        updateInboxBadge();
+    } catch (error) {
+        console.error('Gagal mengambil data monitoring tugas:', error);
+    }
+}
+
+function renderMonitoringTable() {
+    const tbody = document.getElementById('monitoringTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase();
+    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase();
+
+    const filteredTasks = allMonitoringTasks.filter(task => {
+        if (!task.Jenis_Tugas) return false;
+        if (userRole === 'admin') return true;
+        
+        const target = (task.Target_User || '').toLowerCase();
+        return target === loggedInUser || target === userRole;
+    });
+
+    if (filteredTasks.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">Tidak ada tugasan aktif saat ini.</td></tr>`;
+        return;
+    }
+
+    filteredTasks.forEach((task, index) => {
+        const isCompleted = (task.Status || '').toLowerCase() === 'selesai';
+        const statusBadge = isCompleted 
+            ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
+            : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-amber-100">Pending</span>`;
+
+        tbody.innerHTML += `
+            <tr class="hover:bg-slate-50/80 transition-colors">
+                <td class="py-3 px-4 font-bold text-slate-700">${task.Jenis_Tugas || '-'}</td>
+                <td class="py-3 px-4 text-slate-500 font-medium">${task.Detail_Jadwal || '-'}</td>
+                <td class="py-3 px-4 font-semibold text-slate-600 uppercase">${task.Target_User || '-'}</td>
+                <td class="py-3 px-4">
+                    <p class="font-extrabold text-slate-800">${task.Judul_Tugas || '-'}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">${task.Deskripsi || '-'}</p>
+                </td>
+                <td class="py-3 px-4">${statusBadge}</td>
+                <td class="py-3 px-4 text-center">
+                    <span class="text-xs font-semibold text-slate-500">${task.Catatan_User || 'Belum ada respon'}</span>
+                </td>
+            </tr>
+        `;
+    });
+    lucide.createIcons();
+}
+
+function updateInboxBadge() {
+    const badge = document.getElementById('inboxBadge');
+    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase();
+    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase();
+
+    const pendingCount = allMonitoringTasks.filter(task => {
+        if (!task.Jenis_Tugas || (task.Status || '').toLowerCase() === 'selesai') return false;
+        if (userRole === 'admin') return true;
+        const target = (task.Target_User || '').toLowerCase();
+        return target === loggedInUser || target === userRole;
+    }).length;
+
+    if (badge) {
+        if (pendingCount > 0) {
+            badge.innerText = pendingCount;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+}
+
+function toggleInboxModal() {
+    const modal = document.getElementById('inboxModal');
+    const container = document.getElementById('inboxListContainer');
+    if (!modal || !container) return;
+
+    if (modal.classList.contains('hidden')) {
+        const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase();
+        const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase();
+        
+        const activeTasks = allMonitoringTasks.filter(task => {
+            if (!task.Jenis_Tugas || (task.Status || '').toLowerCase() === 'selesai') return false;
+            if (userRole === 'admin') return true;
+            const target = (task.Target_User || '').toLowerCase();
+            return target === loggedInUser || target === userRole;
+        });
+
+        container.innerHTML = '';
+        if (activeTasks.length === 0) {
+            container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-medium">Kotak masuk bersih! Tidak ada tugas pending.</div>`;
+        } else {
+            activeTasks.forEach(task => {
+                container.innerHTML += `
+                    <div class="bg-amber-50/50 border border-amber-100 p-3.5 rounded-2xl flex flex-col gap-2">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[10px] font-extrabold uppercase bg-amber-500 text-white px-2 py-0.5 rounded-md">${task.Jenis_Tugas}</span>
+                            <span class="text-[10px] text-slate-400 font-bold">Jadwal: ${task.Detail_Jadwal}</span>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-black text-slate-800">${task.Judul_Tugas}</h4>
+                            <p class="text-[11px] text-slate-600 mt-0.5">${task.Deskripsi}</p>
+                        </div>
+                        <button onclick="switchView('monitoring'); toggleInboxModal();" class="self-end mt-1 px-3 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-amber-500 transition-all">
+                            Buka Menu Monitoring &rarr;
+                        </button>
+                    </div>
+                `;
+            });
+        }
+        modal.classList.remove('hidden');
+    } else {
+        modal.classList.add('hidden');
+    }
+    lucide.createIcons();
 }
 
 function filterAndRender() {
@@ -476,8 +630,8 @@ document.getElementById('loginForm')?.addEventListener('submit', function(e) {
         if (typeof renderLoggedInUser === "function") renderLoggedInUser();
         applyGuestRestrictions();
         fetchData();
+        fetchMonitoringData();
 
-        // Tampilkan pop-up handbook attitude setelah berhasil login
         showAttitudeModal();
 
         if (userRole === 'guest') switchView('damage');
@@ -502,7 +656,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const isLoggedIn = sessionStorage.getItem('portalLoggedIn');
     const role = sessionStorage.getItem('portalRole');
 
-    // Pengontrol Dropdown Menu Utama "Analyze" di Sidebar
     const analyzeDropdownBtn = document.getElementById('nav-analyze-dropdown');
     const analyzeSubMenu = document.getElementById('analyzeSubMenu');
     const analyzeChevron = document.getElementById('analyzeChevron');
@@ -521,6 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof renderLoggedInUser === "function") renderLoggedInUser();
         applyGuestRestrictions();
         fetchData();
+        fetchMonitoringData();
 
         const urlParams = new URLSearchParams(window.location.search);
         const requestedView = urlParams.get('view') || sessionStorage.getItem('lastActiveView') || (role === 'guest' ? 'damage' : 'files');
