@@ -50,7 +50,7 @@ async function fetchMonitoringData() {
 }
 
 /* ==========================================================================
-   ROUTING TAMPILAN: ADMIN (SUPERIOR VIEW) VS STAFF/ABM/BM (USER VIEW)
+   ROUTING TAMPILAN: ADMIN (SUPERIOR DASHBOARD) VS STAFF/ABM/BM (USER VIEW)
    ========================================================================== */
 function renderMonitoringTable() {
     const tbody = document.getElementById('monitoringTableBody');
@@ -59,7 +59,7 @@ function renderMonitoringTable() {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
 
-    // 1. JIKA ADMIN / SUPERIOR: Tampilkan Executive Progress Dashboard
+    // 1. JIKA ADMIN / SUPERIOR: Tampilkan Executive Progress Dashboard + Early Warning
     if (userRole === 'admin' || loggedInUser === 'admin') {
         renderSuperiorDashboard(tbody);
         return;
@@ -70,9 +70,20 @@ function renderMonitoringTable() {
 }
 
 /* ==========================================================================
-   TAMPILAN KHUSUS ADMIN / SUPERIOR: PROGRESS COMPLETION TIM
+   TAMPILAN KHUSUS ADMIN / SUPERIOR: ANALISA & PROGRESS BERBASIS PRIORITAS
    ========================================================================== */
 function renderSuperiorDashboard(tbody) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Helper untuk deteksi overdue (Pending dari hari sebelumnya)
+    const isOverdue = (task) => {
+        if (!task.Detail_Jadwal) return false;
+        const taskDate = new Date(task.Detail_Jadwal);
+        const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
+        return !isDone && taskDate < today;
+    };
+
     let tasks = [...allMonitoringTasks].filter(task => task.Jenis_Tugas && task.Jenis_Tugas.trim() !== '');
 
     if (currentTaskFilter === 'today') {
@@ -81,128 +92,156 @@ function renderSuperiorDashboard(tbody) {
 
     if (tasks.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Tidak ada data tugasan untuk periode waktu ini.</td></tr>`;
+        const existingSummary = document.getElementById('superiorSummaryContainer');
+        if (existingSummary) existingSummary.remove();
         return;
     }
 
-    // Kelompokkan data berdasarkan Target_User (BM, ABM, dll)
+    // Klasifikasi data untuk Prioritas
+    const attentionList = tasks.filter(t => isOverdue(t));
+    const todayList = tasks.filter(t => !isOverdue(t) && isTaskForToday(t));
+    const doneList = tasks.filter(t => (t.Status || '').toLowerCase().trim() === 'selesai' || (t.Status || '').toLowerCase().trim() === 'done');
+    const totalTasks = tasks.length;
+    const overallPercentage = totalTasks > 0 ? Math.round((doneList.length / totalTasks) * 100) : 0;
+
+    // Kelompokkan data berdasarkan Target_User untuk Progress Bar Tim
     const userSummary = {};
     tasks.forEach(task => {
         const target = (task.Target_User || 'Umum').toUpperCase().trim();
-        if (!userSummary[target]) {
-            userSummary[target] = {
-                total: 0,
-                completed: 0,
-                pending: 0,
-                tasksList: []
-            };
-        }
-
+        if (!userSummary[target]) userSummary[target] = { total: 0, completed: 0 };
         const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
         userSummary[target].total += 1;
-        if (isDone) {
-            userSummary[target].completed += 1;
-        } else {
-            userSummary[target].pending += 1;
-        }
-        userSummary[target].tasksList.push({ ...task, isDone });
+        if (isDone) userSummary[target].completed += 1;
     });
 
-    // 1. Buat Kartu Rangkuman Completion Rate per Target Role
-    let summaryCardsHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 w-full">`;
-    
+    // 1. Executive Summary & KPI Cards (Dilengkapi Kotak Perhatian / Overdue)
+    let kpiHTML = `
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
+        <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4 shadow-sm">
+            <p class="text-[10px] uppercase font-black text-rose-500 mb-1">Perhatian (Overdue)</p>
+            <h3 class="text-2xl font-black text-rose-700">${attentionList.length} <span class="text-xs font-semibold text-rose-500">Tugas</span></h3>
+        </div>
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+            <p class="text-[10px] uppercase font-black text-slate-400 mb-1">Tugas Hari Ini</p>
+            <h3 class="text-2xl font-black text-slate-700">${todayList.length} <span class="text-xs font-semibold text-slate-400">Tugas</span></h3>
+        </div>
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+            <p class="text-[10px] uppercase font-black text-slate-400 mb-1">Total Selesai (Done)</p>
+            <h3 class="text-2xl font-black text-emerald-600">${doneList.length} <span class="text-xs font-semibold text-emerald-500">Tugas</span></h3>
+        </div>
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+            <p class="text-[10px] uppercase font-black text-slate-400 mb-1">Completion Rate</p>
+            <h3 class="text-2xl font-black text-slate-800">${overallPercentage}%</h3>
+        </div>
+    </div>`;
+
+    // 2. Team Progress Bar Section (Analisa cepat performa tiap tim BM/ABM)
+    let teamProgressHTML = `
+    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm mb-6 w-full">
+        <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-2">
+            <i data-lucide="bar-chart-3" class="w-4 h-4 text-amber-500"></i> Progress Completion Per Tim
+        </h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">`;
+
     Object.keys(userSummary).sort().forEach(roleName => {
         const data = userSummary[roleName];
         const percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-        
         let barColor = 'bg-rose-500';
-        let badgeStyle = 'bg-rose-50 text-rose-600 border-rose-200';
-        if (percentage >= 100) {
-            barColor = 'bg-emerald-500';
-            badgeStyle = 'bg-emerald-50 text-emerald-600 border-emerald-200';
-        } else if (percentage >= 50) {
-            barColor = 'bg-amber-500';
-            badgeStyle = 'bg-amber-50 text-amber-600 border-amber-200';
-        }
+        if (percentage >= 100) barColor = 'bg-emerald-500';
+        else if (percentage >= 50) barColor = 'bg-amber-500';
 
-        summaryCardsHTML += `
-            <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-xs font-black uppercase text-slate-700 tracking-wider flex items-center gap-1.5">
-                        <i data-lucide="users" class="w-3.5 h-3.5 text-amber-500"></i> TIM ${roleName}
-                    </span>
-                    <span class="text-xs font-black px-2.5 py-0.5 rounded-lg border ${badgeStyle}">
-                        ${percentage}% Done
-                    </span>
+        teamProgressHTML += `
+            <div class="bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                <div class="flex justify-between items-center text-xs font-bold text-slate-700 mb-1.5">
+                    <span>TIM ${roleName}</span>
+                    <span class="text-slate-500">${data.completed} / ${data.total} (${percentage}%)</span>
                 </div>
-                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mb-3">
+                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                     <div class="${barColor} h-full transition-all duration-500 rounded-full" style="width: ${percentage}%"></div>
                 </div>
-                <div class="flex justify-between items-center text-[11px] font-bold text-slate-500 pt-2 border-t border-slate-100">
-                    <span class="text-emerald-600 flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Selesai: ${data.completed}</span>
-                    <span class="text-amber-600 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Pending: ${data.pending}</span>
-                    <span>Total: ${data.total}</span>
-                </div>
-            </div>
-        `;
+            </div>`;
     });
-    summaryCardsHTML += `</div>`;
+    teamProgressHTML += `</div></div>`;
 
-    // 2. Buat Tabel Detail Bawahan Siapa Saja yang Sudah Done vs Pending
-    let rowsHTML = '';
-    Object.keys(userSummary).sort().forEach((roleName, rIdx) => {
-        const group = userSummary[roleName];
+    // 3. Render Tabel Terstruktur (Attention / Overdue di atas, diikuti tugas aktif)
+    const renderRow = (task, isUrgent = false) => {
+        const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
+        const progressWidth = isDone ? '100%' : '10%';
+        const progressColor = isDone ? 'bg-emerald-500' : (isUrgent ? 'bg-rose-500' : 'bg-amber-400');
         
-        // Baris Header Grup Role
-        rowsHTML += `
-            <tr class="bg-slate-100/80 font-black text-slate-700 border-y border-slate-200">
-                <td colspan="7" class="py-3 px-4 text-xs uppercase tracking-wider">
-                    <div class="flex items-center justify-between">
-                        <span>👥 Target Role: ${roleName}</span>
-                        <span class="text-[11px] font-bold text-slate-500">Progress: ${group.completed} / ${group.total} Selesai</span>
+        const statusBadge = isDone 
+            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200/60 text-[11px]"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> DONE</span>`
+            : (isUrgent 
+                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-600 font-extrabold rounded-lg border border-rose-200/60 text-[11px]"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> OVERDUE</span>`
+                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> PENDING</span>`);
+
+        return `
+            <tr class="${isUrgent ? 'bg-rose-50/20' : 'bg-white'} hover:bg-amber-50/20 transition-colors border-b border-slate-100">
+                <td class="py-3.5 px-4 font-bold text-slate-700">${task.Jenis_Tugas || '-'}</td>
+                <td class="py-3.5 px-4 font-extrabold text-amber-600 uppercase">${task.Target_User || '-'}</td>
+                <td class="py-3.5 px-4">
+                    <p class="font-extrabold text-slate-800">${task.Judul_Tugas || '-'}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">${task.Deskripsi || '-'}</p>
+                </td>
+                <td class="py-3.5 px-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div class="${progressColor} h-full rounded-full" style="width: ${progressWidth}"></div>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-500">${isDone ? '100%' : '0%'}</span>
                     </div>
+                </td>
+                <td class="py-3.5 px-4 text-xs font-semibold ${isUrgent ? 'text-rose-600 font-bold' : 'text-slate-500'}">
+                    ${isUrgent ? '⚠️ ' + task.Detail_Jadwal : task.Detail_Jadwal}
+                </td>
+                <td class="py-3.5 px-4">
+                    <p class="text-xs font-semibold text-slate-700 italic bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                        "${task.Catatan_User || 'Belum ada catatan'}"
+                    </p>
+                </td>
+                <td class="py-3.5 px-4 text-center">${statusBadge}</td>
+            </tr>
+        `;
+    };
+
+    let rowsHTML = '';
+
+    // Bagian 1: Perhatian / Overdue (Jika ada tugas tertunda dari hari sebelumnya)
+    if (attentionList.length > 0) {
+        rowsHTML += `
+            <tr class="bg-rose-100/90 font-black text-rose-800 border-y border-rose-200">
+                <td colspan="7" class="py-2.5 px-4 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-600"></i> Perhatian Khusus: Tugas Terlambat / Belum Selesai dari Hari Sebelumnya (${attentionList.length})
                 </td>
             </tr>
         `;
+        attentionList.forEach(task => { rowsHTML += renderRow(task, true); });
+    }
 
-        // Daftar Tugas per Role
-        group.tasksList.forEach((task, index) => {
-            const statusBadge = task.isDone 
-                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200/60 text-[11px]"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> SELESAI</span>`
-                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> PENDING</span>`;
-
-            rowsHTML += `
-                <tr class="hover:bg-amber-50/20 transition-colors border-b border-slate-100 bg-white">
-                    <td class="py-3.5 px-4 font-bold text-slate-600">${task.Jenis_Tugas || '-'}</td>
-                    <td class="py-3.5 px-4 text-slate-500 font-medium">${task.Detail_Jadwal || '-'}</td>
-                    <td class="py-3.5 px-4 font-extrabold text-amber-600 uppercase">${task.Target_User || '-'}</td>
-                    <td class="py-3.5 px-4">
-                        <p class="font-extrabold text-slate-800">${task.Judul_Tugas || '-'}</p>
-                        <p class="text-[11px] text-slate-400 mt-0.5">${task.Deskripsi || '-'}</p>
-                    </td>
-                    <td class="py-3.5 px-4">
-                        <p class="text-xs font-semibold text-slate-700 italic bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                            "${task.Catatan_User || 'Belum ada catatan'}"
-                        </p>
-                    </td>
-                    <td class="py-3.5 px-4 text-center">${statusBadge}</td>
-                    <td class="py-3.5 px-4 text-center">
-                        <span class="text-[11px] font-bold text-slate-400">Mode Pengawas</span>
-                    </td>
-                </tr>
-            `;
-        });
-    });
-
-    // Sisipkan Kartu Summary + Tabel Rincian ke dalam container
-    const tableContainer = tbody.closest('table').parentElement;
+    // Bagian 2: Tugas Hari Ini / Sesuai Filter
+    rowsHTML += `
+        <tr class="bg-slate-100/80 font-black text-slate-700 border-y border-slate-200">
+            <td colspan="7" class="py-2.5 px-4 text-xs uppercase tracking-wider">
+                📅 Daftar Tugas Berjalan (${todayList.length} Tugas Pending / Aktif)
+            </td>
+        </tr>
+    `;
     
-    // Hapus summary card lama jika ada agar tidak duplikat saat filter berubah
+    let activeTodayTasks = todayList.concat(doneList);
+    if (activeTodayTasks.length === 0) {
+        rowsHTML += `<tr><td colspan="7" class="py-6 text-center text-slate-400 text-xs">Tidak ada tugas dalam kategori ini.</td></tr>`;
+    } else {
+        activeTodayTasks.forEach(task => { rowsHTML += renderRow(task, false); });
+    }
+
+    // Sisipkan Dashboard Superior (KPI + Progress Bar) ke DOM di atas tabel
+    const tableContainer = tbody.closest('table').parentElement;
     const existingSummary = document.getElementById('superiorSummaryContainer');
     if (existingSummary) existingSummary.remove();
 
     const summaryDiv = document.createElement('div');
     summaryDiv.id = 'superiorSummaryContainer';
-    summaryDiv.innerHTML = summaryCardsHTML;
+    summaryDiv.innerHTML = kpiHTML + teamProgressHTML;
     tableContainer.parentNode.insertBefore(summaryDiv, tableContainer);
 
     tbody.innerHTML = rowsHTML;
@@ -213,7 +252,6 @@ function renderSuperiorDashboard(tbody) {
    TAMPILAN KHUSUS USER (BM & ABM): TABEL TUGAS PRIBADI & REMARK
    ========================================================================== */
 function renderUserTaskTable(tbody, loggedInUser, userRole) {
-    // Bersihkan kartu summary Admin jika sebelumnya tertinggal di DOM
     const existingSummary = document.getElementById('superiorSummaryContainer');
     if (existingSummary) existingSummary.remove();
 
@@ -300,7 +338,6 @@ function updateInboxBadge() {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
 
-    // 1. KECUALIKAN ADMIN: Admin tidak memiliki notifikasi pending tugasan pribadi
     if (userRole === 'admin' || loggedInUser === 'admin') {
         if (badge) {
             badge.innerText = '0';
@@ -309,7 +346,6 @@ function updateInboxBadge() {
         return;
     }
 
-    // 2. AKUMULASI PENDING: Hitung semua tugas yang masih 'Pending' untuk role ABM/BM
     const pendingCount = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const status = (task.Status || '').toLowerCase().trim();
@@ -342,7 +378,6 @@ function toggleInboxModal(isRefresh = false) {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
 
-    // 1. JIKA ADMIN: Berikan pesan keterangan bahwa Admin adalah pengawas
     if (userRole === 'admin' || loggedInUser === 'admin') {
         container.innerHTML = `
             <div class="text-center py-6 px-4 bg-slate-50 rounded-2xl border border-slate-100">
@@ -361,7 +396,6 @@ function toggleInboxModal(isRefresh = false) {
         return;
     }
     
-    // 2. JIKA ABM/BM: Tampilkan daftar tugas pending
     let activeTasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const status = (task.Status || '').toLowerCase().trim();
