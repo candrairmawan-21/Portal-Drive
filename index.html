@@ -144,7 +144,7 @@
                     <span class="sidebar-text-element">F003 Builder</span>
                 </button>
                 
-                <!-- MENU MONITORING TUGAS (ABM & BM) -->
+                <!-- MENU MONITORING TUGAS -->
                 <button onclick="switchView('monitoring')" id="menu-monitoring" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
                     <i data-lucide="clipboard-check" class="w-4 h-4 flex-shrink-0"></i> 
                     <span class="sidebar-text-element">Monitoring Tugas</span>
@@ -259,6 +259,7 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
                     <select id="slicerBulan" class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
+                        <option value="august" selected>August 2026</option>
                         <option value="july">July 2026</option>
                     </select>
                 </div>
@@ -349,7 +350,10 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
                     <select id="slicerBulanSales" class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
-                        <option value="Jul26" selected>Juli 2026</option>
+                        <option value="Oct26">Oktober 2026</option>
+                        <option value="Sep26">September 2026</option>
+                        <option value="Aug26" selected>Agustus 2026</option>
+                        <option value="Jul26">Juli 2026</option>
                         <option value="Jun26">Juni 2026</option>
                         <option value="May26">Mei 2026</option>
                         <option value="Apr26">April 2026</option>
@@ -524,15 +528,16 @@
                         <thead>
                             <tr class="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
                                 <th class="py-3.5 px-4">Jenis</th>
-                                <th class="py-3.5 px-4">Jadwal / Remark</th>
+                                <th class="py-3.5 px-4">Jadwal (WIB)</th>
                                 <th class="py-3.5 px-4">Target User</th>
                                 <th class="py-3.5 px-4">Judul & Deskripsi</th>
-                                <th class="py-3.5 px-4">Status</th>
-                                <th class="py-3.5 px-4 text-center">Aksi / Respon</th>
+                                <th class="py-3.5 px-4">Remark / Catatan</th>
+                                <th class="py-3.5 px-4 text-center">Status</th>
+                                <th class="py-3.5 px-4 text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="monitoringTableBody" class="divide-y divide-slate-50">
-                            <tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">Memuat data monitoring...</td></tr>
+                            <tr><td colspan="7" class="py-6 text-center text-slate-400 font-medium">Memuat data monitoring...</td></tr>
                         </tbody>
                     </table>
                 </div>
