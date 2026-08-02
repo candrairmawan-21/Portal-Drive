@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (SMART ASSIGNMENT & COLLAPSE VIEW)
+   MODUL MONITORING TUGAS & INBOX (FIXED RENDERING & CLEAN BADGE COUNT)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 let allMonitoringTasks = [];
@@ -26,7 +26,7 @@ function getWIBDateInfo() {
     const now = new Date();
     const weekdayName = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long' }).format(now).toLowerCase();
     const dayNumber = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric' }).format(now);
-    const dayOfWeek = now.getDay(); // 0 = Minggu
+    const dayOfWeek = now.getDay();
     return { weekdayName, dayNumber, dayOfWeek };
 }
 
@@ -79,7 +79,7 @@ async function fetchMonitoringData() {
 }
 
 /* ==========================================================================
-   SMART ASSIGNMENT HELPER: MENENTUKAN SIAPA SAJA USER YANG TER-ASSIGN
+   SMART ASSIGNMENT HELPER
    ========================================================================== */
 function getAssignedUsersForTask(task) {
     const target = (task.Target_User || '').toLowerCase().trim();
@@ -91,23 +91,17 @@ function getAssignedUsersForTask(task) {
     } else if (target === '' || target === 'umum') {
         return SYSTEM_TEAM;
     } else {
-        // Cari user spesifik (misal "abm anas")
         const found = SYSTEM_TEAM.find(u => u.username === target || u.name.toLowerCase() === target);
         return found ? [found] : [{ username: target, role: 'CUSTOM', name: task.Target_User }];
     }
 }
 
-/* ==========================================================================
-   AUTO-RESET MINGGUAN & PENCATATAN KPI KE GOOGLE SHEETS
-   ========================================================================== */
 function checkWeeklyResetAndKPI() {
     const { dayOfWeek } = getWIBDateInfo();
     const lastResetWeek = localStorage.getItem('lastResetWeek');
     const currentWeekNum = Math.ceil(new Date().getDate() / 7);
 
     if (dayOfWeek === 0 && lastResetWeek !== String(currentWeekNum)) {
-        console.log("Reset Mingguan: Merekam history completion rate KPI ABM & BM ke Google Sheet...");
-        // Di sini rekapitulasi KPI mingguan tiap personil dicatat
         localStorage.setItem('lastResetWeek', String(currentWeekNum));
     }
 }
@@ -131,7 +125,7 @@ function renderMonitoringTable() {
 }
 
 /* ==========================================================================
-   DASHBOARD SUPERIOR DENGAN SMART DISTRIBUTION & COLLAPSE VIEW
+   DASHBOARD SUPERIOR
    ========================================================================== */
 function renderSuperiorDashboard(tbody) {
     const today = new Date();
@@ -164,6 +158,8 @@ function renderSuperiorDashboard(tbody) {
         tasks = tasks.filter(task => isTaskForToday(task));
     }
 
+    tbody.innerHTML = ''; // Bersihkan teks loading statis
+
     if (tasks.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Tidak ada data tugasan untuk periode waktu ini.</td></tr>`;
         const existingSummary = document.getElementById('superiorSummaryContainer');
@@ -177,7 +173,6 @@ function renderSuperiorDashboard(tbody) {
     const totalTasks = tasks.length;
     const overallPercentage = totalTasks > 0 ? Math.round((doneList.length / totalTasks) * 100) : 0;
 
-    // Hitung KPI per Personil (ABM & BM)
     const personalStats = {};
     SYSTEM_TEAM.forEach(user => {
         personalStats[user.username] = { name: user.name, role: user.role, total: 0, done: 0 };
@@ -196,7 +191,6 @@ function renderSuperiorDashboard(tbody) {
         });
     });
 
-    // 1. KPI Cards Superior
     let kpiHTML = `
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
         <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4 shadow-sm">
@@ -217,11 +211,10 @@ function renderSuperiorDashboard(tbody) {
         </div>
     </div>`;
 
-    // 2. Personal KPI Cards Grid (11 ABM & 3 BM)
     let teamProgressHTML = `
     <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm mb-6 w-full">
         <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-2">
-            <i data-lucide="award" class="w-4 h-4 text-amber-500"></i> KPI Completion Rate Per Personil (11 ABM & 3 BM)
+            <i data-lucide="award" class="w-4 h-4 text-amber-500"></i> KPI Completion Rate Per Personil
         </h4>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">`;
 
@@ -248,7 +241,6 @@ function renderSuperiorDashboard(tbody) {
     });
     teamProgressHTML += `</div></div>`;
 
-    // 3. Render Tabel dengan Collapse View per Tugas
     let rowsHTML = '';
 
     const renderRowWithCollapse = (task, index, isUrgent = false) => {
@@ -299,7 +291,6 @@ function renderSuperiorDashboard(tbody) {
                 </td>
                 <td class="py-3.5 px-4 text-center">${statusBadge}</td>
             </tr>
-            <!-- COLLAPSE DETAIL VIEW -->
             <tr id="collapse-row-${index}" class="hidden bg-slate-100/60 border-b border-slate-200">
                 <td colspan="7" class="p-4">
                     <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-inner">
@@ -350,13 +341,12 @@ window.toggleTaskCollapse = function(index) {
 }
 
 /* ==========================================================================
-   TAMPILAN USER BIASA & INBOX (SMART INHERITANCE)
+   TAMPILAN USER BIASA & INBOX
    ========================================================================== */
 function renderUserTaskTable(tbody, loggedInUser, userRole) {
     const existingSummary = document.getElementById('superiorSummaryContainer');
     if (existingSummary) existingSummary.remove();
 
-    // User biasa dapat melihat tugas spesifik mereka ATAU tugas umum role mereka (ABM/BM)
     let tasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const assigned = getAssignedUsersForTask(task);
@@ -366,6 +356,8 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
     if (currentTaskFilter === 'today') {
         tasks = tasks.filter(task => isTaskForToday(task));
     }
+
+    tbody.innerHTML = ''; // Bersihkan teks loading statis
 
     if (tasks.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Tidak ada tugasan aktif untuk Anda.</td></tr>`;
@@ -419,13 +411,14 @@ function updateInboxBadge() {
         return;
     }
 
+    // Hitung hanya tugas pending yang benar-benar ditujukan untuk user yang sedang login
     const pendingCount = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const status = (task.Status || '').toLowerCase().trim();
         if (status === 'selesai' || status === 'done') return false;
 
         const assigned = getAssignedUsersForTask(task);
-        return assigned.some(u => u.username === loggedInUser || u.role.toLowerCase() === userRole);
+        return assigned.some(u => u.username === loggedInUser);
     }).length;
 
     if (badge) {
