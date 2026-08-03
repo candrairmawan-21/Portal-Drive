@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (GLOBAL SERVER-SIDE RESET & SYNC)
+   MODUL MONITORING TUGAS & INBOX (CLEAN UI, FUNCTIONAL REFRESH & ENHANCED KPI)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 const LOG_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRbZXekvj6nyo6N6zuniiKEpmWXiXN-i3oWLN3oJth83nN28ENCibYOFy_cFgx1_GvULPrBHUJVDrcO/pub?gid=2043519577&single=true&output=csv';
@@ -46,7 +46,6 @@ function getFormattedTimestamp() {
     return `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`;
 }
 
-// Logika Key Minggu Berjalan untuk Reset Otomatis Mingguan
 function getCurrentWeekKey() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -66,7 +65,6 @@ function checkAndResetWeeklyStatus() {
     }
 }
 
-// Lookup ke Log_Respon & LocalStorage dengan membandingkan Nama User & Tanggal Hari Ini (Kolom E)
 function isTaskCompletedByUser(task, userObj) {
     if (!userObj) return false;
     
@@ -76,7 +74,6 @@ function isTaskCompletedByUser(task, userObj) {
     const targetUsername = (userObj.username || '').toLowerCase().trim();
     const todayDateStr = new Date().toLocaleDateString('id-ID');
 
-    // 1. Cek cache lokal browser
     const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
     const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}`;
     
@@ -86,7 +83,6 @@ function isTaskCompletedByUser(task, userObj) {
         }
     }
 
-    // 2. Lookup ke data Log_Respon server (allTaskLogs)
     const foundInLogs = allTaskLogs.some(log => {
         const logUser = (log['Nama User'] || log.Nama_User || '').toLowerCase().trim();
         const logTugas = (log['Tugas yang Selesai'] || log.Tugas_yang_Selesai || log.TugasYangSelesai || '').toLowerCase().trim();
@@ -94,7 +90,6 @@ function isTaskCompletedByUser(task, userObj) {
         
         const matchUser = (logUser === targetName || logUser === targetUsername);
         const matchTugas = (logTugas === taskTitle);
-        
         const logDatePart = logTimestamp.split(' ')[0];
         const matchDate = (logDatePart === todayDateStr);
 
@@ -157,12 +152,20 @@ function changeTaskFilter(val) {
     renderMonitoringTable();
 }
 
-async function fetchMonitoringData() {
-    const tbody = document.getElementById('monitoringTableBody');
-    if (tbody && allMonitoringTasks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Memuat data tugasan pintar dari sheet...</td></tr>`;
+// Fungsi Refresh Data yang dapat dipanggil langsung dari tombol UI
+window.triggerManualRefresh = async function() {
+    const btn = document.getElementById('refreshDataBtn');
+    if (btn) {
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Memperbarui...`;
     }
+    await fetchMonitoringData();
+    if (btn) {
+        btn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh Data`;
+        lucide.createIcons();
+    }
+};
 
+async function fetchMonitoringData() {
     try {
         const [taskRes, logRes] = await Promise.all([
             fetch(`${MONITORING_API_URL}&t=${Date.now()}`),
@@ -180,17 +183,12 @@ async function fetchMonitoringData() {
             newLogs = parseCSV(logCsv);
         }
 
-        if (JSON.stringify(newTasks) !== JSON.stringify(allMonitoringTasks) || JSON.stringify(newLogs) !== JSON.stringify(allTaskLogs)) {
-            allMonitoringTasks = newTasks;
-            allTaskLogs = newLogs;
-            renderMonitoringTable();
-            updateInboxBadge();
-        }
+        allMonitoringTasks = newTasks;
+        allTaskLogs = newLogs;
+        renderMonitoringTable();
+        updateInboxBadge();
     } catch (error) {
         console.error('Gagal mengambil data monitoring:', error);
-        if (tbody && allMonitoringTasks.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-rose-500 font-bold">Gagal memuat data: ${error.message}</td></tr>`;
-        }
     }
 }
 
@@ -203,6 +201,7 @@ function initRealtimeMonitoring() {
 
 document.addEventListener('DOMContentLoaded', () => {
     initRealtimeMonitoring();
+    fetchMonitoringData();
 });
 
 function getAssignedUsersForTask(task) {
@@ -229,7 +228,6 @@ function renderMonitoringTable() {
     renderUserTaskTable(tbody, loggedInUser, userRole);
 }
 
-// Fungsi Reset Global oleh Admin untuk Membersihkan Log Server & Mengaktifkan Kembali Semua Tombol User
 window.resetAllTasksCache = async function() {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
@@ -239,12 +237,10 @@ window.resetAllTasksCache = async function() {
         return;
     }
 
-    if (confirm('Apakah Anda yakin ingin mereset status pengerjaan tugas? Log respon di server akan dikosongkan dan tombol pengerjaan akan aktif kembali untuk semua user.')) {
-        // 1. Bersihkan cache lokal admin
+    if (confirm('Yakin ingin mereset status hari ini? Semua tombol pengerjaan tim akan diaktifkan kembali.')) {
         localStorage.removeItem('portal_completed_tasks');
         allTaskLogs = [];
 
-        // 2. Kirim perintah reset ke Apps Script agar sheet Log_Respon dikosongkan secara global
         try {
             await fetch(UPDATE_API_URL, {
                 method: 'POST',
@@ -253,13 +249,12 @@ window.resetAllTasksCache = async function() {
                 body: JSON.stringify({ action: "reset" })
             });
         } catch (err) {
-            console.error('Gagal mengirim perintah reset ke server:', err);
+            console.error('Gagal mereset server:', err);
         }
 
-        // 3. Tarik data terbaru setelah server dibersihkan
         setTimeout(() => {
             fetchMonitoringData();
-            alert('Status tugas berhasil di-reset secara global! Tombol user telah aktif kembali.');
+            alert('Berhasil! Tombol user sudah aktif kembali.');
         }, 1200);
     }
 };
@@ -274,7 +269,7 @@ function renderSuperiorDashboard(tbody) {
     tbody.innerHTML = '';
 
     if (tasks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Tidak ada data tugasan untuk periode waktu ini.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Belum ada data tugas yang tersedia untuk saat ini.</td></tr>`;
         const existingSummary = document.getElementById('superiorSummaryContainer');
         if (existingSummary) existingSummary.remove();
         return;
@@ -313,60 +308,75 @@ function renderSuperiorDashboard(tbody) {
         return assigned.length > 0 && assigned.every(u => isTaskCompletedByUser(t, u));
     }).length;
 
+    // Keterangan card dashboard lebih natural & humanis
     let kpiHTML = `
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 w-full bg-slate-900 p-4 rounded-2xl text-white shadow-sm">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 w-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-5 rounded-2xl text-white shadow-md">
         <div>
-            <h4 class="text-sm font-black uppercase tracking-wider text-amber-400">Dashboard Pengawas Tim (Admin)</h4>
-            <p class="text-[11px] text-slate-300 mt-0.5">Monitoring pengerjaan tugas seluruh ABM & BM secara real-time.</p>
+            <h4 class="text-sm font-black tracking-wide text-amber-400 flex items-center gap-2">
+                <i data-lucide="shield-alert" class="w-4 h-4"></i> Pusat Kontrol Pengawas Lapangan
+            </h4>
+            <p class="text-xs text-slate-300 mt-1">Pantau pergerakan tugas operasional tim ABM & BM secara langsung tanpa jeda.</p>
         </div>
-        <button onclick="resetAllTasksCache()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2">
-            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset Tombol User
+        <button onclick="resetAllTasksCache()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow transition-all flex items-center gap-2">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Buka Kunci Tombol Tim
         </button>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
-        <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4 shadow-sm">
-            <p class="text-[10px] uppercase font-black text-rose-500 mb-1">Perhatian (Overdue)</p>
-            <h3 class="text-2xl font-black text-rose-700">${attentionList.length} <span class="text-xs font-semibold text-rose-500">Tugas</span></h3>
+        <div class="bg-gradient-to-br from-rose-50 to-white border border-rose-200/60 rounded-2xl p-4 shadow-xs">
+            <p class="text-[11px] font-extrabold text-rose-600 mb-1 flex items-center gap-1.5"><i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Perlu Perhatian</p>
+            <h3 class="text-2xl font-black text-rose-700">${attentionList.length} <span class="text-xs font-semibold text-rose-500">Tugas Terlambat</span></h3>
+            <p class="text-[10px] text-slate-400 mt-1">Tugas melewati jadwal tenggat waktu.</p>
         </div>
-        <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-            <p class="text-[10px] uppercase font-black text-slate-400 mb-1">Tugas Hari Ini</p>
-            <h3 class="text-2xl font-black text-slate-700">${todayList.length} <span class="text-xs font-semibold text-slate-400">Tugas</span></h3>
+        <div class="bg-gradient-to-br from-white to-slate-50 border border-slate-200/80 rounded-2xl p-4 shadow-xs">
+            <p class="text-[11px] font-extrabold text-slate-500 mb-1 flex items-center gap-1.5"><i data-lucide="calendar-days" class="w-3.5 h-3.5"></i> Agenda Hari Ini</p>
+            <h3 class="text-2xl font-black text-slate-800">${todayList.length} <span class="text-xs font-semibold text-slate-400">Tugas Aktif</span></h3>
+            <p class="text-[10px] text-slate-400 mt-1">Fokus pengerjaan untuk hari ini.</p>
         </div>
-        <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-            <p class="text-[10px] uppercase font-black text-slate-400 mb-1">Total Selesai Sempurna</p>
-            <h3 class="text-2xl font-black text-emerald-600">${doneListCount} <span class="text-xs font-semibold text-emerald-500">Tugas</span></h3>
+        <div class="bg-gradient-to-br from-white to-emerald-50/40 border border-emerald-200/60 rounded-2xl p-4 shadow-xs">
+            <p class="text-[11px] font-extrabold text-emerald-600 mb-1 flex items-center gap-1.5"><i data-lucide="check-check" class="w-3.5 h-3.5"></i> Tuntas Sempurna</p>
+            <h3 class="text-2xl font-black text-emerald-700">${doneListCount} <span class="text-xs font-semibold text-emerald-500">Tugas Selesai</span></h3>
+            <p class="text-[10px] text-slate-400 mt-1">Diselesaikan penuh oleh seluruh tim.</p>
         </div>
-        <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-            <p class="text-[10px] uppercase font-black text-slate-400 mb-1">Completion Rate KPI</p>
+        <div class="bg-gradient-to-br from-white to-amber-50/40 border border-amber-200/60 rounded-2xl p-4 shadow-xs">
+            <p class="text-[11px] font-extrabold text-amber-600 mb-1 flex items-center gap-1.5"><i data-lucide="activity" class="w-3.5 h-3.5"></i> Efektivitas Kinerja</p>
             <h3 class="text-2xl font-black text-slate-800">${overallPercentage}%</h3>
+            <p class="text-[10px] text-slate-400 mt-1">Rasio penyelesaian tugas keseluruhan.</p>
         </div>
     </div>`;
 
+    // KPI Completion Rate per Personil dibuat tidak flat (dilengkapi gradasi, shadow, & border interaktif)
     let teamProgressHTML = `
     <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm mb-6 w-full">
-        <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-2">
-            <i data-lucide="award" class="w-4 h-4 text-amber-500"></i> KPI Completion Rate Per Personil
+        <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-2">
+            <i data-lucide="award" class="w-4 h-4 text-amber-500"></i> Progress & Pencapaian Kinerja Personil
         </h4>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">`;
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">`;
 
     Object.keys(personalStats).sort().forEach(key => {
         const p = personalStats[key];
         const pct = p.total > 0 ? Math.round((p.done / p.total) * 100) : 0;
-        let barColor = 'bg-rose-500';
-        if (pct >= 100) barColor = 'bg-emerald-500';
-        else if (pct >= 50) barColor = 'bg-amber-500';
+        
+        let barGradient = 'from-rose-500 to-rose-600';
+        let badgeBg = 'bg-rose-50 text-rose-700 border-rose-200';
+        if (pct >= 100) {
+            barGradient = 'from-emerald-500 to-teal-600';
+            badgeBg = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        } else if (pct >= 50) {
+            barGradient = 'from-amber-400 to-amber-500';
+            badgeBg = 'bg-amber-50 text-amber-700 border-amber-200';
+        }
 
         teamProgressHTML += `
-            <div class="bg-slate-50/80 p-3 rounded-xl border border-slate-200/60 flex flex-col justify-between">
+            <div class="bg-gradient-to-b from-white to-slate-50/60 p-3.5 rounded-2xl border border-slate-200/70 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
                 <div>
-                    <div class="flex justify-between items-center text-xs font-extrabold text-slate-800 mb-1">
+                    <div class="flex justify-between items-center text-xs font-bold text-slate-800 mb-1.5">
                         <span class="truncate">${p.name}</span>
-                        <span class="px-1.5 py-0.5 bg-white border rounded text-[10px] text-amber-600 font-black">${pct}%</span>
+                        <span class="px-2 py-0.5 ${badgeBg} border rounded-lg text-[10px] font-black shadow-2xs">${pct}%</span>
                     </div>
-                    <p class="text-[10px] text-slate-400 font-bold mb-2">Selesai: ${p.done} dari ${p.total} beban tugas</p>
+                    <p class="text-[10px] text-slate-400 font-medium mb-3">Tuntas: <strong class="text-slate-700">${p.done}</strong> dari ${p.total} tugas</p>
                 </div>
-                <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                    <div class="${barColor} h-full rounded-full transition-all" style="width: ${pct}%"></div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden p-0.5 border border-slate-200/40">
+                    <div class="bg-gradient-to-r ${barGradient} h-full rounded-full transition-all duration-500 shadow-xs" style="width: ${pct}%"></div>
                 </div>
             </div>`;
     });
@@ -384,10 +394,10 @@ function renderSuperiorDashboard(tbody) {
         const isUrgent = statusObj.code === 'OVERDUE' && !isAllDone;
 
         const statusBadge = isAllDone 
-            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200/60 text-[11px]"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> DONE (${doneCount}/${assignedUsers.length})</span>`
+            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200/60 text-[11px]"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> SELESAI (${doneCount}/${assignedUsers.length})</span>`
             : (isUrgent 
-                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-600 font-extrabold rounded-lg border border-rose-200/60 text-[11px]"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> OVERDUE</span>`
-                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ON GOING (${doneCount}/${assignedUsers.length})</span>`);
+                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-600 font-extrabold rounded-lg border border-rose-200/60 text-[11px]"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> TERLAMBAT</span>`
+                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> BERJALAN (${doneCount}/${assignedUsers.length})</span>`);
 
         let collapseHtml = assignedUsers.map(user => {
             const userDone = isTaskCompletedByUser(task, user);
@@ -495,7 +505,7 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
     tbody.innerHTML = '';
 
     if (tasks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Tidak ada tugasan aktif untuk Anda.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Tidak ada tugasan aktif untuk Anda saat ini.</td></tr>`;
         return;
     }
 
@@ -527,7 +537,7 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
 }
 
 async function openResponseModal(buttonElement, taskId, taskTitle) {
-    const catatan = prompt(`Berikan remark / catatan pengerjaan untuk tugas:\n"${taskTitle}"`, "Selesai dikerjakan");
+    const catatan = prompt(`Berikan catatan / remark pengerjaan untuk tugas:\n"${taskTitle}"`, "Selesai dikerjakan");
     if (catatan !== null) {
         if (buttonElement) {
             buttonElement.disabled = true;
