@@ -1,9 +1,12 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (REALTIME, AUTO-RESET MINGGUAN & SYNC)
+   MODUL MONITORING TUGAS & INBOX (DUAL-SHEET READER: MONITORING & LOG RESPON)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
+const LOG_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRbZXekvj6nyo6N6zuniiKEpmWXiXN-i3oWLN3oJth83nN28ENCibYOFy_cFgx1_GvULPrBHUJVDrcO/pub?gid=2043519577&single=true&output=csv';
 const UPDATE_API_URL = 'https://script.google.com/macros/s/AKfycbylA9zPOniiBscbANH-8jzjpEuEPM1yCF8hQFGUOCqnZYyr0xGwq7AqqPweeK6OSFHarw/exec';
+
 let allMonitoringTasks = [];
+let allTaskLogs = [];
 let currentTaskFilter = 'today'; 
 let monitoringInterval = null;
 
@@ -43,7 +46,7 @@ function getFormattedTimestamp() {
     return `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`;
 }
 
-// Mendapatkan key minggu berjalan untuk keperluan reset otomatis mingguan
+// Logika Key Minggu Berjalan untuk Reset Otomatis
 function getCurrentWeekKey() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -53,32 +56,44 @@ function getCurrentWeekKey() {
     return `${d.getFullYear()}-W${weekNo}`;
 }
 
-// Logika Reset Otomatis Ketika Berganti Minggu
-function checkAndResetWeeklyStatus(tasks) {
+function checkAndResetWeeklyStatus() {
     const currentWeek = getCurrentWeekKey();
     const storedWeek = localStorage.getItem('portal_task_week');
     
     if (storedWeek !== currentWeek) {
-        // Jika minggu sudah berganti, bersihkan penyimpanan lokal tugas selesai minggu lalu
         localStorage.setItem('portal_task_week', currentWeek);
         localStorage.removeItem('portal_completed_tasks');
     }
-
-    const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
-
-    // Terapkan status selesai dari state lokal minggu ini
-    tasks.forEach((task, idx) => {
-        const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}_${idx}`;
-        if (completedTasksMap[taskIdKey]) {
-            task.Status = 'Selesai';
-            task.Catatan_User = completedTasksMap[taskIdKey].catatan;
-        }
-    });
-    return tasks;
 }
 
-function getTaskTemporalStatus(task) {
-    const isDone = (task.Status || '').toLowerCase().trim() === 'selesai' || (task.Status || '').toLowerCase().trim() === 'done';
+// Mengecek apakah user tertentu sudah menyelesaikan tugas tertentu berdasarkan Log_Respon
+function isTaskCompletedByUser(task, userObj) {
+    if (!userObj) return false;
+    
+    checkAndResetWeeklyStatus();
+    const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
+    const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}`;
+    
+    if (completedTasksMap[taskIdKey]) return true;
+
+    const taskTitle = (task.Judul_Tugas || '').toLowerCase().trim();
+    const targetName = (userObj.name || '').toLowerCase().trim();
+    const targetUsername = (userObj.username || '').toLowerCase().trim();
+
+    const foundInLogs = allTaskLogs.some(log => {
+        const logUser = (log['Nama User'] || log.Nama_User || '').toLowerCase().trim();
+        const logTugas = (log['Tugas yang Selesai'] || log.Tugas_yang_Selesai || log.TugasYangSelesai || '').toLowerCase().trim();
+        
+        const matchUser = (logUser === targetName || logUser === targetUsername);
+        const matchTugas = (logTugas === taskTitle);
+        return matchUser && matchTugas;
+    });
+
+    return foundInLogs;
+}
+
+function getTaskTemporalStatusForUser(task, userObj) {
+    const isDone = isTaskCompletedByUser(task, userObj);
     if (isDone) {
         return { code: 'DONE', label: 'Selesai', colorClass: 'bg-emerald-500 text-white', isActionable: false };
     }
@@ -116,6 +131,10 @@ function getTaskTemporalStatus(task) {
     return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
 }
 
+function getTaskTemporalStatus(task) {
+    return getTaskTemporalStatusForUser(task, SYSTEM_TEAM[0]);
+}
+
 function isTaskForToday(task) {
     const status = getTaskTemporalStatus(task);
     return status.code === 'TODAY' || status.code === 'OVERDUE';
@@ -126,37 +145,45 @@ function changeTaskFilter(val) {
     renderMonitoringTable();
 }
 
+// Fetch data dari DUA SHEET SEKALIGUS (Monitoring_Tugas & Log_Respon)
 async function fetchMonitoringData() {
     const tbody = document.getElementById('monitoringTableBody');
     if (tbody && allMonitoringTasks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Memuat data tugasan pintar...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Memuat data tugasan pintar dari sheet...</td></tr>`;
     }
 
     try {
-        const response = await fetch(`${MONITORING_API_URL}&t=${Date.now()}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const [taskRes, logRes] = await Promise.all([
+            fetch(`${MONITORING_API_URL}&t=${Date.now()}`),
+            fetch(`${LOG_API_URL}&t=${Date.now()}`).catch(() => null)
+        ]);
+
+        if (!taskRes.ok) throw new Error(`HTTP error monitoring: ${taskRes.status}`);
         
-        const csvText = await response.text();
-        let parsedTasks = parseCSV(csvText);
-        
-        // Jalankan pemeriksaan reset mingguan
-        parsedTasks = checkAndResetWeeklyStatus(parsedTasks);
-        
-        // Update data jika ada perubahan untuk meminimalkan latensi tampilan admin
-        if (JSON.stringify(parsedTasks) !== JSON.stringify(allMonitoringTasks)) {
-            allMonitoringTasks = parsedTasks;
+        const taskCsv = await taskRes.text();
+        const newTasks = parseCSV(taskCsv);
+
+        let newLogs = [];
+        if (logRes && logRes.ok) {
+            const logCsv = await logRes.text();
+            newLogs = parseCSV(logCsv);
+        }
+
+        if (JSON.stringify(newTasks) !== JSON.stringify(allMonitoringTasks) || JSON.stringify(newLogs) !== JSON.stringify(allTaskLogs)) {
+            allMonitoringTasks = newTasks;
+            allTaskLogs = newLogs;
             renderMonitoringTable();
             updateInboxBadge();
         }
     } catch (error) {
-        console.error('Gagal mengambil data monitoring tugas:', error);
+        console.error('Gagal mengambil data monitoring:', error);
         if (tbody && allMonitoringTasks.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-rose-500 font-bold">Gagal memuat data: ${error.message}</td></tr>`;
         }
     }
 }
 
-// Realtime Polling dengan interval 3 detik untuk meminimalkan latensi
+// Realtime Polling 3 Detik untuk meminimalkan latensi
 function initRealtimeMonitoring() {
     if (monitoringInterval) clearInterval(monitoringInterval);
     monitoringInterval = setInterval(() => {
@@ -210,9 +237,9 @@ function renderSuperiorDashboard(tbody) {
 
     const attentionList = tasks.filter(t => getTaskTemporalStatus(t).code === 'OVERDUE');
     const todayList = tasks.filter(t => getTaskTemporalStatus(t).code === 'TODAY');
-    const doneList = tasks.filter(t => getTaskTemporalStatus(t).code === 'DONE');
-    const totalTasks = tasks.length;
-    const overallPercentage = totalTasks > 0 ? Math.round((doneList.length / totalTasks) * 100) : 0;
+    
+    let totalAssignments = 0;
+    let totalDoneAssignments = 0;
 
     const personalStats = {};
     SYSTEM_TEAM.forEach(user => {
@@ -221,16 +248,25 @@ function renderSuperiorDashboard(tbody) {
 
     tasks.forEach(task => {
         const assignedUsers = getAssignedUsersForTask(task);
-        const isDone = getTaskTemporalStatus(task).code === 'DONE';
-        
         assignedUsers.forEach(u => {
             if (!personalStats[u.username]) {
                 personalStats[u.username] = { name: u.name, role: u.role || 'ABM', total: 0, done: 0 };
             }
             personalStats[u.username].total += 1;
-            if (isDone) personalStats[u.username].done += 1;
+            totalAssignments += 1;
+
+            if (isTaskCompletedByUser(task, u)) {
+                personalStats[u.username].done += 1;
+                totalDoneAssignments += 1;
+            }
         });
     });
+
+    const overallPercentage = totalAssignments > 0 ? Math.round((totalDoneAssignments / totalAssignments) * 100) : 0;
+    const doneListCount = tasks.filter(t => {
+        const assigned = getAssignedUsersForTask(t);
+        return assigned.length > 0 && assigned.every(u => isTaskCompletedByUser(t, u));
+    }).length;
 
     let kpiHTML = `
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
@@ -243,8 +279,8 @@ function renderSuperiorDashboard(tbody) {
             <h3 class="text-2xl font-black text-slate-700">${todayList.length} <span class="text-xs font-semibold text-slate-400">Tugas</span></h3>
         </div>
         <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-            <p class="text-[10px] uppercase font-black text-slate-400 mb-1">Total Selesai (Done)</p>
-            <h3 class="text-2xl font-black text-emerald-600">${doneList.length} <span class="text-xs font-semibold text-emerald-500">Tugas</span></h3>
+            <p class="text-[10px] uppercase font-black text-slate-400 mb-1">Total Selesai Sempurna</p>
+            <h3 class="text-2xl font-black text-emerald-600">${doneListCount} <span class="text-xs font-semibold text-emerald-500">Tugas</span></h3>
         </div>
         <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
             <p class="text-[10px] uppercase font-black text-slate-400 mb-1">Completion Rate KPI</p>
@@ -285,23 +321,27 @@ function renderSuperiorDashboard(tbody) {
     let rowsHTML = '';
 
     const renderRowWithCollapse = (task, index) => {
-        const statusObj = getTaskTemporalStatus(task);
-        const isDone = statusObj.code === 'DONE';
-        const isUrgent = statusObj.code === 'OVERDUE';
         const assignedUsers = getAssignedUsersForTask(task);
+        const doneCount = assignedUsers.filter(u => isTaskCompletedByUser(task, u)).length;
+        const taskPct = assignedUsers.length > 0 ? Math.round((doneCount / assignedUsers.length) * 100) : 0;
+        const isAllDone = taskPct === 100;
+        
+        const statusObj = getTaskTemporalStatus(task);
+        const isUrgent = statusObj.code === 'OVERDUE' && !isAllDone;
 
-        const statusBadge = isDone 
-            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200/60 text-[11px]"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> DONE</span>`
+        const statusBadge = isAllDone 
+            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200/60 text-[11px]"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> DONE (${doneCount}/${assignedUsers.length})</span>`
             : (isUrgent 
                 ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-600 font-extrabold rounded-lg border border-rose-200/60 text-[11px]"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> OVERDUE</span>`
-                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ON GOING</span>`);
+                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ON GOING (${doneCount}/${assignedUsers.length})</span>`);
 
         let collapseHtml = assignedUsers.map(user => {
+            const userDone = isTaskCompletedByUser(task, user);
             return `
                 <div class="flex items-center justify-between py-1.5 px-3 bg-white rounded-lg border border-slate-200/60 text-xs shadow-xs">
                     <span class="font-bold text-slate-700">${user.name}</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-black ${isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
-                        ${isDone ? 'Selesai' : 'Pending'}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black ${userDone ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                        ${userDone ? 'Selesai' : 'Pending'}
                     </span>
                 </div>
             `;
@@ -318,9 +358,9 @@ function renderSuperiorDashboard(tbody) {
                 <td class="py-3.5 px-4">
                     <div class="flex items-center gap-2">
                         <div class="w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div class="${isDone ? 'bg-emerald-500' : (isUrgent ? 'bg-rose-500' : 'bg-amber-400')} h-full rounded-full" style="width: ${isDone ? '100%' : '10%'}"></div>
+                            <div class="${isAllDone ? 'bg-emerald-500' : (isUrgent ? 'bg-rose-500' : 'bg-amber-400')} h-full rounded-full" style="width: ${taskPct}%"></div>
                         </div>
-                        <span class="text-[10px] font-bold text-slate-500">${isDone ? '100%' : '0%'}</span>
+                        <span class="text-[10px] font-bold text-slate-500">${taskPct}%</span>
                     </div>
                 </td>
                 <td class="py-3.5 px-4 text-xs font-semibold ${isUrgent ? 'text-rose-600 font-bold' : 'text-slate-500'}">
@@ -328,7 +368,7 @@ function renderSuperiorDashboard(tbody) {
                 </td>
                 <td class="py-3.5 px-4">
                     <p class="text-xs font-semibold text-slate-700 italic bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                        "${task.Catatan_User || 'Belum ada catatan'}"
+                        "Progres Tim: ${doneCount} dari ${assignedUsers.length} selesai"
                     </p>
                 </td>
                 <td class="py-3.5 px-4 text-center">${statusBadge}</td>
@@ -355,9 +395,9 @@ function renderSuperiorDashboard(tbody) {
 
     rowsHTML += `<tr class="bg-slate-100/80 font-black text-slate-700 border-y border-slate-200"><td colspan="7" class="py-2.5 px-4 text-xs uppercase tracking-wider">📅 Daftar Tugas Berjalan & Aktif</td></tr>`;
     
-    let activeTasks = todayList.concat(doneList);
+    let activeTasks = todayList;
     if (activeTasks.length === 0) {
-        rowsHTML += `<tr><td colspan="7" class="py-6 text-center text-slate-400 text-xs">Tidak ada tugas dalam kategori ini.</td></tr>`;
+        rowsHTML += `<tr><td colspan="7" class="py-6 text-center text-slate-400 text-xs">Tidak ada tugas aktif dalam kategori ini.</td></tr>`;
     } else {
         activeTasks.forEach((task, idx) => { rowsHTML += renderRowWithCollapse(task, 'act-' + idx); });
     }
@@ -386,6 +426,8 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
     const existingSummary = document.getElementById('superiorSummaryContainer');
     if (existingSummary) existingSummary.remove();
 
+    const currentUserObj = SYSTEM_TEAM.find(u => u.username === loggedInUser) || { username: loggedInUser, name: loggedInUser, role: userRole };
+
     let tasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const assigned = getAssignedUsersForTask(task);
@@ -404,14 +446,13 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
     }
 
     tasks.forEach((task, index) => {
-        const statusObj = getTaskTemporalStatus(task);
-        const isCompleted = statusObj.code === 'DONE' || (task.Status || '').toLowerCase() === 'selesai';
+        const isCompleted = isTaskCompletedByUser(task, currentUserObj);
+        const statusObj = getTaskTemporalStatusForUser(task, currentUserObj);
         
         const statusBadge = isCompleted 
             ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
             : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-emerald-100">Pending (${statusObj.label})</span>`;
 
-        // Tombol hanya disabled jika memang sudah done/selesai
         const actionButton = isCompleted
             ? `<button disabled class="px-3.5 py-1.5 bg-slate-200 text-slate-400 text-[11px] font-bold rounded-xl cursor-not-allowed">Sudah Selesai</button>`
             : `<button onclick="openResponseModal(this, '${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-3.5 py-1.5 bg-slate-900 hover:bg-amber-500 text-white text-[11px] font-bold rounded-xl transition-all">Selesaikan</button>`;
@@ -440,47 +481,45 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
             buttonElement.className = 'px-3.5 py-1.5 bg-slate-300 text-slate-500 text-[11px] font-bold rounded-xl cursor-not-allowed';
         }
 
-        const targetTaskIndex = allMonitoringTasks.findIndex(t => (t.ID_Tugas || '') === taskId || t.Judul_Tugas === taskTitle);
-        if (targetTaskIndex !== -1) {
-            const targetTask = allMonitoringTasks[targetTaskIndex];
-            targetTask.Status = 'Selesai';
-            targetTask.Catatan_User = catatan;
+        const loggedInUser = (sessionStorage.getItem('portalUser') || 'Unknown').toLowerCase().trim();
+        const matchedUser = SYSTEM_TEAM.find(u => u.username === loggedInUser);
+        const namaUserLengkap = matchedUser ? matchedUser.name : loggedInUser;
 
-            // Simpan status selesai ke localStorage untuk minggu berjalan
-            const taskIdKey = targetTask.ID_Tugas || `${targetTask.Judul_Tugas}_${targetTask.Detail_Jadwal}_${targetTaskIndex}`;
-            let completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
-            completedTasksMap[taskIdKey] = { catatan: catatan, timestamp: new Date().toISOString() };
-            localStorage.setItem('portal_completed_tasks', JSON.stringify(completedTasksMap));
+        const taskIdKey = taskId || taskTitle;
+        let completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
+        completedTasksMap[taskIdKey] = { catatan: catatan, timestamp: new Date().toISOString() };
+        localStorage.setItem('portal_completed_tasks', JSON.stringify(completedTasksMap));
 
-            renderMonitoringTable();
-            updateInboxBadge();
+        allTaskLogs.push({
+            'Hari': getIndonesianDayName(),
+            'Nama User': namaUserLengkap,
+            'Tugas yang Selesai': taskTitle,
+            'Remark': catatan,
+            'Tanggal & Jam Respons': getFormattedTimestamp()
+        });
 
-            const loggedInUser = (sessionStorage.getItem('portalUser') || 'Unknown').toLowerCase().trim();
-            const matchedUser = SYSTEM_TEAM.find(u => u.username === loggedInUser);
-            const namaUserLengkap = matchedUser ? matchedUser.name : loggedInUser;
+        renderMonitoringTable();
+        updateInboxBadge();
 
-            const payload = {
-                hari: getIndonesianDayName(),
-                nama_user: namaUserLengkap,
-                tugas_selesai: taskTitle,
-                remark: catatan,
-                timestamp: getFormattedTimestamp()
-            };
+        const payload = {
+            hari: getIndonesianDayName(),
+            nama_user: namaUserLengkap,
+            tugas_selesai: taskTitle,
+            remark: catatan,
+            timestamp: getFormattedTimestamp()
+        };
 
-            // Push data ke Apps Script agar tercatat di sheet lain dengan minim latensi
-            try {
-                await fetch(UPDATE_API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                // Segera panggil fetch data untuk memperbarui tampilan admin tanpa menunggu interval berikutnya
-                setTimeout(fetchMonitoringData, 400);
-            } catch (err) {
-                console.error('Gagal mengirim update ke server:', err);
-            }
+        try {
+            await fetch(UPDATE_API_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            setTimeout(fetchMonitoringData, 500);
+        } catch (err) {
+            console.error('Gagal mengirim update ke server:', err);
         }
     }
 }
@@ -495,13 +534,18 @@ function updateInboxBadge() {
         return;
     }
 
+    const currentUserObj = SYSTEM_TEAM.find(u => u.username === loggedInUser) || { username: loggedInUser, name: loggedInUser, role: userRole };
+
     const pendingCount = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
-        const temporal = getTaskTemporalStatus(task);
+        const assigned = getAssignedUsersForTask(task);
+        const isAssignedToUser = assigned.some(u => u.username === loggedInUser);
+        if (!isAssignedToUser) return false;
+
+        const temporal = getTaskTemporalStatusForUser(task, currentUserObj);
         if (!temporal.isActionable) return false;
 
-        const assigned = getAssignedUsersForTask(task);
-        return assigned.some(u => u.username === loggedInUser);
+        return !isTaskCompletedByUser(task, currentUserObj);
     }).length;
 
     if (badge) {
@@ -545,13 +589,17 @@ function toggleInboxModal(isRefresh = false) {
         return;
     }
     
+    const currentUserObj = SYSTEM_TEAM.find(u => u.username === loggedInUser) || { username: loggedInUser, name: loggedInUser, role: userRole };
+
     let activeTasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
-        const temporal = getTaskTemporalStatus(task);
+        const assigned = getAssignedUsersForTask(task);
+        if (!assigned.some(u => u.username === loggedInUser)) return false;
+
+        const temporal = getTaskTemporalStatusForUser(task, currentUserObj);
         if (!temporal.isActionable) return false;
 
-        const assigned = getAssignedUsersForTask(task);
-        return assigned.some(u => u.username === loggedInUser);
+        return !isTaskCompletedByUser(task, currentUserObj);
     });
 
     container.innerHTML = '';
@@ -559,7 +607,7 @@ function toggleInboxModal(isRefresh = false) {
         container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-medium">Tidak ada tugas pending untuk kriteria ini.</div>`;
     } else {
         activeTasks.forEach(task => {
-            const temporal = getTaskTemporalStatus(task);
+            const temporal = getTaskTemporalStatusForUser(task, currentUserObj);
             const badgeWaktu = `<span class="text-[9px] ${temporal.colorClass} font-bold px-2 py-0.5 rounded-md">${temporal.label}</span>`;
 
             container.innerHTML += `
