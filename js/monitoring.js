@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (DUAL-SHEET & STRICT DATE/USER LOOKUP)
+   MODUL MONITORING TUGAS & INBOX (DUAL-SHEET, STRICT DATE LOOKUP & ADMIN RESET)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 const LOG_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRbZXekvj6nyo6N6zuniiKEpmWXiXN-i3oWLN3oJth83nN28ENCibYOFy_cFgx1_GvULPrBHUJVDrcO/pub?gid=2043519577&single=true&output=csv';
@@ -74,14 +74,13 @@ function isTaskCompletedByUser(task, userObj) {
     const taskTitle = (task.Judul_Tugas || '').toLowerCase().trim();
     const targetName = (userObj.name || '').toLowerCase().trim();
     const targetUsername = (userObj.username || '').toLowerCase().trim();
-    const todayDateStr = new Date().toLocaleDateString('id-ID'); // Format tanggal lokal, misal: 3/8/2026 atau 03/08/2026
+    const todayDateStr = new Date().toLocaleDateString('id-ID');
 
     // 1. Cek cache lokal (mencegah glitch saat CSV Google Sheets terkena cache/delay)
     const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
     const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}`;
     
     if (completedTasksMap[taskIdKey]) {
-        // Pastikan catatan tersimpan untuk hari yang sama
         if (completedTasksMap[taskIdKey].date === todayDateStr) {
             return true;
         }
@@ -96,7 +95,6 @@ function isTaskCompletedByUser(task, userObj) {
         const matchUser = (logUser === targetName || logUser === targetUsername);
         const matchTugas = (logTugas === taskTitle);
         
-        // Ambil tanggal saja dari Kolom E (bagian sebelum spasi, misal "3/8/2026 11.33.28" -> "3/8/2026")
         const logDatePart = logTimestamp.split(' ')[0];
         const matchDate = (logDatePart === todayDateStr);
 
@@ -233,6 +231,24 @@ function renderMonitoringTable() {
     renderUserTaskTable(tbody, loggedInUser, userRole);
 }
 
+// Fungsi tombol reset khusus Admin untuk mengaktifkan kembali tombol semua user
+window.resetAllTasksCache = function() {
+    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
+    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
+    
+    if (userRole !== 'admin' && loggedInUser !== 'admin') {
+        alert('Akses ditolak. Fitur ini hanya untuk Admin.');
+        return;
+    }
+
+    if (confirm('Apakah Anda yakin ingin mereset status pengerjaan tugas hari ini? Tombol pengerjaan akan diaktifkan kembali untuk semua user.')) {
+        localStorage.removeItem('portal_completed_tasks');
+        allTaskLogs = [];
+        fetchMonitoringData();
+        alert('Status tugas berhasil di-reset!');
+    }
+};
+
 function renderSuperiorDashboard(tbody) {
     let tasks = [...allMonitoringTasks].filter(task => task.Jenis_Tugas && task.Jenis_Tugas.trim() !== '');
 
@@ -282,7 +298,17 @@ function renderSuperiorDashboard(tbody) {
         return assigned.length > 0 && assigned.every(u => isTaskCompletedByUser(t, u));
     }).length;
 
+    // Header superior dilengkapi Tombol Reset khusus Admin
     let kpiHTML = `
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 w-full bg-slate-900 p-4 rounded-2xl text-white shadow-sm">
+        <div>
+            <h4 class="text-sm font-black uppercase tracking-wider text-amber-400">Dashboard Pengawas Tim (Admin)</h4>
+            <p class="text-[11px] text-slate-300 mt-0.5">Monitoring pengerjaan tugas seluruh ABM & BM secara real-time.</p>
+        </div>
+        <button onclick="resetAllTasksCache()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset Tombol User
+        </button>
+    </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
         <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4 shadow-sm">
             <p class="text-[10px] uppercase font-black text-rose-500 mb-1">Perhatian (Overdue)</p>
@@ -500,7 +526,6 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
         const namaUserLengkap = matchedUser ? matchedUser.name : loggedInUser;
         const todayDateStr = new Date().toLocaleDateString('id-ID');
 
-        // Simpan ke localStorage dengan mencatat tanggal hari ini untuk mencegah glitch saat server CSV delay
         const taskIdKey = taskId || taskTitle;
         let completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
         completedTasksMap[taskIdKey] = { 
@@ -510,7 +535,6 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
         };
         localStorage.setItem('portal_completed_tasks', JSON.stringify(completedTasksMap));
 
-        // Tambahkan juga secara lokal ke allTaskLogs agar langsung terdeteksi tanpa menunggu sinkronisasi CSV sheet
         allTaskLogs.push({
             'Hari': getIndonesianDayName(),
             'Nama User': namaUserLengkap,
