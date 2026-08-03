@@ -1,11 +1,13 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (CLEAN INBOX POPUP - NO FILTER)
+   MODUL MONITORING TUGAS & INBOX (CLEAN INBOX POPUP - NO FILTER + REALTIME)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
+const UPDATE_API_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL'; // Ganti dengan URL Web App Apps Script Anda untuk menyimpan status ke Sheets
 let allMonitoringTasks = [];
 let currentTaskFilter = 'today'; 
+let monitoringInterval = null;
 
-// Database Master Seluruh Tim (11 ABM & 3 BM)
+// Database Master Seluruh Tim (11 ABM & 3 BM)[cite: 1]
 const SYSTEM_TEAM = [
     { username: 'bm agus', role: 'BM', name: 'BM Agus' },
     { username: 'bm didik', role: 'BM', name: 'BM Didik' },
@@ -82,7 +84,7 @@ function changeTaskFilter(val) {
 
 async function fetchMonitoringData() {
     const tbody = document.getElementById('monitoringTableBody');
-    if (tbody) {
+    if (tbody && allMonitoringTasks.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Memuat data tugasan pintar...</td></tr>`;
     }
 
@@ -91,17 +93,33 @@ async function fetchMonitoringData() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const csvText = await response.text();
-        allMonitoringTasks = parseCSV(csvText);
+        const newTasks = parseCSV(csvText);
         
-        renderMonitoringTable();
-        updateInboxBadge();
+        // Update data secara otomatis jika terdeteksi perubahan dari server/sheet
+        if (JSON.stringify(newTasks) !== JSON.stringify(allMonitoringTasks)) {
+            allMonitoringTasks = newTasks;
+            renderMonitoringTable();
+            updateInboxBadge();
+        }
     } catch (error) {
         console.error('Gagal mengambil data monitoring tugas:', error);
-        if (tbody) {
+        if (tbody && allMonitoringTasks.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-rose-500 font-bold">Gagal memuat data: ${error.message}</td></tr>`;
         }
     }
 }
+
+// Auto-Polling Realtime setiap 5 detik agar page admin otomatis ter-progress tanpa delay
+function initRealtimeMonitoring() {
+    if (monitoringInterval) clearInterval(monitoringInterval);
+    monitoringInterval = setInterval(() => {
+        fetchMonitoringData();
+    }, 5000); 
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initRealtimeMonitoring();
+});
 
 function getAssignedUsersForTask(task) {
     const target = (task.Target_User || '').toLowerCase().trim();
@@ -344,7 +362,7 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
         
         const statusBadge = isCompleted 
             ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
-            : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-amber-100">Pending (${statusObj.label})</span>`;
+            : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-emerald-100">Pending (${statusObj.label})</span>`;
 
         tbody.innerHTML += `
             <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50 bg-white">
@@ -363,7 +381,7 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
     lucide.createIcons();
 }
 
-function openResponseModal(taskId, taskTitle) {
+async function openResponseModal(taskId, taskTitle) {
     const catatan = prompt(`Berikan remark / catatan pengerjaan untuk tugas:\n"${taskTitle}"`, "Selesai dikerjakan");
     if (catatan !== null) {
         const targetTask = allMonitoringTasks.find(t => (t.ID_Tugas || '') === taskId || t.Judul_Tugas === taskTitle);
@@ -372,6 +390,24 @@ function openResponseModal(taskId, taskTitle) {
             targetTask.Catatan_User = catatan;
             renderMonitoringTable();
             updateInboxBadge();
+
+            // Kirim data ke backend / Google Sheets agar tersimpan permanen
+            try {
+                await fetch(UPDATE_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id_tugas: targetTask.ID_Tugas || taskId,
+                        judul_tugas: taskTitle,
+                        status: 'Selesai',
+                        catatan_user: catatan,
+                        updated_at: new Date().toISOString()
+                    })
+                });
+            } catch (err) {
+                console.error('Gagal mengirim update ke server:', err);
+            }
         }
     }
 }
@@ -405,7 +441,6 @@ function updateInboxBadge() {
     }
 }
 
-// TOGGLE INBOX MODAL (Filter "Semua Hari" Dihilangkan Total)
 function toggleInboxModal(isRefresh = false) {
     const modal = document.getElementById('inboxModal');
     const container = document.getElementById('inboxListContainer');
@@ -437,7 +472,6 @@ function toggleInboxModal(isRefresh = false) {
         return;
     }
     
-    // Hanya ambil tugas yang actionable (On Going & Overdue)
     let activeTasks = allMonitoringTasks.filter(task => {
         if (!task.Jenis_Tugas) return false;
         const temporal = getTaskTemporalStatus(task);
