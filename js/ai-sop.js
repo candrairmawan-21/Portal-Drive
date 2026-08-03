@@ -27,10 +27,10 @@ async function sendAiPrompt() {
     const welcomeBox = document.getElementById('aiWelcomeBox');
     if (welcomeBox) welcomeBox.style.display = 'none';
 
-    // 1. Bubble Chat User (Huruf lebih besar: text-sm font-medium)
+    // 1. Bubble Chat User (Font 16px / text-base, Lebih Lebar max-w-3xl)
     container.innerHTML += `
-        <div class="flex justify-end mb-5 animate-[fadeIn_0.2s_ease-out]">
-            <div class="bg-slate-900 text-white px-5 py-3.5 rounded-2xl rounded-tr-xs max-w-2xl text-sm font-medium shadow-sm leading-relaxed">
+        <div class="flex justify-end mb-6 animate-[fadeIn_0.2s_ease-out]">
+            <div class="bg-slate-900 text-white px-6 py-4 rounded-2xl rounded-tr-xs max-w-3xl text-base font-medium shadow-sm leading-relaxed">
                 ${escapeHtml(question)}
             </div>
         </div>
@@ -39,18 +39,18 @@ async function sendAiPrompt() {
     inputField.value = '';
     container.scrollTop = container.scrollHeight;
 
-    // 2. Loading State (Ukuran huruf disesuaikan)
+    // 2. Loading State
     const loadingId = 'ai-loading-' + Date.now();
     container.innerHTML += `
-        <div id="${loadingId}" class="flex justify-start mb-5 animate-[fadeIn_0.2s_ease-out]">
+        <div id="${loadingId}" class="flex justify-start mb-6 animate-[fadeIn_0.2s_ease-out]">
             <div class="flex items-start gap-3 max-w-xl">
-                <div class="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm font-bold text-xs">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm font-bold text-sm">
                     AI
                 </div>
-                <div class="bg-white border border-slate-200/80 px-5 py-3.5 rounded-2xl rounded-tl-xs text-sm text-slate-500 shadow-sm flex items-center gap-2">
-                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"></span>
-                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                <div class="bg-white border border-slate-200/80 px-5 py-4 rounded-2xl rounded-tl-xs text-base text-slate-500 shadow-sm flex items-center gap-2.5">
+                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-bounce"></span>
+                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
                     <span class="ml-1 font-semibold text-slate-600">AI sedang membaca dokumen SOP...</span>
                 </div>
             </div>
@@ -83,24 +83,24 @@ async function sendAiPrompt() {
         if (result.answer) {
             aiAnswerText = formatAiResponse(result.answer);
         } else if (result.error) {
-            aiAnswerText = `<p class="text-rose-600 font-bold text-sm">Terjadi kesalahan sistem: ${escapeHtml(result.error)}</p>`;
+            aiAnswerText = `<p class="text-rose-600 font-bold text-base">Terjadi kesalahan sistem: ${escapeHtml(result.error)}</p>`;
         } else {
-            aiAnswerText = `<p class="text-slate-600 text-sm">Maaf, AI tidak dapat merespon saat ini.</p>`;
+            aiAnswerText = `<p class="text-slate-600 text-base">Maaf, AI tidak dapat merespon saat ini.</p>`;
         }
 
-        // 3. Bubble Chat AI (Ukuran text-sm nyaman dibaca, lebar kotak maksimal ditingkatkan max-w-3xl)
+        // 3. Bubble Chat AI (Font 16px / text-base, Sangat Luas max-w-5xl)
         container.innerHTML += `
-            <div class="flex justify-start mb-6 animate-[fadeIn_0.2s_ease-out]">
-                <div class="flex items-start gap-3.5 max-w-3xl w-full">
-                    <div class="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm font-bold text-xs">
+            <div class="flex justify-start mb-8 animate-[fadeIn_0.2s_ease-out]">
+                <div class="flex items-start gap-4 max-w-5xl w-full">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm font-bold text-sm">
                         AI
                     </div>
-                    <div class="bg-white border border-slate-200/80 px-6 py-5 rounded-2xl rounded-tl-xs text-sm text-slate-700 shadow-sm leading-relaxed space-y-3 w-full">
-                        <div class="font-extrabold text-slate-900 border-b border-slate-100 pb-2 mb-3 flex items-center justify-between">
-                            <span class="text-xs tracking-wide uppercase text-slate-500">MR.DIY Operations Assistant</span>
-                            <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full font-bold">Live Drive</span>
+                    <div class="bg-white border border-slate-200/80 px-7 py-6 rounded-2xl rounded-tl-xs text-base text-slate-700 shadow-sm leading-relaxed space-y-4 w-full">
+                        <div class="font-extrabold text-slate-900 border-b border-slate-100 pb-3 mb-3 flex items-center justify-between">
+                            <span class="text-sm tracking-wide uppercase text-slate-500">MR.DIY Operations Assistant</span>
+                            <span class="text-xs bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full font-bold">Live Drive</span>
                         </div>
-                        <div class="text-sm text-slate-700 space-y-2 font-normal">
+                        <div class="text-base text-slate-800 space-y-3 font-normal">
                             ${aiAnswerText}
                         </div>
                     </div>
@@ -116,10 +116,10 @@ async function sendAiPrompt() {
         if (loadingElement) loadingElement.remove();
 
         container.innerHTML += `
-            <div class="flex justify-start mb-5">
-                <div class="bg-rose-50 border border-rose-200 px-5 py-4 rounded-2xl text-sm text-rose-700 shadow-sm space-y-1">
+            <div class="flex justify-start mb-6">
+                <div class="bg-rose-50 border border-rose-200 px-6 py-4 rounded-2xl text-base text-rose-700 shadow-sm space-y-1">
                     <p class="font-bold">Gagal terhubung ke server Google Apps Script</p>
-                    <p class="text-xs text-rose-600">${escapeHtml(error.message)}</p>
+                    <p class="text-sm text-rose-600">${escapeHtml(error.message)}</p>
                 </div>
             </div>
         `;
