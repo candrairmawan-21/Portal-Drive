@@ -181,23 +181,25 @@ function applyGuestRestrictions() {
 function switchView(view) {
     sessionStorage.setItem('lastActiveView', view); 
 
-    const allSections = ['files', 'dashboard', 'sales', 'damage', 'monitoring', 'itemize', 'fast-moving'];
+    const allSections = ['files', 'dashboard', 'sales', 'damage', 'monitoring', 'ai-sop', 'itemize', 'fast-moving'];
     allSections.forEach(id => {
         const el = document.getElementById('section-' + id);
         if(el) el.classList.add('hidden');
     });
               
-    const standardButtons = ['files', 'dashboard', 'sales', 'damage', 'monitoring'];
+    const standardButtons = ['files', 'dashboard', 'sales', 'damage', 'monitoring', 'ai-sop'];
     standardButtons.forEach(id => {
         let btnId;
         if (id === 'damage') btnId = 'nav-damage';
         else if (id === 'monitoring') btnId = 'menu-monitoring';
+        else if (id === 'ai-sop') btnId = 'menu-ai-sop';
         else btnId = 'menu-' + id;
 
         const btn = document.getElementById(btnId);
         
         if(btn) {
-            btn.classList.remove('bg-amber-500', 'text-white', 'bg-slate-800/50');
+            // Reset semua kelas warna aktif sebelumnya
+            btn.classList.remove('bg-amber-500', 'text-white', 'bg-slate-800/50', 'bg-[#39FF14]', 'text-slate-950', 'shadow-[0_0_20px_rgba(57,255,20,0.6)]');
             btn.classList.add('text-slate-400');
             
             const icon = btn.querySelector('i');
@@ -221,8 +223,9 @@ function switchView(view) {
 
     if (view === 'dashboard') {
         document.getElementById('section-dashboard').classList.remove('hidden');
-        document.getElementById('menu-dashboard').classList.remove('text-slate-400');
-        document.getElementById('menu-dashboard').classList.add('bg-amber-500', 'text-white');
+        const btn = document.getElementById('menu-dashboard');
+        btn.classList.remove('text-slate-400');
+        btn.classList.add('bg-amber-500', 'text-white');
         title.innerText = "Performa UPT Dashboard";
         if(fileTools) fileTools.classList.add('invisible');
         if (typeof fetchDashboardData === "function") fetchDashboardData();
@@ -235,8 +238,9 @@ function switchView(view) {
         
     } else if (view === 'sales') {
         document.getElementById('section-sales').classList.remove('hidden');
-        document.getElementById('menu-sales').classList.remove('text-slate-400');
-        document.getElementById('menu-sales').classList.add('bg-amber-500', 'text-white');
+        const btn = document.getElementById('menu-sales');
+        btn.classList.remove('text-slate-400');
+        btn.classList.add('bg-amber-500', 'text-white');
         title.innerText = "Sales Target Dashboard";
         if(fileTools) fileTools.classList.add('invisible');
         if (typeof fetchSalesData === "function") fetchSalesData();
@@ -249,10 +253,11 @@ function switchView(view) {
         
     } else if (view === 'damage') {
         document.getElementById('section-damage').classList.remove('hidden');
-        document.getElementById('nav-damage').classList.remove('text-slate-400');
-        document.getElementById('nav-damage').classList.add('bg-slate-800/50', 'text-white');
+        const btn = document.getElementById('nav-damage');
+        btn.classList.remove('text-slate-400');
+        btn.classList.add('bg-slate-800/50', 'text-white');
         
-        const icon = document.getElementById('nav-damage').querySelector('i');
+        const icon = btn.querySelector('i');
         if (icon) icon.classList.add('text-amber-500');
         
         title.innerText = "F003 Builder";
@@ -270,6 +275,17 @@ function switchView(view) {
         title.innerText = "Monitoring Progress Tugasan Rutin";
         if(fileTools) fileTools.classList.add('invisible');
         if (typeof fetchMonitoringData === "function") fetchMonitoringData();
+
+    } else if (view === 'ai-sop') {
+        document.getElementById('section-ai-sop').classList.remove('hidden');
+        const aiBtn = document.getElementById('menu-ai-sop');
+        if(aiBtn) {
+            aiBtn.classList.remove('text-slate-400');
+            // KHUSUS MENU AI: Warna Hijau Monster Energy dengan Efek Glow Spesial
+            aiBtn.classList.add('bg-[#39FF14]', 'text-slate-950', 'font-black', 'shadow-[0_0_20px_rgba(57,255,20,0.6)]', 'transition-all');
+        }
+        title.innerText = "AI SOP Assistant";
+        if(fileTools) fileTools.classList.add('invisible');
 
     } else if (view === 'itemize') {
         document.getElementById('section-itemize').classList.remove('hidden');
@@ -297,8 +313,9 @@ function switchView(view) {
 
     } else {
         document.getElementById('section-files').classList.remove('hidden');
-        document.getElementById('menu-files').classList.remove('text-slate-400');
-        document.getElementById('menu-files').classList.add('bg-amber-500', 'text-white');
+        const btn = document.getElementById('menu-files');
+        btn.classList.remove('text-slate-400');
+        btn.classList.add('bg-amber-500', 'text-white');
         title.innerText = "File Manager";
         if(fileTools) fileTools.classList.remove('invisible');
     }
