@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (DUAL-SHEET, STRICT DATE LOOKUP & ADMIN RESET)
+   MODUL MONITORING TUGAS & INBOX (DUAL-SHEET, STRICT DATE LOOKUP & SMART RESET)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 const LOG_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRbZXekvj6nyo6N6zuniiKEpmWXiXN-i3oWLN3oJth83nN28ENCibYOFy_cFgx1_GvULPrBHUJVDrcO/pub?gid=2043519577&single=true&output=csv';
@@ -46,7 +46,26 @@ function getFormattedTimestamp() {
     return `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`;
 }
 
-// Logika Key Minggu Berjalan untuk Reset Otomatis
+// Helper untuk memparsing string timestamp dari log spreadsheet ke milidetik
+function parseLogTimestamp(timestampStr) {
+    if (!timestampStr) return 0;
+    try {
+        let parts = timestampStr.trim().split(' ');
+        if (parts.length < 2) return 0;
+        let dateParts = parts[0].split('/'); // [d, m, y]
+        let timeParts = parts[1].split(/[\.:]/); // [h, m, s]
+        if (dateParts.length === 3 && timeParts.length >= 3) {
+            let d = parseInt(dateParts[0]), m = parseInt(dateParts[1]) - 1, y = parseInt(dateParts[2]);
+            let h = parseInt(timeParts[0]), min = parseInt(timeParts[1]), s = parseInt(timeParts[2]);
+            return new Date(y, m, d, h, min, s).getTime();
+        }
+    } catch(e) {
+        return 0;
+    }
+    return 0;
+}
+
+// Logika Key Minggu Berjalan untuk Reset Otomatis Mingguan
 function getCurrentWeekKey() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -63,10 +82,11 @@ function checkAndResetWeeklyStatus() {
     if (storedWeek !== currentWeek) {
         localStorage.setItem('portal_task_week', currentWeek);
         localStorage.removeItem('portal_completed_tasks');
+        localStorage.removeItem('portal_reset_time');
     }
 }
 
-// Lookup ke Log_Respon & LocalStorage dengan membandingkan Nama User & Tanggal Hari Ini (Kolom E)
+// Lookup ke Log_Respon & LocalStorage dengan validasi Reset Time & Tanggal Hari Ini
 function isTaskCompletedByUser(task, userObj) {
     if (!userObj) return false;
     
@@ -76,7 +96,7 @@ function isTaskCompletedByUser(task, userObj) {
     const targetUsername = (userObj.username || '').toLowerCase().trim();
     const todayDateStr = new Date().toLocaleDateString('id-ID');
 
-    // 1. Cek cache lokal (mencegah glitch saat CSV Google Sheets terkena cache/delay)
+    // 1. Cek cache lokal
     const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
     const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}`;
     
@@ -86,7 +106,10 @@ function isTaskCompletedByUser(task, userObj) {
         }
     }
 
-    // 2. Lookup ke data Log_Respon (allTaskLogs)
+    // Ambil batas waktu reset terakhir (jika admin pernah menekan tombol reset)
+    const resetTime = parseInt(localStorage.getItem('portal_reset_time') || '0');
+
+    // 2. Lookup ke data Log_Respon (allTaskLogs) dengan mengabaikan log sebelum waktu reset
     const foundInLogs = allTaskLogs.some(log => {
         const logUser = (log['Nama User'] || log.Nama_User || '').toLowerCase().trim();
         const logTugas = (log['Tugas yang Selesai'] || log.Tugas_yang_Selesai || log.TugasYangSelesai || '').toLowerCase().trim();
@@ -98,7 +121,11 @@ function isTaskCompletedByUser(task, userObj) {
         const logDatePart = logTimestamp.split(' ')[0];
         const matchDate = (logDatePart === todayDateStr);
 
-        return matchUser && matchTugas && matchDate;
+        // Pastikan log terjadi SETELAH tombol reset terakhir ditekan oleh admin
+        const logTimeMs = parseLogTimestamp(logTimestamp);
+        const isAfterReset = logTimeMs > resetTime;
+
+        return matchUser && matchTugas && matchDate && isAfterReset;
     });
 
     return foundInLogs;
@@ -157,7 +184,6 @@ function changeTaskFilter(val) {
     renderMonitoringTable();
 }
 
-// Fetch data dari DUA SHEET SEKALIGUS (Monitoring_Tugas & Log_Respon)
 async function fetchMonitoringData() {
     const tbody = document.getElementById('monitoringTableBody');
     if (tbody && allMonitoringTasks.length === 0) {
@@ -195,7 +221,6 @@ async function fetchMonitoringData() {
     }
 }
 
-// Realtime Polling 3 Detik untuk meminimalkan latensi
 function initRealtimeMonitoring() {
     if (monitoringInterval) clearInterval(monitoringInterval);
     monitoringInterval = setInterval(() => {
@@ -231,7 +256,7 @@ function renderMonitoringTable() {
     renderUserTaskTable(tbody, loggedInUser, userRole);
 }
 
-// Fungsi tombol reset khusus Admin untuk mengaktifkan kembali tombol semua user
+// Fungsi Reset Khusus Admin untuk Mengaktifkan Kembali Tombol Semua User
 window.resetAllTasksCache = function() {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
@@ -241,11 +266,12 @@ window.resetAllTasksCache = function() {
         return;
     }
 
-    if (confirm('Apakah Anda yakin ingin mereset status pengerjaan tugas hari ini? Tombol pengerjaan akan diaktifkan kembali untuk semua user.')) {
+    if (confirm('Apakah Anda yakin ingin mereset status pengerjaan tugas? Tombol pengerjaan akan diaktifkan kembali untuk semua user.')) {
         localStorage.removeItem('portal_completed_tasks');
+        localStorage.setItem('portal_reset_time', Date.now().toString()); // Set waktu reset saat ini
         allTaskLogs = [];
         fetchMonitoringData();
-        alert('Status tugas berhasil di-reset!');
+        alert('Status tugas berhasil di-reset! Tombol user telah aktif kembali.');
     }
 };
 
@@ -298,7 +324,6 @@ function renderSuperiorDashboard(tbody) {
         return assigned.length > 0 && assigned.every(u => isTaskCompletedByUser(t, u));
     }).length;
 
-    // Header superior dilengkapi Tombol Reset khusus Admin
     let kpiHTML = `
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 w-full bg-slate-900 p-4 rounded-2xl text-white shadow-sm">
         <div>
