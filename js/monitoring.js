@@ -1,8 +1,8 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (CLEAN INBOX POPUP - NO FILTER + REALTIME)
+   MODUL MONITORING TUGAS & INBOX (REALTIME, AUTO-RESET MINGGUAN & SYNC)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
-const UPDATE_API_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL'; // Ganti dengan URL Web App Apps Script Anda untuk menyimpan status ke Sheets
+const UPDATE_API_URL = 'https://script.google.com/macros/s/AKfycbylA9zPOniiBscbANH-8jzjpEuEPM1yCF8hQFGUOCqnZYyr0xGwq7AqqPweeK6OSFHarw/exec';
 let allMonitoringTasks = [];
 let currentTaskFilter = 'today'; 
 let monitoringInterval = null;
@@ -31,6 +31,50 @@ function getIndonesianDayIndex(dayName) {
 function getCurrentIndonesianDayIndex() {
     const d = new Date().getDay();
     return d === 0 ? 7 : d;
+}
+
+function getIndonesianDayName() {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    return days[new Date().getDay()];
+}
+
+function getFormattedTimestamp() {
+    const now = new Date();
+    return `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`;
+}
+
+// Mendapatkan key minggu berjalan untuk keperluan reset otomatis mingguan
+function getCurrentWeekKey() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return `${d.getFullYear()}-W${weekNo}`;
+}
+
+// Logika Reset Otomatis Ketika Berganti Minggu
+function checkAndResetWeeklyStatus(tasks) {
+    const currentWeek = getCurrentWeekKey();
+    const storedWeek = localStorage.getItem('portal_task_week');
+    
+    if (storedWeek !== currentWeek) {
+        // Jika minggu sudah berganti, bersihkan penyimpanan lokal tugas selesai minggu lalu
+        localStorage.setItem('portal_task_week', currentWeek);
+        localStorage.removeItem('portal_completed_tasks');
+    }
+
+    const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
+
+    // Terapkan status selesai dari state lokal minggu ini
+    tasks.forEach((task, idx) => {
+        const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}_${idx}`;
+        if (completedTasksMap[taskIdKey]) {
+            task.Status = 'Selesai';
+            task.Catatan_User = completedTasksMap[taskIdKey].catatan;
+        }
+    });
+    return tasks;
 }
 
 function getTaskTemporalStatus(task) {
@@ -93,11 +137,14 @@ async function fetchMonitoringData() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const csvText = await response.text();
-        const newTasks = parseCSV(csvText);
+        let parsedTasks = parseCSV(csvText);
         
-        // Update data secara otomatis jika terdeteksi perubahan dari server/sheet
-        if (JSON.stringify(newTasks) !== JSON.stringify(allMonitoringTasks)) {
-            allMonitoringTasks = newTasks;
+        // Jalankan pemeriksaan reset mingguan
+        parsedTasks = checkAndResetWeeklyStatus(parsedTasks);
+        
+        // Update data jika ada perubahan untuk meminimalkan latensi tampilan admin
+        if (JSON.stringify(parsedTasks) !== JSON.stringify(allMonitoringTasks)) {
+            allMonitoringTasks = parsedTasks;
             renderMonitoringTable();
             updateInboxBadge();
         }
@@ -109,12 +156,12 @@ async function fetchMonitoringData() {
     }
 }
 
-// Auto-Polling Realtime setiap 5 detik agar page admin otomatis ter-progress tanpa delay
+// Realtime Polling dengan interval 3 detik untuk meminimalkan latensi
 function initRealtimeMonitoring() {
     if (monitoringInterval) clearInterval(monitoringInterval);
     monitoringInterval = setInterval(() => {
         fetchMonitoringData();
-    }, 5000); 
+    }, 3000); 
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -358,11 +405,16 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
 
     tasks.forEach((task, index) => {
         const statusObj = getTaskTemporalStatus(task);
-        const isCompleted = statusObj.code === 'DONE';
+        const isCompleted = statusObj.code === 'DONE' || (task.Status || '').toLowerCase() === 'selesai';
         
         const statusBadge = isCompleted 
             ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
             : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-emerald-100">Pending (${statusObj.label})</span>`;
+
+        // Tombol hanya disabled jika memang sudah done/selesai
+        const actionButton = isCompleted
+            ? `<button disabled class="px-3.5 py-1.5 bg-slate-200 text-slate-400 text-[11px] font-bold rounded-xl cursor-not-allowed">Sudah Selesai</button>`
+            : `<button onclick="openResponseModal(this, '${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-3.5 py-1.5 bg-slate-900 hover:bg-amber-500 text-white text-[11px] font-bold rounded-xl transition-all">Selesaikan</button>`;
 
         tbody.innerHTML += `
             <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50 bg-white">
@@ -372,39 +424,60 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
                 <td class="py-3.5 px-4"><p class="font-extrabold text-slate-800">${task.Judul_Tugas || '-'}</p></td>
                 <td class="py-3.5 px-4"><p class="text-xs italic text-slate-600">"${task.Catatan_User || '-'}"</p></td>
                 <td class="py-3.5 px-4 text-center">${statusBadge}</td>
-                <td class="py-3.5 px-4 text-center">
-                    <button onclick="openResponseModal('${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-3.5 py-1.5 bg-slate-900 hover:bg-amber-500 text-white text-[11px] font-bold rounded-xl transition-all">Selesaikan</button>
-                </td>
+                <td class="py-3.5 px-4 text-center">${actionButton}</td>
             </tr>
         `;
     });
     lucide.createIcons();
 }
 
-async function openResponseModal(taskId, taskTitle) {
+async function openResponseModal(buttonElement, taskId, taskTitle) {
     const catatan = prompt(`Berikan remark / catatan pengerjaan untuk tugas:\n"${taskTitle}"`, "Selesai dikerjakan");
     if (catatan !== null) {
-        const targetTask = allMonitoringTasks.find(t => (t.ID_Tugas || '') === taskId || t.Judul_Tugas === taskTitle);
-        if (targetTask) {
+        if (buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.innerText = 'Menyimpan...';
+            buttonElement.className = 'px-3.5 py-1.5 bg-slate-300 text-slate-500 text-[11px] font-bold rounded-xl cursor-not-allowed';
+        }
+
+        const targetTaskIndex = allMonitoringTasks.findIndex(t => (t.ID_Tugas || '') === taskId || t.Judul_Tugas === taskTitle);
+        if (targetTaskIndex !== -1) {
+            const targetTask = allMonitoringTasks[targetTaskIndex];
             targetTask.Status = 'Selesai';
             targetTask.Catatan_User = catatan;
+
+            // Simpan status selesai ke localStorage untuk minggu berjalan
+            const taskIdKey = targetTask.ID_Tugas || `${targetTask.Judul_Tugas}_${targetTask.Detail_Jadwal}_${targetTaskIndex}`;
+            let completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
+            completedTasksMap[taskIdKey] = { catatan: catatan, timestamp: new Date().toISOString() };
+            localStorage.setItem('portal_completed_tasks', JSON.stringify(completedTasksMap));
+
             renderMonitoringTable();
             updateInboxBadge();
 
-            // Kirim data ke backend / Google Sheets agar tersimpan permanen
+            const loggedInUser = (sessionStorage.getItem('portalUser') || 'Unknown').toLowerCase().trim();
+            const matchedUser = SYSTEM_TEAM.find(u => u.username === loggedInUser);
+            const namaUserLengkap = matchedUser ? matchedUser.name : loggedInUser;
+
+            const payload = {
+                hari: getIndonesianDayName(),
+                nama_user: namaUserLengkap,
+                tugas_selesai: taskTitle,
+                remark: catatan,
+                timestamp: getFormattedTimestamp()
+            };
+
+            // Push data ke Apps Script agar tercatat di sheet lain dengan minim latensi
             try {
                 await fetch(UPDATE_API_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id_tugas: targetTask.ID_Tugas || taskId,
-                        judul_tugas: taskTitle,
-                        status: 'Selesai',
-                        catatan_user: catatan,
-                        updated_at: new Date().toISOString()
-                    })
+                    body: JSON.stringify(payload)
                 });
+                
+                // Segera panggil fetch data untuk memperbarui tampilan admin tanpa menunggu interval berikutnya
+                setTimeout(fetchMonitoringData, 400);
             } catch (err) {
                 console.error('Gagal mengirim update ke server:', err);
             }
