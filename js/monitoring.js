@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (CLEAN UI, FUNCTIONAL REFRESH & ENHANCED KPI)
+   MODUL MONITORING TUGAS & INBOX (PREMIUM EXECUTIVE UI & AUTO-CLEANUP)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 const LOG_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRbZXekvj6nyo6N6zuniiKEpmWXiXN-i3oWLN3oJth83nN28ENCibYOFy_cFgx1_GvULPrBHUJVDrcO/pub?gid=2043519577&single=true&output=csv';
@@ -77,31 +77,25 @@ function isTaskCompletedByUser(task, userObj) {
     const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
     const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}`;
     
-    if (completedTasksMap[taskIdKey]) {
-        if (completedTasksMap[taskIdKey].date === todayDateStr) {
-            return true;
-        }
+    if (completedTasksMap[taskIdKey] && completedTasksMap[taskIdKey].date === todayDateStr) {
+        return true;
     }
 
-    const foundInLogs = allTaskLogs.some(log => {
+    return allTaskLogs.some(log => {
         const logUser = (log['Nama User'] || log.Nama_User || '').toLowerCase().trim();
         const logTugas = (log['Tugas yang Selesai'] || log.Tugas_yang_Selesai || log.TugasYangSelesai || '').toLowerCase().trim();
         const logTimestamp = (log['Tanggal & Jam Respons'] || log.Tanggal_Jam_Respons || log.Timestamp || '').trim();
         
         const matchUser = (logUser === targetName || logUser === targetUsername);
         const matchTugas = (logTugas === taskTitle);
-        const logDatePart = logTimestamp.split(' ')[0];
-        const matchDate = (logDatePart === todayDateStr);
+        const matchDate = (logTimestamp.split(' ')[0] === todayDateStr);
 
         return matchUser && matchTugas && matchDate;
     });
-
-    return foundInLogs;
 }
 
 function getTaskTemporalStatusForUser(task, userObj) {
-    const isDone = isTaskCompletedByUser(task, userObj);
-    if (isDone) {
+    if (isTaskCompletedByUser(task, userObj)) {
         return { code: 'DONE', label: 'Selesai', colorClass: 'bg-emerald-500 text-white', isActionable: false };
     }
 
@@ -116,9 +110,9 @@ function getTaskTemporalStatusForUser(task, userObj) {
         if (targetDayIdx === 0 || targetDayIdx === currentDayIdx) {
             return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
         } else if (targetDayIdx < currentDayIdx) {
-            return { code: 'OVERDUE', label: 'Overdue (Terlambat)', colorClass: 'bg-rose-500 text-white', isActionable: true };
+            return { code: 'OVERDUE', label: 'Terlambat', colorClass: 'bg-rose-500 text-white', isActionable: true };
         } else {
-            return { code: 'UPCOMING', label: 'Jadwal Mendatang', colorClass: 'bg-slate-500 text-white', isActionable: false };
+            return { code: 'UPCOMING', label: 'Mendatang', colorClass: 'bg-slate-500 text-white', isActionable: false };
         }
     }
 
@@ -128,9 +122,9 @@ function getTaskTemporalStatusForUser(task, userObj) {
             if (targetDateNum === currentDateNum) {
                 return { code: 'TODAY', label: 'Hari Ini (On Going)', colorClass: 'bg-emerald-500 text-white', isActionable: true };
             } else if (targetDateNum < currentDateNum) {
-                return { code: 'OVERDUE', label: 'Overdue (Terlambat)', colorClass: 'bg-rose-500 text-white', isActionable: true };
+                return { code: 'OVERDUE', label: 'Terlambat', colorClass: 'bg-rose-500 text-white', isActionable: true };
             } else {
-                return { code: 'UPCOMING', label: 'Jadwal Mendatang', colorClass: 'bg-slate-500 text-white', isActionable: false };
+                return { code: 'UPCOMING', label: 'Mendatang', colorClass: 'bg-slate-500 text-white', isActionable: false };
             }
         }
     }
@@ -147,12 +141,7 @@ function isTaskForToday(task) {
     return status.code === 'TODAY' || status.code === 'OVERDUE';
 }
 
-function changeTaskFilter(val) {
-    currentTaskFilter = val;
-    renderMonitoringTable();
-}
-
-// Fungsi Refresh Data yang dapat dipanggil langsung dari tombol UI
+// Fungsi Refresh Data Manual yang responsif
 window.triggerManualRefresh = async function() {
     const btn = document.getElementById('refreshDataBtn');
     if (btn) {
@@ -199,9 +188,22 @@ function initRealtimeMonitoring() {
     }, 3000); 
 }
 
+// Otomatis menghilangkan elemen "Tampilan Tugas" dari halaman
+function removeTampilanTugasUI() {
+    const allElements = document.querySelectorAll('*');
+    allElements.forEach(el => {
+        if (el.childNodes.length === 1 && el.textContent.includes('Tampilan Tugas')) {
+            const parentContainer = el.closest('div.flex, div.bg-white, div');
+            if (parentContainer) parentContainer.style.display = 'none';
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initRealtimeMonitoring();
     fetchMonitoringData();
+    setTimeout(removeTampilanTugasUI, 100);
+    setInterval(removeTampilanTugasUI, 1000);
 });
 
 function getAssignedUsersForTask(task) {
@@ -233,11 +235,11 @@ window.resetAllTasksCache = async function() {
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
     
     if (userRole !== 'admin' && loggedInUser !== 'admin') {
-        alert('Akses ditolak. Fitur ini hanya untuk Admin.');
+        alert('Akses ditolak. Fitur ini khusus untuk Admin.');
         return;
     }
 
-    if (confirm('Yakin ingin mereset status hari ini? Semua tombol pengerjaan tim akan diaktifkan kembali.')) {
+    if (confirm('Yakin ingin mereset seluruh status tugas hari ini? Tombol pengerjaan tim akan diaktifkan kembali.')) {
         localStorage.removeItem('portal_completed_tasks');
         allTaskLogs = [];
 
@@ -254,12 +256,13 @@ window.resetAllTasksCache = async function() {
 
         setTimeout(() => {
             fetchMonitoringData();
-            alert('Berhasil! Tombol user sudah aktif kembali.');
+            alert('Berhasil! Tombol pengerjaan tim telah aktif kembali.');
         }, 1200);
     }
 };
 
 function renderSuperiorDashboard(tbody) {
+    removeTampilanTugasUI();
     let tasks = [...allMonitoringTasks].filter(task => task.Jenis_Tugas && task.Jenis_Tugas.trim() !== '');
 
     if (currentTaskFilter === 'today') {
@@ -269,7 +272,7 @@ function renderSuperiorDashboard(tbody) {
     tbody.innerHTML = '';
 
     if (tasks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Belum ada data tugas yang tersedia untuk saat ini.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">Belum ada data tugas yang tersedia.</td></tr>`;
         const existingSummary = document.getElementById('superiorSummaryContainer');
         if (existingSummary) existingSummary.remove();
         return;
@@ -308,75 +311,104 @@ function renderSuperiorDashboard(tbody) {
         return assigned.length > 0 && assigned.every(u => isTaskCompletedByUser(t, u));
     }).length;
 
-    // Keterangan card dashboard lebih natural & humanis
+    // Desain Super Elegan: Tidak flat, shadow mendalam, gradasi dinamis
     let kpiHTML = `
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 w-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-5 rounded-2xl text-white shadow-md">
-        <div>
-            <h4 class="text-sm font-black tracking-wide text-amber-400 flex items-center gap-2">
-                <i data-lucide="shield-alert" class="w-4 h-4"></i> Pusat Kontrol Pengawas Lapangan
-            </h4>
-            <p class="text-xs text-slate-300 mt-1">Pantau pergerakan tugas operasional tim ABM & BM secara langsung tanpa jeda.</p>
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 w-full bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-slate-800">
+        <div class="space-y-1">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 text-amber-400 text-xs font-black tracking-wider uppercase border border-amber-400/20">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Mode Pengawas Aktif
+            </div>
+            <h4 class="text-base font-black tracking-wide text-white">Pusat Kendali Operasional Tim Lapangan</h4>
+            <p class="text-xs text-slate-300">Memantau tingkat penyelesaian tugas seluruh ABM & BM secara langsung dan akurat.</p>
         </div>
-        <button onclick="resetAllTasksCache()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow transition-all flex items-center gap-2">
+        <button onclick="resetAllTasksCache()" class="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-rose-900/30 transition-all flex items-center gap-2 border border-rose-500/30 active:scale-95">
             <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Buka Kunci Tombol Tim
         </button>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
-        <div class="bg-gradient-to-br from-rose-50 to-white border border-rose-200/60 rounded-2xl p-4 shadow-xs">
-            <p class="text-[11px] font-extrabold text-rose-600 mb-1 flex items-center gap-1.5"><i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Perlu Perhatian</p>
-            <h3 class="text-2xl font-black text-rose-700">${attentionList.length} <span class="text-xs font-semibold text-rose-500">Tugas Terlambat</span></h3>
-            <p class="text-[10px] text-slate-400 mt-1">Tugas melewati jadwal tenggat waktu.</p>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8 w-full">
+        <!-- Card 1 -->
+        <div class="bg-gradient-to-br from-rose-50/80 via-white to-white border border-rose-200/80 rounded-3xl p-5 shadow-lg shadow-rose-900/5 hover:shadow-xl transition-all relative overflow-hidden group">
+            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-rose-100 rounded-full opacity-40 group-hover:scale-125 transition-transform"></div>
+            <div class="flex justify-between items-start mb-3">
+                <p class="text-xs font-extrabold uppercase tracking-wider text-rose-600 flex items-center gap-2">
+                    <span class="p-2 rounded-xl bg-rose-100 text-rose-600 shadow-inner"><i data-lucide="alert-circle" class="w-4 h-4"></i></span> Tugas Terlambat
+                </p>
+            </div>
+            <h3 class="text-3xl font-black text-rose-900 tracking-tight">${attentionList.length} <span class="text-xs font-bold text-rose-500">Agenda</span></h3>
+            <p class="text-[11px] text-slate-500 mt-2 font-medium">Memerlukan tindak lanjut segera.</p>
         </div>
-        <div class="bg-gradient-to-br from-white to-slate-50 border border-slate-200/80 rounded-2xl p-4 shadow-xs">
-            <p class="text-[11px] font-extrabold text-slate-500 mb-1 flex items-center gap-1.5"><i data-lucide="calendar-days" class="w-3.5 h-3.5"></i> Agenda Hari Ini</p>
-            <h3 class="text-2xl font-black text-slate-800">${todayList.length} <span class="text-xs font-semibold text-slate-400">Tugas Aktif</span></h3>
-            <p class="text-[10px] text-slate-400 mt-1">Fokus pengerjaan untuk hari ini.</p>
+
+        <!-- Card 2 -->
+        <div class="bg-gradient-to-br from-indigo-50/50 via-white to-white border border-indigo-100 rounded-3xl p-5 shadow-lg shadow-slate-200/50 hover:shadow-xl transition-all relative overflow-hidden group">
+            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-50 rounded-full opacity-40 group-hover:scale-125 transition-transform"></div>
+            <div class="flex justify-between items-start mb-3">
+                <p class="text-xs font-extrabold uppercase tracking-wider text-indigo-600 flex items-center gap-2">
+                    <span class="p-2 rounded-xl bg-indigo-100 text-indigo-600 shadow-inner"><i data-lucide="calendar-days" class="w-4 h-4"></i></span> Agenda Hari Ini
+                </p>
+            </div>
+            <h3 class="text-3xl font-black text-slate-900 tracking-tight">${todayList.length} <span class="text-xs font-bold text-indigo-500">Tugas Aktif</span></h3>
+            <p class="text-[11px] text-slate-500 mt-2 font-medium">Target operasional hari ini.</p>
         </div>
-        <div class="bg-gradient-to-br from-white to-emerald-50/40 border border-emerald-200/60 rounded-2xl p-4 shadow-xs">
-            <p class="text-[11px] font-extrabold text-emerald-600 mb-1 flex items-center gap-1.5"><i data-lucide="check-check" class="w-3.5 h-3.5"></i> Tuntas Sempurna</p>
-            <h3 class="text-2xl font-black text-emerald-700">${doneListCount} <span class="text-xs font-semibold text-emerald-500">Tugas Selesai</span></h3>
-            <p class="text-[10px] text-slate-400 mt-1">Diselesaikan penuh oleh seluruh tim.</p>
+
+        <!-- Card 3 -->
+        <div class="bg-gradient-to-br from-emerald-50/80 via-white to-white border border-emerald-200/80 rounded-3xl p-5 shadow-lg shadow-emerald-900/5 hover:shadow-xl transition-all relative overflow-hidden group">
+            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-100 rounded-full opacity-40 group-hover:scale-125 transition-transform"></div>
+            <div class="flex justify-between items-start mb-3">
+                <p class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 flex items-center gap-2">
+                    <span class="p-2 rounded-xl bg-emerald-100 text-emerald-600 shadow-inner"><i data-lucide="check-circle-2" class="w-4 h-4"></i></span> Tuntas Sempurna
+                </p>
+            </div>
+            <h3 class="text-3xl font-black text-emerald-900 tracking-tight">${doneListCount} <span class="text-xs font-bold text-emerald-500">Tugas Selesai</span></h3>
+            <p class="text-[11px] text-slate-500 mt-2 font-medium">Diselesaikan penuh oleh tim.</p>
         </div>
-        <div class="bg-gradient-to-br from-white to-amber-50/40 border border-amber-200/60 rounded-2xl p-4 shadow-xs">
-            <p class="text-[11px] font-extrabold text-amber-600 mb-1 flex items-center gap-1.5"><i data-lucide="activity" class="w-3.5 h-3.5"></i> Efektivitas Kinerja</p>
-            <h3 class="text-2xl font-black text-slate-800">${overallPercentage}%</h3>
-            <p class="text-[10px] text-slate-400 mt-1">Rasio penyelesaian tugas keseluruhan.</p>
+
+        <!-- Card 4 -->
+        <div class="bg-gradient-to-br from-amber-50/80 via-white to-white border border-amber-200/80 rounded-3xl p-5 shadow-lg shadow-amber-900/5 hover:shadow-xl transition-all relative overflow-hidden group">
+            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-amber-100 rounded-full opacity-40 group-hover:scale-125 transition-transform"></div>
+            <div class="flex justify-between items-start mb-3">
+                <p class="text-xs font-extrabold uppercase tracking-wider text-amber-600 flex items-center gap-2">
+                    <span class="p-2 rounded-xl bg-amber-100 text-amber-600 shadow-inner"><i data-lucide="activity" class="w-4 h-4"></i></span> Efektivitas Kinerja
+                </p>
+            </div>
+            <h3 class="text-3xl font-black text-slate-900 tracking-tight">${overallPercentage}%</h3>
+            <p class="text-[11px] text-slate-500 mt-2 font-medium">Rasio penyelesaian keseluruhan.</p>
         </div>
     </div>`;
 
-    // KPI Completion Rate per Personil dibuat tidak flat (dilengkapi gradasi, shadow, & border interaktif)
+    // Perbaikan Card KPI Personil agar tidak flat (bergradasi, shadow tebal, badge elegan)
     let teamProgressHTML = `
-    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm mb-6 w-full">
-        <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-2">
-            <i data-lucide="award" class="w-4 h-4 text-amber-500"></i> Progress & Pencapaian Kinerja Personil
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xl shadow-slate-200/50 mb-8 w-full">
+        <h4 class="text-xs font-black uppercase tracking-wider text-slate-800 mb-5 flex items-center gap-2.5">
+            <span class="p-2 rounded-xl bg-amber-500 text-white shadow-md"><i data-lucide="award" class="w-4 h-4"></i></span> Progress & Pencapaian Kinerja Personil
         </h4>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">`;
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">`;
 
     Object.keys(personalStats).sort().forEach(key => {
         const p = personalStats[key];
         const pct = p.total > 0 ? Math.round((p.done / p.total) * 100) : 0;
         
-        let barGradient = 'from-rose-500 to-rose-600';
-        let badgeBg = 'bg-rose-50 text-rose-700 border-rose-200';
+        let barGradient = 'from-rose-500 to-red-600';
+        let badgeStyle = 'bg-rose-50 text-rose-700 border-rose-200';
         if (pct >= 100) {
             barGradient = 'from-emerald-500 to-teal-600';
-            badgeBg = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            badgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-200';
         } else if (pct >= 50) {
             barGradient = 'from-amber-400 to-amber-500';
-            badgeBg = 'bg-amber-50 text-amber-700 border-amber-200';
+            badgeStyle = 'bg-amber-50 text-amber-700 border-amber-200';
         }
 
         teamProgressHTML += `
-            <div class="bg-gradient-to-b from-white to-slate-50/60 p-3.5 rounded-2xl border border-slate-200/70 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+            <div class="bg-gradient-to-b from-white via-slate-50/50 to-slate-100/60 p-4 rounded-2xl border border-slate-200/80 shadow-md shadow-slate-100 hover:shadow-lg transition-all flex flex-col justify-between group">
                 <div>
-                    <div class="flex justify-between items-center text-xs font-bold text-slate-800 mb-1.5">
-                        <span class="truncate">${p.name}</span>
-                        <span class="px-2 py-0.5 ${badgeBg} border rounded-lg text-[10px] font-black shadow-2xs">${pct}%</span>
+                    <div class="flex justify-between items-center text-xs font-bold text-slate-800 mb-2">
+                        <span class="truncate font-black text-slate-900">${p.name}</span>
+                        <span class="px-2.5 py-1 ${badgeStyle} border rounded-xl text-[10px] font-black shadow-2xs">${pct}%</span>
                     </div>
-                    <p class="text-[10px] text-slate-400 font-medium mb-3">Tuntas: <strong class="text-slate-700">${p.done}</strong> dari ${p.total} tugas</p>
+                    <p class="text-[11px] text-slate-500 font-medium mb-3">Tuntas: <strong class="text-slate-800">${p.done}</strong> dari ${p.total} tugas</p>
                 </div>
-                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden p-0.5 border border-slate-200/40">
-                    <div class="bg-gradient-to-r ${barGradient} h-full rounded-full transition-all duration-500 shadow-xs" style="width: ${pct}%"></div>
+                <div class="w-full bg-slate-200/80 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200/60 shadow-inner">
+                    <div class="bg-gradient-to-r ${barGradient} h-full rounded-full transition-all duration-700 shadow-xs group-hover:brightness-110" style="width: ${pct}%"></div>
                 </div>
             </div>`;
     });
@@ -394,17 +426,17 @@ function renderSuperiorDashboard(tbody) {
         const isUrgent = statusObj.code === 'OVERDUE' && !isAllDone;
 
         const statusBadge = isAllDone 
-            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200/60 text-[11px]"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> SELESAI (${doneCount}/${assignedUsers.length})</span>`
+            ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 font-extrabold rounded-xl border border-emerald-200/60 text-xs shadow-2xs"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> SELESAI (${doneCount}/${assignedUsers.length})</span>`
             : (isUrgent 
-                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-600 font-extrabold rounded-lg border border-rose-200/60 text-[11px]"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> TERLAMBAT</span>`
-                : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 font-extrabold rounded-lg border border-amber-200/60 text-[11px]"><i data-lucide="clock" class="w-3.5 h-3.5"></i> BERJALAN (${doneCount}/${assignedUsers.length})</span>`);
+                ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 font-extrabold rounded-xl border border-rose-200/60 text-xs shadow-2xs"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> TERLAMBAT</span>`
+                : `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 font-extrabold rounded-xl border border-amber-200/60 text-xs shadow-2xs"><i data-lucide="clock" class="w-3.5 h-3.5"></i> BERJALAN (${doneCount}/${assignedUsers.length})</span>`);
 
         let collapseHtml = assignedUsers.map(user => {
             const userDone = isTaskCompletedByUser(task, user);
             return `
-                <div class="flex items-center justify-between py-1.5 px-3 bg-white rounded-lg border border-slate-200/60 text-xs shadow-xs">
-                    <span class="font-bold text-slate-700">${user.name}</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-black ${userDone ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                <div class="flex items-center justify-between py-2 px-3.5 bg-white rounded-xl border border-slate-200/80 text-xs shadow-xs">
+                    <span class="font-bold text-slate-800">${user.name}</span>
+                    <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black ${userDone ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
                         ${userDone ? 'Selesai' : 'Pending'}
                     </span>
                 </div>
@@ -412,38 +444,38 @@ function renderSuperiorDashboard(tbody) {
         }).join('');
 
         return `
-            <tr class="${isUrgent ? 'bg-rose-50/20' : 'bg-white'} hover:bg-amber-50/20 transition-colors border-b border-slate-100 cursor-pointer" onclick="toggleTaskCollapse('${index}')">
-                <td class="py-3.5 px-4 font-bold text-slate-700">${task.Jenis_Tugas || '-'}</td>
-                <td class="py-3.5 px-4 font-extrabold text-amber-600 uppercase">${task.Target_User || 'Umum'}</td>
-                <td class="py-3.5 px-4">
-                    <p class="font-extrabold text-slate-800">${task.Judul_Tugas || '-'}</p>
-                    <p class="text-[11px] text-amber-600 font-semibold mt-0.5">Klik untuk lihat rincian ${assignedUsers.length} personil ter-assign &or;</p>
+            <tr class="${isUrgent ? 'bg-rose-50/20' : 'bg-white'} hover:bg-slate-50/80 transition-all border-b border-slate-100 cursor-pointer shadow-2xs" onclick="toggleTaskCollapse('${index}')">
+                <td class="py-4 px-5 font-bold text-slate-800">${task.Jenis_Tugas || '-'}</td>
+                <td class="py-4 px-5 font-extrabold text-amber-600 uppercase tracking-wide">${task.Target_User || 'Umum'}</td>
+                <td class="py-4 px-5">
+                    <p class="font-extrabold text-slate-900">${task.Judul_Tugas || '-'}</p>
+                    <p class="text-[11px] text-amber-600 font-semibold mt-0.5 flex items-center gap-1">Klik untuk rincian ${assignedUsers.length} personil &or;</p>
                 </td>
-                <td class="py-3.5 px-4">
-                    <div class="flex items-center gap-2">
-                        <div class="w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div class="${isAllDone ? 'bg-emerald-500' : (isUrgent ? 'bg-rose-500' : 'bg-amber-400')} h-full rounded-full" style="width: ${taskPct}%"></div>
+                <td class="py-4 px-5">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-24 bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/60 shadow-inner">
+                            <div class="${isAllDone ? 'bg-emerald-500' : (isUrgent ? 'bg-rose-500' : 'bg-amber-400')} h-full rounded-full transition-all" style="width: ${taskPct}%"></div>
                         </div>
-                        <span class="text-[10px] font-bold text-slate-500">${taskPct}%</span>
+                        <span class="text-[11px] font-black text-slate-600">${taskPct}%</span>
                     </div>
                 </td>
-                <td class="py-3.5 px-4 text-xs font-semibold ${isUrgent ? 'text-rose-600 font-bold' : 'text-slate-500'}">
+                <td class="py-4 px-5 text-xs font-semibold ${isUrgent ? 'text-rose-600 font-bold' : 'text-slate-600'}">
                     ${isUrgent ? '⚠️ Tgl ' + task.Detail_Jadwal : 'Tgl ' + task.Detail_Jadwal}
                 </td>
-                <td class="py-3.5 px-4">
-                    <p class="text-xs font-semibold text-slate-700 italic bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                        "Progres Tim: ${doneCount} dari ${assignedUsers.length} selesai"
+                <td class="py-4 px-5">
+                    <p class="text-xs font-semibold text-slate-700 italic bg-slate-50/80 px-3.5 py-2 rounded-2xl border border-slate-100 shadow-2xs">
+                        "Progres: ${doneCount} dari ${assignedUsers.length} selesai"
                     </p>
                 </td>
-                <td class="py-3.5 px-4 text-center">${statusBadge}</td>
+                <td class="py-4 px-5 text-center">${statusBadge}</td>
             </tr>
-            <tr id="collapse-row-${index}" class="hidden bg-slate-100/60 border-b border-slate-200">
-                <td colspan="7" class="p-4">
-                    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-inner">
-                        <p class="text-xs font-black text-slate-800 mb-3 uppercase tracking-wide flex items-center gap-1.5">
+            <tr id="collapse-row-${index}" class="hidden bg-slate-50/80 border-b border-slate-200">
+                <td colspan="7" class="p-5">
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-lg shadow-slate-200/40">
+                        <p class="text-xs font-black text-slate-800 mb-3.5 uppercase tracking-wide flex items-center gap-2">
                             <i data-lucide="users" class="w-4 h-4 text-amber-500"></i> Rincian Status Personil Ter-Assign (${assignedUsers.length} Orang):
                         </p>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                             ${collapseHtml}
                         </div>
                     </div>
@@ -453,15 +485,15 @@ function renderSuperiorDashboard(tbody) {
     };
 
     if (attentionList.length > 0) {
-        rowsHTML += `<tr class="bg-rose-100/90 font-black text-rose-800 border-y border-rose-200"><td colspan="7" class="py-2.5 px-4 text-xs uppercase tracking-wider">⚠️ Perhatian Khusus: Tugas Terlambat / Overdue (${attentionList.length})</td></tr>`;
+        rowsHTML += `<tr class="bg-rose-100/90 font-black text-rose-900 border-y border-rose-200"><td colspan="7" class="py-3 px-5 text-xs uppercase tracking-wider">⚠️ Perhatian Khusus: Tugas Terlambat / Overdue (${attentionList.length})</td></tr>`;
         attentionList.forEach((task, idx) => { rowsHTML += renderRowWithCollapse(task, 'att-' + idx); });
     }
 
-    rowsHTML += `<tr class="bg-slate-100/80 font-black text-slate-700 border-y border-slate-200"><td colspan="7" class="py-2.5 px-4 text-xs uppercase tracking-wider">📅 Daftar Tugas Berjalan & Aktif</td></tr>`;
+    rowsHTML += `<tr class="bg-slate-100 font-black text-slate-800 border-y border-slate-200"><td colspan="7" class="py-3 px-5 text-xs uppercase tracking-wider">📅 Daftar Tugas Berjalan & Aktif</td></tr>`;
     
     let activeTasks = todayList;
     if (activeTasks.length === 0) {
-        rowsHTML += `<tr><td colspan="7" class="py-6 text-center text-slate-400 text-xs">Tidak ada tugas aktif dalam kategori ini.</td></tr>`;
+        rowsHTML += `<tr><td colspan="7" class="py-8 text-center text-slate-400 text-xs">Tidak ada tugas aktif dalam kategori ini.</td></tr>`;
     } else {
         activeTasks.forEach((task, idx) => { rowsHTML += renderRowWithCollapse(task, 'act-' + idx); });
     }
@@ -514,22 +546,22 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
         const statusObj = getTaskTemporalStatusForUser(task, currentUserObj);
         
         const statusBadge = isCompleted 
-            ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-100">Selesai</span>`
-            : `<span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold rounded-lg border border-emerald-100">Pending (${statusObj.label})</span>`;
+            ? `<span class="px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200">Selesai</span>`
+            : `<span class="px-3 py-1 bg-amber-50 text-amber-700 font-bold rounded-xl border border-amber-200">Pending (${statusObj.label})</span>`;
 
         const actionButton = isCompleted
-            ? `<button disabled class="px-3.5 py-1.5 bg-slate-200 text-slate-400 text-[11px] font-bold rounded-xl cursor-not-allowed">Sudah Selesai</button>`
-            : `<button onclick="openResponseModal(this, '${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-3.5 py-1.5 bg-slate-900 hover:bg-amber-500 text-white text-[11px] font-bold rounded-xl transition-all">Selesaikan</button>`;
+            ? `<button disabled class="px-4 py-2 bg-slate-200 text-slate-400 text-xs font-bold rounded-xl cursor-not-allowed shadow-none">Sudah Selesai</button>`
+            : `<button onclick="openResponseModal(this, '${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-4 py-2 bg-slate-900 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-slate-900/10 active:scale-95">Selesaikan</button>`;
 
         tbody.innerHTML += `
-            <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50 bg-white">
-                <td class="py-3.5 px-4 font-bold text-slate-700">${task.Jenis_Tugas || '-'}</td>
-                <td class="py-3.5 px-4 text-slate-500 font-medium">${task.Detail_Jadwal || '-'}</td>
-                <td class="py-3.5 px-4 font-semibold text-slate-600 uppercase">${task.Target_User || '-'}</td>
-                <td class="py-3.5 px-4"><p class="font-extrabold text-slate-800">${task.Judul_Tugas || '-'}</p></td>
-                <td class="py-3.5 px-4"><p class="text-xs italic text-slate-600">"${task.Catatan_User || '-'}"</p></td>
-                <td class="py-3.5 px-4 text-center">${statusBadge}</td>
-                <td class="py-3.5 px-4 text-center">${actionButton}</td>
+            <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 bg-white shadow-2xs">
+                <td class="py-4 px-5 font-bold text-slate-800">${task.Jenis_Tugas || '-'}</td>
+                <td class="py-4 px-5 text-slate-600 font-semibold">${task.Detail_Jadwal || '-'}</td>
+                <td class="py-4 px-5 font-bold text-slate-700 uppercase">${task.Target_User || '-'}</td>
+                <td class="py-4 px-5"><p class="font-extrabold text-slate-900">${task.Judul_Tugas || '-'}</p></td>
+                <td class="py-4 px-5"><p class="text-xs italic text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">"${task.Catatan_User || '-'}"</p></td>
+                <td class="py-4 px-5 text-center">${statusBadge}</td>
+                <td class="py-4 px-5 text-center">${actionButton}</td>
             </tr>
         `;
     });
@@ -542,7 +574,7 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
         if (buttonElement) {
             buttonElement.disabled = true;
             buttonElement.innerText = 'Menyimpan...';
-            buttonElement.className = 'px-3.5 py-1.5 bg-slate-300 text-slate-500 text-[11px] font-bold rounded-xl cursor-not-allowed';
+            buttonElement.className = 'px-4 py-2 bg-slate-300 text-slate-600 text-xs font-bold rounded-xl cursor-not-allowed';
         }
 
         const loggedInUser = (sessionStorage.getItem('portalUser') || 'Unknown').toLowerCase().trim();
