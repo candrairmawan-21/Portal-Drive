@@ -559,36 +559,47 @@
             </div>
         </main>
 
-        <!-- SEKSI BARU: AI SOP ASSISTANT -->
-        <main id="section-ai-sop" class="container mx-auto px-6 py-8 flex-1 hidden">
-            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm max-w-4xl mx-auto">
-                <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                    <div class="w-10 h-10 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center font-bold">
-                        <i data-lucide="bot" class="w-6 h-6"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-base sm:text-lg font-black text-slate-800">AI SOP Assistant</h2>
-                        <p class="text-xs text-slate-400 font-medium mt-0.5">Tanya jawab seputar Retail Operations Handbook & SOP perusahaan.</p>
-                    </div>
+        <!-- SEKSI: AI SOP ASSISTANT (CHATGPT STYLE) -->
+<main id="section-ai-sop" class="container mx-auto px-6 py-8 flex-1 hidden">
+    <div class="bg-slate-50/50 rounded-3xl border border-slate-200/80 shadow-sm max-w-4xl mx-auto flex flex-col h-[calc(100vh-140px)]">
+        <!-- Header Chat -->
+        <div class="p-4 sm:p-5 bg-white border-b border-slate-200/60 rounded-t-3xl flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-emerald-500 text-white rounded-xl flex items-center justify-center font-bold shadow-sm">
+                    <i data-lucide="bot" class="w-5 h-5"></i>
                 </div>
-
-                <!-- Area Chat / Tanya Jawab AI -->
-                <div id="aiChatContainer" class="space-y-4 mb-6 min-h-[300px] max-h-[500px] overflow-y-auto pr-2">
-                    <div class="bg-amber-50/60 border border-amber-100 p-4 rounded-2xl text-xs text-slate-700">
-                        <p class="font-bold text-amber-900 mb-1 flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Halo Tim Operasional!</p>
-                        Silakan ketik pertanyaan seputar SOP, pedoman toko, atau penanganan barang di bawah ini. AI akan memberikan jawaban akurat beserta referensi nomor halamannya.
-                    </div>
-                </div>
-
-                <!-- Input Pertanyaan -->
-                <div class="flex gap-2">
-                    <input type="text" id="aiPromptInput" placeholder="Contoh: Bagaimana prosedur penanganan barang rusak dari receiving toko?" class="flex-1 px-4 py-3 border border-slate-200 rounded-2xl bg-slate-50 text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-500">
-                    <button onclick="sendAiPrompt()" class="px-6 py-3 bg-slate-900 hover:bg-amber-500 text-white text-xs font-bold rounded-2xl transition-all flex items-center gap-2 shadow-md">
-                        <i data-lucide="send" class="w-4 h-4"></i> Kirim
-                    </button>
+                <div>
+                    <h2 class="text-sm font-black text-slate-800">AI SOP Assistant</h2>
+                    <p class="text-[10px] text-slate-400 font-medium">Terhubung otomatis dengan Pustaka Google Drive perusahaan</p>
                 </div>
             </div>
-        </main>
+        </div>
+
+        <!-- Area Pesan / Chat Container -->
+        <div id="aiChatContainer" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div id="aiWelcomeBox" class="bg-white border border-slate-200/80 p-5 rounded-2xl max-w-lg shadow-xs">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-[10px]">AI</span>
+                    <h4 class="text-xs font-black text-slate-800">Halo Tim Operasional!</h4>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    Silakan ketik pertanyaan seputar SOP, pedoman toko, atau penanganan barang. AI akan merespon secara instan berdasarkan dokumen handbook di Google Drive.
+                </p>
+            </div>
+        </div>
+
+        <!-- Area Input Bar Bawah (ChatGPT Style) -->
+        <div class="p-4 bg-white border-t border-slate-200/60 rounded-b-3xl">
+            <div class="relative flex items-center">
+                <input type="text" id="aiPromptInput" placeholder="Ketik pertanyaan SOP atau operasional di sini (Tekan Enter)..." class="w-full pl-4 pr-12 py-3.5 border border-slate-200 rounded-2xl bg-slate-50 text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner">
+                <button onclick="sendAiPrompt()" class="absolute right-2 p-2 bg-slate-900 hover:bg-emerald-600 text-white rounded-xl transition-all shadow-sm flex items-center justify-center">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <p class="text-[10px] text-center text-slate-400 font-medium mt-2">AI dapat membuat kesalahan. Selalu verifikasi informasi penting dengan dokumen resmi.</p>
+        </div>
+    </div>
+</main>
 
         <!-- SEKSI 6: ITEMIZE -->
         <main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
