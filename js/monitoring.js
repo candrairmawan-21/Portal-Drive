@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (PREMIUM EXECUTIVE UI & AUTO-CLEANUP)
+   MODUL MONITORING TUGAS & INBOX (PREMIUM EXECUTIVE UI & FIXED ACCORDION STATE)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 const LOG_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRbZXekvj6nyo6N6zuniiKEpmWXiXN-i3oWLN3oJth83nN28ENCibYOFy_cFgx1_GvULPrBHUJVDrcO/pub?gid=2043519577&single=true&output=csv';
@@ -9,6 +9,9 @@ let allMonitoringTasks = [];
 let allTaskLogs = [];
 let currentTaskFilter = 'today'; 
 let monitoringInterval = null;
+
+// Memori state untuk mencatat ID baris collapse yang sedang dibuka user agar tidak tertutup sendiri saat refresh
+let openTaskAccordions = new Set();
 
 // Database Master Seluruh Tim (11 ABM & 3 BM)[cite: 1]
 const SYSTEM_TEAM = [
@@ -25,6 +28,46 @@ const SYSTEM_TEAM = [
     { username: 'abm wildan', role: 'ABM', name: 'ABM Wildan' },
     { username: 'abm satria', role: 'ABM', name: 'ABM Satria' }
 ];
+
+// Parser CSV Aman (Mengatasi teks yang mengandung koma di dalam tanda kutip)
+function parseCSV(text) {
+    const lines = text.split('\n');
+    if (lines.length === 0) return [];
+    
+    const headers = parseCSVLine(lines[0]);
+    const result = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const currentLine = parseCSVLine(lines[i]);
+        const obj = {};
+        for (let j = 0; j < headers.length; j++) {
+            obj[headers[j].trim()] = currentLine[j] ? currentLine[j].trim() : '';
+        }
+        result.push(obj);
+    }
+    return result;
+}
+
+function parseCSVLine(text) {
+    const result = [];
+    let insideQuotes = false;
+    let entry = '';
+    
+    for (let i = 0; i < text.length; i++) {
+        let c = text[i];
+        if (c === '"') {
+            insideQuotes = !insideQuotes;
+        } else if (c === ',' && !insideQuotes) {
+            result.push(entry);
+            entry = '';
+        } else {
+            entry += c;
+        }
+    }
+    result.push(entry);
+    return result.map(item => item.replace(/^"|"$/g, '').trim());
+}
 
 function getIndonesianDayIndex(dayName) {
     const map = { 'senin': 1, 'selasa': 2, 'rabu': 3, 'kamis': 4, 'jumat': 5, 'sabtu': 6, 'minggu': 7 };
@@ -141,7 +184,6 @@ function isTaskForToday(task) {
     return status.code === 'TODAY' || status.code === 'OVERDUE';
 }
 
-// Fungsi Refresh Data Manual yang responsif
 window.triggerManualRefresh = async function() {
     const btn = document.getElementById('refreshDataBtn');
     if (btn) {
@@ -185,10 +227,9 @@ function initRealtimeMonitoring() {
     if (monitoringInterval) clearInterval(monitoringInterval);
     monitoringInterval = setInterval(() => {
         fetchMonitoringData();
-    }, 3000); 
+    }, 5000); // Disesuaikan jadi 5 detik agar lebih stabil
 }
 
-// Otomatis menghilangkan elemen "Tampilan Tugas" dari halaman
 function removeTampilanTugasUI() {
     const allElements = document.querySelectorAll('*');
     allElements.forEach(el => {
@@ -311,7 +352,6 @@ function renderSuperiorDashboard(tbody) {
         return assigned.length > 0 && assigned.every(u => isTaskCompletedByUser(t, u));
     }).length;
 
-    // Desain Super Elegan: Tidak flat, shadow mendalam, gradasi dinamis
     let kpiHTML = `
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 w-full bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-slate-800">
         <div class="space-y-1">
@@ -327,9 +367,7 @@ function renderSuperiorDashboard(tbody) {
     </div>
     
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8 w-full">
-        <!-- Card 1 -->
-        <div class="bg-gradient-to-br from-rose-50/80 via-white to-white border border-rose-200/80 rounded-3xl p-5 shadow-lg shadow-rose-900/5 hover:shadow-xl transition-all relative overflow-hidden group">
-            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-rose-100 rounded-full opacity-40 group-hover:scale-125 transition-transform"></div>
+        <div class="bg-gradient-to-br from-rose-50/80 via-white to-white border border-rose-200/80 rounded-3xl p-5 shadow-lg shadow-rose-900/5 relative overflow-hidden group">
             <div class="flex justify-between items-start mb-3">
                 <p class="text-xs font-extrabold uppercase tracking-wider text-rose-600 flex items-center gap-2">
                     <span class="p-2 rounded-xl bg-rose-100 text-rose-600 shadow-inner"><i data-lucide="alert-circle" class="w-4 h-4"></i></span> Tugas Terlambat
@@ -339,9 +377,7 @@ function renderSuperiorDashboard(tbody) {
             <p class="text-[11px] text-slate-500 mt-2 font-medium">Memerlukan tindak lanjut segera.</p>
         </div>
 
-        <!-- Card 2 -->
-        <div class="bg-gradient-to-br from-indigo-50/50 via-white to-white border border-indigo-100 rounded-3xl p-5 shadow-lg shadow-slate-200/50 hover:shadow-xl transition-all relative overflow-hidden group">
-            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-50 rounded-full opacity-40 group-hover:scale-125 transition-transform"></div>
+        <div class="bg-gradient-to-br from-indigo-50/50 via-white to-white border border-indigo-100 rounded-3xl p-5 shadow-lg relative overflow-hidden group">
             <div class="flex justify-between items-start mb-3">
                 <p class="text-xs font-extrabold uppercase tracking-wider text-indigo-600 flex items-center gap-2">
                     <span class="p-2 rounded-xl bg-indigo-100 text-indigo-600 shadow-inner"><i data-lucide="calendar-days" class="w-4 h-4"></i></span> Agenda Hari Ini
@@ -351,9 +387,7 @@ function renderSuperiorDashboard(tbody) {
             <p class="text-[11px] text-slate-500 mt-2 font-medium">Target operasional hari ini.</p>
         </div>
 
-        <!-- Card 3 -->
-        <div class="bg-gradient-to-br from-emerald-50/80 via-white to-white border border-emerald-200/80 rounded-3xl p-5 shadow-lg shadow-emerald-900/5 hover:shadow-xl transition-all relative overflow-hidden group">
-            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-100 rounded-full opacity-40 group-hover:scale-125 transition-transform"></div>
+        <div class="bg-gradient-to-br from-emerald-50/80 via-white to-white border border-emerald-200/80 rounded-3xl p-5 shadow-lg relative overflow-hidden group">
             <div class="flex justify-between items-start mb-3">
                 <p class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 flex items-center gap-2">
                     <span class="p-2 rounded-xl bg-emerald-100 text-emerald-600 shadow-inner"><i data-lucide="check-circle-2" class="w-4 h-4"></i></span> Tuntas Sempurna
@@ -363,9 +397,7 @@ function renderSuperiorDashboard(tbody) {
             <p class="text-[11px] text-slate-500 mt-2 font-medium">Diselesaikan penuh oleh tim.</p>
         </div>
 
-        <!-- Card 4 -->
-        <div class="bg-gradient-to-br from-amber-50/80 via-white to-white border border-amber-200/80 rounded-3xl p-5 shadow-lg shadow-amber-900/5 hover:shadow-xl transition-all relative overflow-hidden group">
-            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-amber-100 rounded-full opacity-40 group-hover:scale-125 transition-transform"></div>
+        <div class="bg-gradient-to-br from-amber-50/80 via-white to-white border border-amber-200/80 rounded-3xl p-5 shadow-lg relative overflow-hidden group">
             <div class="flex justify-between items-start mb-3">
                 <p class="text-xs font-extrabold uppercase tracking-wider text-amber-600 flex items-center gap-2">
                     <span class="p-2 rounded-xl bg-amber-100 text-amber-600 shadow-inner"><i data-lucide="activity" class="w-4 h-4"></i></span> Efektivitas Kinerja
@@ -376,9 +408,8 @@ function renderSuperiorDashboard(tbody) {
         </div>
     </div>`;
 
-    // Perbaikan Card KPI Personil agar tidak flat (bergradasi, shadow tebal, badge elegan)
     let teamProgressHTML = `
-    <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xl shadow-slate-200/50 mb-8 w-full">
+    <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xl mb-8 w-full">
         <h4 class="text-xs font-black uppercase tracking-wider text-slate-800 mb-5 flex items-center gap-2.5">
             <span class="p-2 rounded-xl bg-amber-500 text-white shadow-md"><i data-lucide="award" class="w-4 h-4"></i></span> Progress & Pencapaian Kinerja Personil
         </h4>
@@ -399,16 +430,16 @@ function renderSuperiorDashboard(tbody) {
         }
 
         teamProgressHTML += `
-            <div class="bg-gradient-to-b from-white via-slate-50/50 to-slate-100/60 p-4 rounded-2xl border border-slate-200/80 shadow-md shadow-slate-100 hover:shadow-lg transition-all flex flex-col justify-between group">
+            <div class="bg-gradient-to-b from-white via-slate-50/50 to-slate-100/60 p-4 rounded-2xl border border-slate-200/80 shadow-md flex flex-col justify-between group">
                 <div>
                     <div class="flex justify-between items-center text-xs font-bold text-slate-800 mb-2">
                         <span class="truncate font-black text-slate-900">${p.name}</span>
-                        <span class="px-2.5 py-1 ${badgeStyle} border rounded-xl text-[10px] font-black shadow-2xs">${pct}%</span>
+                        <span class="px-2.5 py-1 ${badgeStyle} border rounded-xl text-[10px] font-black">${pct}%</span>
                     </div>
                     <p class="text-[11px] text-slate-500 font-medium mb-3">Tuntas: <strong class="text-slate-800">${p.done}</strong> dari ${p.total} tugas</p>
                 </div>
-                <div class="w-full bg-slate-200/80 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200/60 shadow-inner">
-                    <div class="bg-gradient-to-r ${barGradient} h-full rounded-full transition-all duration-700 shadow-xs group-hover:brightness-110" style="width: ${pct}%"></div>
+                <div class="w-full bg-slate-200/80 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+                    <div class="bg-gradient-to-r ${barGradient} h-full rounded-full transition-all duration-700" style="width: ${pct}%"></div>
                 </div>
             </div>`;
     });
@@ -426,10 +457,10 @@ function renderSuperiorDashboard(tbody) {
         const isUrgent = statusObj.code === 'OVERDUE' && !isAllDone;
 
         const statusBadge = isAllDone 
-            ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 font-extrabold rounded-xl border border-emerald-200/60 text-xs shadow-2xs"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> SELESAI (${doneCount}/${assignedUsers.length})</span>`
+            ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 font-extrabold rounded-xl border border-emerald-200 text-xs"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> SELESAI (${doneCount}/${assignedUsers.length})</span>`
             : (isUrgent 
-                ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 font-extrabold rounded-xl border border-rose-200/60 text-xs shadow-2xs"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> TERLAMBAT</span>`
-                : `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 font-extrabold rounded-xl border border-amber-200/60 text-xs shadow-2xs"><i data-lucide="clock" class="w-3.5 h-3.5"></i> BERJALAN (${doneCount}/${assignedUsers.length})</span>`);
+                ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 font-extrabold rounded-xl border border-rose-200 text-xs"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> TERLAMBAT</span>`
+                : `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 font-extrabold rounded-xl border border-amber-200 text-xs"><i data-lucide="clock" class="w-3.5 h-3.5"></i> BERJALAN (${doneCount}/${assignedUsers.length})</span>`);
 
         let collapseHtml = assignedUsers.map(user => {
             const userDone = isTaskCompletedByUser(task, user);
@@ -443,13 +474,17 @@ function renderSuperiorDashboard(tbody) {
             `;
         }).join('');
 
+        // Cek apakah accordion ini sebelumnya sedang terbuka di memori
+        const isCurrentlyOpen = openTaskAccordions.has(index);
+        const collapseClass = isCurrentlyOpen ? '' : 'hidden';
+
         return `
             <tr class="${isUrgent ? 'bg-rose-50/20' : 'bg-white'} hover:bg-slate-50/80 transition-all border-b border-slate-100 cursor-pointer shadow-2xs" onclick="toggleTaskCollapse('${index}')">
                 <td class="py-4 px-5 font-bold text-slate-800">${task.Jenis_Tugas || '-'}</td>
                 <td class="py-4 px-5 font-extrabold text-amber-600 uppercase tracking-wide">${task.Target_User || 'Umum'}</td>
                 <td class="py-4 px-5">
                     <p class="font-extrabold text-slate-900">${task.Judul_Tugas || '-'}</p>
-                    <p class="text-[11px] text-amber-600 font-semibold mt-0.5 flex items-center gap-1">Klik untuk rincian ${assignedUsers.length} personil &or;</p>
+                    <p class="text-[11px] text-amber-600 font-semibold mt-0.5">Klik untuk rincian ${assignedUsers.length} personil &or;</p>
                 </td>
                 <td class="py-4 px-5">
                     <div class="flex items-center gap-2.5">
@@ -460,18 +495,18 @@ function renderSuperiorDashboard(tbody) {
                     </div>
                 </td>
                 <td class="py-4 px-5 text-xs font-semibold ${isUrgent ? 'text-rose-600 font-bold' : 'text-slate-600'}">
-                    ${isUrgent ? '⚠️ Tgl ' + task.Detail_Jadwal : 'Tgl ' + task.Detail_Jadwal}
+                    Tgl ${task.Detail_Jadwal}
                 </td>
                 <td class="py-4 px-5">
-                    <p class="text-xs font-semibold text-slate-700 italic bg-slate-50/80 px-3.5 py-2 rounded-2xl border border-slate-100 shadow-2xs">
+                    <p class="text-xs font-semibold text-slate-700 italic bg-slate-50 px-3.5 py-2 rounded-2xl border border-slate-100">
                         "Progres: ${doneCount} dari ${assignedUsers.length} selesai"
                     </p>
                 </td>
                 <td class="py-4 px-5 text-center">${statusBadge}</td>
             </tr>
-            <tr id="collapse-row-${index}" class="hidden bg-slate-50/80 border-b border-slate-200">
+            <tr id="collapse-row-${index}" class="${collapseClass} bg-slate-50/80 border-b border-slate-200">
                 <td colspan="7" class="p-5">
-                    <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-lg shadow-slate-200/40">
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-lg">
                         <p class="text-xs font-black text-slate-800 mb-3.5 uppercase tracking-wide flex items-center gap-2">
                             <i data-lucide="users" class="w-4 h-4 text-amber-500"></i> Rincian Status Personil Ter-Assign (${assignedUsers.length} Orang):
                         </p>
@@ -511,10 +546,18 @@ function renderSuperiorDashboard(tbody) {
     lucide.createIcons();
 }
 
+// Fungsi Toggle dengan memori pencatat agar tidak tertutup otomatis saat data ter-refresh
 window.toggleTaskCollapse = function(index) {
     const collapseRow = document.getElementById(`collapse-row-${index}`);
     if (collapseRow) {
         collapseRow.classList.toggle('hidden');
+        
+        // Simpan status ke Set memori
+        if (collapseRow.classList.contains('hidden')) {
+            openTaskAccordions.delete(index);
+        } else {
+            openTaskAccordions.add(index);
+        }
     }
 }
 
@@ -550,8 +593,8 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
             : `<span class="px-3 py-1 bg-amber-50 text-amber-700 font-bold rounded-xl border border-amber-200">Pending (${statusObj.label})</span>`;
 
         const actionButton = isCompleted
-            ? `<button disabled class="px-4 py-2 bg-slate-200 text-slate-400 text-xs font-bold rounded-xl cursor-not-allowed shadow-none">Sudah Selesai</button>`
-            : `<button onclick="openResponseModal(this, '${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-4 py-2 bg-slate-900 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-slate-900/10 active:scale-95">Selesaikan</button>`;
+            ? `<button disabled class="px-4 py-2 bg-slate-200 text-slate-400 text-xs font-bold rounded-xl cursor-not-allowed">Sudah Selesai</button>`
+            : `<button onclick="openResponseModal(this, '${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-4 py-2 bg-slate-900 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95">Selesaikan</button>`;
 
         tbody.innerHTML += `
             <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 bg-white shadow-2xs">
@@ -657,80 +700,4 @@ function updateInboxBadge() {
             badge.classList.add('hidden');
         }
     }
-}
-
-function toggleInboxModal(isRefresh = false) {
-    const modal = document.getElementById('inboxModal');
-    const container = document.getElementById('inboxListContainer');
-    if (!modal || !container) return;
-
-    if (!modal.classList.contains('hidden') && !isRefresh) {
-        modal.classList.add('hidden');
-        return;
-    }
-
-    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
-    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
-
-    if (userRole === 'admin' || loggedInUser === 'admin') {
-        container.innerHTML = `
-            <div class="text-center py-6 px-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <i data-lucide="shield-check" class="w-8 h-8 text-amber-500 mx-auto mb-2"></i>
-                <p class="text-xs font-bold text-slate-700">Mode Pengawas (Superior)</p>
-                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                    Role Admin tidak memiliki tagihan tugas pending pribadi. Untuk memantau progres pengerjaan tugas seluruh tim BM & ABM, silakan buka menu <strong class="text-slate-600">Monitoring Tugas</strong>.
-                </p>
-                <button onclick="switchView('monitoring'); toggleInboxModal();" class="mt-3 px-4 py-2 bg-slate-900 hover:bg-amber-500 text-white text-[11px] font-bold rounded-xl transition-all">
-                    Buka Monitoring Tugas &rarr;
-                </button>
-            </div>
-        `;
-        modal.classList.remove('hidden');
-        lucide.createIcons();
-        return;
-    }
-    
-    const currentUserObj = SYSTEM_TEAM.find(u => u.username === loggedInUser) || { username: loggedInUser, name: loggedInUser, role: userRole };
-
-    let activeTasks = allMonitoringTasks.filter(task => {
-        if (!task.Jenis_Tugas) return false;
-        const assigned = getAssignedUsersForTask(task);
-        if (!assigned.some(u => u.username === loggedInUser)) return false;
-
-        const temporal = getTaskTemporalStatusForUser(task, currentUserObj);
-        if (!temporal.isActionable) return false;
-
-        return !isTaskCompletedByUser(task, currentUserObj);
-    });
-
-    container.innerHTML = '';
-    if (activeTasks.length === 0) {
-        container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-medium">Tidak ada tugas pending untuk kriteria ini.</div>`;
-    } else {
-        activeTasks.forEach(task => {
-            const temporal = getTaskTemporalStatusForUser(task, currentUserObj);
-            const badgeWaktu = `<span class="text-[9px] ${temporal.colorClass} font-bold px-2 py-0.5 rounded-md">${temporal.label}</span>`;
-
-            container.innerHTML += `
-                <div class="bg-amber-50/50 border border-amber-100 p-3.5 rounded-2xl flex flex-col gap-2">
-                    <div class="flex justify-between items-start">
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[10px] font-extrabold uppercase bg-amber-500 text-white px-2 py-0.5 rounded-md">${task.Jenis_Tugas}</span>
-                            ${badgeWaktu}
-                        </div>
-                        <span class="text-[10px] text-slate-400 font-bold">Jadwal: ${task.Detail_Jadwal}</span>
-                    </div>
-                    <div>
-                        <h4 class="text-xs font-black text-slate-800">${task.Judul_Tugas}</h4>
-                        <p class="text-[11px] text-slate-600 mt-0.5">${task.Deskripsi}</p>
-                    </div>
-                    <button onclick="switchView('monitoring'); toggleInboxModal();" class="self-end mt-1 px-3 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-amber-500 transition-all">
-                        Buka & Selesaikan &rarr;
-                    </button>
-                </div>
-            `;
-        });
-    }
-    modal.classList.remove('hidden');
-    lucide.createIcons();
 }
