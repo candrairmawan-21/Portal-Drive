@@ -1,10 +1,9 @@
 /* ==========================================================================
-   MODUL AI SOP ASSISTANT (CHATGPT/GEMINI STYLE UI & ENTER KEY SUPPORT)
+   MODUL AI SOP ASSISTANT (FIXED UI BUBBLE & ENTER SUPPORT)
    ========================================================================== */
 
 const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyJsQtbg2LvMVenLQoy0uyYd3MBZbXP_r_hVVevzrs0AahU07aJj-9-2ltU8DQ58Tx_/exec";
 
-// Inisialisasi event listener Enter key saat dokumen dimuat
 document.addEventListener('DOMContentLoaded', () => {
     const inputField = document.getElementById('aiPromptInput');
     if (inputField) {
@@ -25,13 +24,12 @@ async function sendAiPrompt() {
     const question = inputField.value.trim();
     if (!question) return;
 
-    // Hilangkan pesan sambutan awal jika masih ada
     const welcomeBox = document.getElementById('aiWelcomeBox');
     if (welcomeBox) welcomeBox.style.display = 'none';
 
-    // 1. Tampilkan Bubble Chat User (Gaya ChatGPT Kanan)
+    // Perbaikan: Tag div pembuka kini sudah lengkap
     container.innerHTML += `
-        flex justify-end mb-4 animate-[fadeIn_0.2s_ease-out]">
+        <div class="flex justify-end mb-4 animate-[fadeIn_0.2s_ease-out]">
             <div class="bg-slate-900 text-white px-4 py-3 rounded-2xl rounded-tr-xs max-w-xl text-xs font-medium shadow-sm leading-relaxed">
                 ${escapeHtml(question)}
             </div>
@@ -41,7 +39,6 @@ async function sendAiPrompt() {
     inputField.value = '';
     container.scrollTop = container.scrollHeight;
 
-    // 2. Tampilkan Loading State (Animasi Titik Berdenyut ala AI)
     const loadingId = 'ai-loading-' + Date.now();
     container.innerHTML += `
         <div id="${loadingId}" class="flex justify-start mb-4 animate-[fadeIn_0.2s_ease-out]">
@@ -81,7 +78,6 @@ async function sendAiPrompt() {
             aiAnswerText = `<p class="text-slate-600">Maaf, AI tidak dapat merespon.</p>`;
         }
 
-        // 3. Tampilkan Bubble Chat AI (Gaya ChatGPT Kiri dengan Avatar)
         container.innerHTML += `
             <div class="flex justify-start mb-4 animate-[fadeIn_0.2s_ease-out]">
                 <div class="flex items-start gap-3 max-w-2xl">
