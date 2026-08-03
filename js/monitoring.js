@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (DUAL-SHEET READER: MONITORING & LOG RESPON)
+   MODUL MONITORING TUGAS & INBOX (DUAL-SHEET & STRICT DATE/USER LOOKUP)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 const LOG_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRbZXekvj6nyo6N6zuniiKEpmWXiXN-i3oWLN3oJth83nN28ENCibYOFy_cFgx1_GvULPrBHUJVDrcO/pub?gid=2043519577&single=true&output=csv';
@@ -66,27 +66,41 @@ function checkAndResetWeeklyStatus() {
     }
 }
 
-// Mengecek apakah user tertentu sudah menyelesaikan tugas tertentu berdasarkan Log_Respon
+// Lookup ke Log_Respon & LocalStorage dengan membandingkan Nama User & Tanggal Hari Ini (Kolom E)
 function isTaskCompletedByUser(task, userObj) {
     if (!userObj) return false;
     
     checkAndResetWeeklyStatus();
-    const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
-    const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}`;
-    
-    if (completedTasksMap[taskIdKey]) return true;
-
     const taskTitle = (task.Judul_Tugas || '').toLowerCase().trim();
     const targetName = (userObj.name || '').toLowerCase().trim();
     const targetUsername = (userObj.username || '').toLowerCase().trim();
+    const todayDateStr = new Date().toLocaleDateString('id-ID'); // Format tanggal lokal, misal: 3/8/2026 atau 03/08/2026
 
+    // 1. Cek cache lokal (mencegah glitch saat CSV Google Sheets terkena cache/delay)
+    const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
+    const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}`;
+    
+    if (completedTasksMap[taskIdKey]) {
+        // Pastikan catatan tersimpan untuk hari yang sama
+        if (completedTasksMap[taskIdKey].date === todayDateStr) {
+            return true;
+        }
+    }
+
+    // 2. Lookup ke data Log_Respon (allTaskLogs)
     const foundInLogs = allTaskLogs.some(log => {
         const logUser = (log['Nama User'] || log.Nama_User || '').toLowerCase().trim();
         const logTugas = (log['Tugas yang Selesai'] || log.Tugas_yang_Selesai || log.TugasYangSelesai || '').toLowerCase().trim();
+        const logTimestamp = (log['Tanggal & Jam Respons'] || log.Tanggal_Jam_Respons || log.Timestamp || '').trim();
         
         const matchUser = (logUser === targetName || logUser === targetUsername);
         const matchTugas = (logTugas === taskTitle);
-        return matchUser && matchTugas;
+        
+        // Ambil tanggal saja dari Kolom E (bagian sebelum spasi, misal "3/8/2026 11.33.28" -> "3/8/2026")
+        const logDatePart = logTimestamp.split(' ')[0];
+        const matchDate = (logDatePart === todayDateStr);
+
+        return matchUser && matchTugas && matchDate;
     });
 
     return foundInLogs;
@@ -484,12 +498,19 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
         const loggedInUser = (sessionStorage.getItem('portalUser') || 'Unknown').toLowerCase().trim();
         const matchedUser = SYSTEM_TEAM.find(u => u.username === loggedInUser);
         const namaUserLengkap = matchedUser ? matchedUser.name : loggedInUser;
+        const todayDateStr = new Date().toLocaleDateString('id-ID');
 
+        // Simpan ke localStorage dengan mencatat tanggal hari ini untuk mencegah glitch saat server CSV delay
         const taskIdKey = taskId || taskTitle;
         let completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
-        completedTasksMap[taskIdKey] = { catatan: catatan, timestamp: new Date().toISOString() };
+        completedTasksMap[taskIdKey] = { 
+            catatan: catatan, 
+            date: todayDateStr, 
+            timestamp: new Date().toISOString() 
+        };
         localStorage.setItem('portal_completed_tasks', JSON.stringify(completedTasksMap));
 
+        // Tambahkan juga secara lokal ke allTaskLogs agar langsung terdeteksi tanpa menunggu sinkronisasi CSV sheet
         allTaskLogs.push({
             'Hari': getIndonesianDayName(),
             'Nama User': namaUserLengkap,
@@ -517,7 +538,7 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
                 body: JSON.stringify(payload)
             });
             
-            setTimeout(fetchMonitoringData, 500);
+            setTimeout(fetchMonitoringData, 1000);
         } catch (err) {
             console.error('Gagal mengirim update ke server:', err);
         }
