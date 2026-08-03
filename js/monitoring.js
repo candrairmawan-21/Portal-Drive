@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL MONITORING TUGAS & INBOX (DUAL-SHEET, STRICT DATE LOOKUP & SMART RESET)
+   MODUL MONITORING TUGAS & INBOX (GLOBAL SERVER-SIDE RESET & SYNC)
    ========================================================================== */
 const MONITORING_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSxNv5RprtBuF1wZEylbpaO0hVA3M67_9-zdIrv5pX7lyKV1duYNfQKgcRIOD6_aATKTWjC3dSYyQ/pub?gid=1912450864&single=true&output=csv';
 const LOG_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRbZXekvj6nyo6N6zuniiKEpmWXiXN-i3oWLN3oJth83nN28ENCibYOFy_cFgx1_GvULPrBHUJVDrcO/pub?gid=2043519577&single=true&output=csv';
@@ -46,25 +46,6 @@ function getFormattedTimestamp() {
     return `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`;
 }
 
-// Helper untuk memparsing string timestamp dari log spreadsheet ke milidetik
-function parseLogTimestamp(timestampStr) {
-    if (!timestampStr) return 0;
-    try {
-        let parts = timestampStr.trim().split(' ');
-        if (parts.length < 2) return 0;
-        let dateParts = parts[0].split('/'); // [d, m, y]
-        let timeParts = parts[1].split(/[\.:]/); // [h, m, s]
-        if (dateParts.length === 3 && timeParts.length >= 3) {
-            let d = parseInt(dateParts[0]), m = parseInt(dateParts[1]) - 1, y = parseInt(dateParts[2]);
-            let h = parseInt(timeParts[0]), min = parseInt(timeParts[1]), s = parseInt(timeParts[2]);
-            return new Date(y, m, d, h, min, s).getTime();
-        }
-    } catch(e) {
-        return 0;
-    }
-    return 0;
-}
-
 // Logika Key Minggu Berjalan untuk Reset Otomatis Mingguan
 function getCurrentWeekKey() {
     const d = new Date();
@@ -82,11 +63,10 @@ function checkAndResetWeeklyStatus() {
     if (storedWeek !== currentWeek) {
         localStorage.setItem('portal_task_week', currentWeek);
         localStorage.removeItem('portal_completed_tasks');
-        localStorage.removeItem('portal_reset_time');
     }
 }
 
-// Lookup ke Log_Respon & LocalStorage dengan validasi Reset Time & Tanggal Hari Ini
+// Lookup ke Log_Respon & LocalStorage dengan membandingkan Nama User & Tanggal Hari Ini (Kolom E)
 function isTaskCompletedByUser(task, userObj) {
     if (!userObj) return false;
     
@@ -96,7 +76,7 @@ function isTaskCompletedByUser(task, userObj) {
     const targetUsername = (userObj.username || '').toLowerCase().trim();
     const todayDateStr = new Date().toLocaleDateString('id-ID');
 
-    // 1. Cek cache lokal
+    // 1. Cek cache lokal browser
     const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
     const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}`;
     
@@ -106,10 +86,7 @@ function isTaskCompletedByUser(task, userObj) {
         }
     }
 
-    // Ambil batas waktu reset terakhir (jika admin pernah menekan tombol reset)
-    const resetTime = parseInt(localStorage.getItem('portal_reset_time') || '0');
-
-    // 2. Lookup ke data Log_Respon (allTaskLogs) dengan mengabaikan log sebelum waktu reset
+    // 2. Lookup ke data Log_Respon server (allTaskLogs)
     const foundInLogs = allTaskLogs.some(log => {
         const logUser = (log['Nama User'] || log.Nama_User || '').toLowerCase().trim();
         const logTugas = (log['Tugas yang Selesai'] || log.Tugas_yang_Selesai || log.TugasYangSelesai || '').toLowerCase().trim();
@@ -121,11 +98,7 @@ function isTaskCompletedByUser(task, userObj) {
         const logDatePart = logTimestamp.split(' ')[0];
         const matchDate = (logDatePart === todayDateStr);
 
-        // Pastikan log terjadi SETELAH tombol reset terakhir ditekan oleh admin
-        const logTimeMs = parseLogTimestamp(logTimestamp);
-        const isAfterReset = logTimeMs > resetTime;
-
-        return matchUser && matchTugas && matchDate && isAfterReset;
+        return matchUser && matchTugas && matchDate;
     });
 
     return foundInLogs;
@@ -256,8 +229,8 @@ function renderMonitoringTable() {
     renderUserTaskTable(tbody, loggedInUser, userRole);
 }
 
-// Fungsi Reset Khusus Admin untuk Mengaktifkan Kembali Tombol Semua User
-window.resetAllTasksCache = function() {
+// Fungsi Reset Global oleh Admin untuk Membersihkan Log Server & Mengaktifkan Kembali Semua Tombol User
+window.resetAllTasksCache = async function() {
     const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
     const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
     
@@ -266,12 +239,28 @@ window.resetAllTasksCache = function() {
         return;
     }
 
-    if (confirm('Apakah Anda yakin ingin mereset status pengerjaan tugas? Tombol pengerjaan akan diaktifkan kembali untuk semua user.')) {
+    if (confirm('Apakah Anda yakin ingin mereset status pengerjaan tugas? Log respon di server akan dikosongkan dan tombol pengerjaan akan aktif kembali untuk semua user.')) {
+        // 1. Bersihkan cache lokal admin
         localStorage.removeItem('portal_completed_tasks');
-        localStorage.setItem('portal_reset_time', Date.now().toString()); // Set waktu reset saat ini
         allTaskLogs = [];
-        fetchMonitoringData();
-        alert('Status tugas berhasil di-reset! Tombol user telah aktif kembali.');
+
+        // 2. Kirim perintah reset ke Apps Script agar sheet Log_Respon dikosongkan secara global
+        try {
+            await fetch(UPDATE_API_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "reset" })
+            });
+        } catch (err) {
+            console.error('Gagal mengirim perintah reset ke server:', err);
+        }
+
+        // 3. Tarik data terbaru setelah server dibersihkan
+        setTimeout(() => {
+            fetchMonitoringData();
+            alert('Status tugas berhasil di-reset secara global! Tombol user telah aktif kembali.');
+        }, 1200);
     }
 };
 
