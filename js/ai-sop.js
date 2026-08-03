@@ -2,7 +2,7 @@
    MODUL AI SOP ASSISTANT (CHATGPT/GEMINI STYLE UI & ENTER KEY SUPPORT)
    ========================================================================== */
 
-const APPS_SCRIPT_WEB_APP_URL = "MASUKKAN_URL_WEB_APP_ANDA_DISINI";
+const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwFOGgJRBCWazxNBvD9cqbSNOy8R2QVOoJvWCn6ELE/dev";
 
 // Inisialisasi event listener Enter key saat dokumen dimuat
 document.addEventListener('DOMContentLoaded', () => {
