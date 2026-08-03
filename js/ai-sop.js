@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MODUL AI SOP ASSISTANT (FIXED UI BUBBLE & ENTER SUPPORT)
+   MODUL AI SOP ASSISTANT (ANTI-CORS & REAL ERROR REPORTING)
    ========================================================================== */
 
 const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyJsQtbg2LvMVenLQoy0uyYd3MBZbXP_r_hVVevzrs0AahU07aJj-9-2ltU8DQ58Tx_/exec";
@@ -27,7 +27,7 @@ async function sendAiPrompt() {
     const welcomeBox = document.getElementById('aiWelcomeBox');
     if (welcomeBox) welcomeBox.style.display = 'none';
 
-    // Perbaikan: Tag div pembuka kini sudah lengkap
+    // 1. Bubble Chat User
     container.innerHTML += `
         <div class="flex justify-end mb-4 animate-[fadeIn_0.2s_ease-out]">
             <div class="bg-slate-900 text-white px-4 py-3 rounded-2xl rounded-tr-xs max-w-xl text-xs font-medium shadow-sm leading-relaxed">
@@ -39,6 +39,7 @@ async function sendAiPrompt() {
     inputField.value = '';
     container.scrollTop = container.scrollHeight;
 
+    // 2. Loading State
     const loadingId = 'ai-loading-' + Date.now();
     container.innerHTML += `
         <div id="${loadingId}" class="flex justify-start mb-4 animate-[fadeIn_0.2s_ease-out]">
@@ -59,12 +60,23 @@ async function sendAiPrompt() {
     lucide.createIcons();
 
     try {
+        // PERBAIKAN PENTING: Menggunakan Content-Type text/plain agar tidak diblokir CORS oleh Google Apps Script
         const response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
             method: 'POST',
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
             body: JSON.stringify({ question: question })
         });
 
-        const result = await response.json();
+        // Membaca teks mentah terlebih dahulu untuk mendeteksi error HTML dari Google
+        const rawText = await response.text();
+        let result;
+        try {
+            result = JSON.parse(rawText);
+        } catch (e) {
+            throw new Error("Server mengembalikan respons non-JSON (Kemungkinan izin 'Who has access' belum diatur ke 'Anyone').");
+        }
         
         const loadingElement = document.getElementById(loadingId);
         if (loadingElement) loadingElement.remove();
@@ -73,7 +85,7 @@ async function sendAiPrompt() {
         if (result.answer) {
             aiAnswerText = formatAiResponse(result.answer);
         } else if (result.error) {
-            aiAnswerText = `<p class="text-rose-600 font-bold">Terjadi kesalahan: ${escapeHtml(result.error)}</p>`;
+            aiAnswerText = `<p class="text-rose-600 font-bold">Terjadi kesalahan sistem: ${escapeHtml(result.error)}</p>`;
         } else {
             aiAnswerText = `<p class="text-slate-600">Maaf, AI tidak dapat merespon.</p>`;
         }
@@ -100,14 +112,15 @@ async function sendAiPrompt() {
         lucide.createIcons();
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error detail:', error);
         const loadingElement = document.getElementById(loadingId);
         if (loadingElement) loadingElement.remove();
 
         container.innerHTML += `
             <div class="flex justify-start mb-4">
-                <div class="bg-rose-50 border border-rose-200 px-4 py-3 rounded-2xl text-xs text-rose-700 shadow-sm">
-                    Gagal terhubung ke server Google Apps Script. Periksa URL Web App Anda.
+                <div class="bg-rose-50 border border-rose-200 px-4 py-3 rounded-2xl text-xs text-rose-700 shadow-sm space-y-1">
+                    <p class="font-bold">Gagal terhubung ke server Google Apps Script</p>
+                    <p class="text-[11px] text-rose-600">${escapeHtml(error.message)}</p>
                 </div>
             </div>
         `;
