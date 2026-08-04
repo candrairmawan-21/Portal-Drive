@@ -13,7 +13,7 @@ let monitoringInterval = null;
 // Memori state untuk mencatat ID baris collapse yang sedang dibuka user agar tidak tertutup sendiri saat refresh
 let openTaskAccordions = new Set();
 
-// Database Master Seluruh Tim (11 ABM & 3 BM)[cite: 1]
+// Database Master Seluruh Tim (11 ABM & 3 BM)
 const SYSTEM_TEAM = [
     { username: 'bm agus', role: 'BM', name: 'BM Agus' },
     { username: 'bm didik', role: 'BM', name: 'BM Didik' },
@@ -361,9 +361,14 @@ function renderSuperiorDashboard(tbody) {
             <h4 class="text-base font-black tracking-wide text-white">Pusat Kendali Operasional Tim Lapangan</h4>
             <p class="text-xs text-slate-300">Memantau tingkat penyelesaian tugas seluruh ABM & BM secara langsung dan akurat.</p>
         </div>
-        <button onclick="resetAllTasksCache()" class="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-rose-900/30 transition-all flex items-center gap-2 border border-rose-500/30 active:scale-95">
-            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Buka Kunci Tombol Tim
-        </button>
+        <div class="flex flex-wrap items-center gap-2.5">
+            <a href="https://docs.google.com/spreadsheets/d/1DwQNbu8KstZnm8PKE7d0Wtdf7Ox9pH4IgdSu3KQnemc/edit?gid=1742374499#gid=1742374499" target="_blank" rel="noopener noreferrer" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-900/30 transition-all flex items-center gap-2 border border-emerald-500/30 active:scale-95">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Rekap Google Sheet
+            </a>
+            <button onclick="resetAllTasksCache()" class="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-rose-900/30 transition-all flex items-center gap-2 border border-rose-500/30 active:scale-95">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Buka Kunci Tombol Tim
+            </button>
+        </div>
     </div>
     
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8 w-full">
