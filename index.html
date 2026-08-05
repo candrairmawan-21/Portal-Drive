@@ -731,45 +731,59 @@
         </div>
     </div>
 
-    <!-- MODAL 5: UPLOAD PDF OFFICIAL IT REPORT -->
-    <div id="uploadPdfModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4 hidden">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 p-6 relative animate-[fadeIn_0.3s_ease-out]">
-            <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
-                <div class="flex items-center gap-2">
-                    <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                        <i data-lucide="file-text" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-black text-slate-800">Upload Official IT Report</h3>
-                        <p class="text-[11px] text-slate-400">Otomatis filter & validasi ke sheet OFFICIAL_IT_REPORT</p>
-                    </div>
+    <!-- MODAL 5: UPLOAD PDF OFFICIAL IT REPORT (DENGAN PROGRESS BAR) -->
+<div id="uploadPdfModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4 hidden">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 p-6 relative animate-[fadeIn_0.3s_ease-out]">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+            <div class="flex items-center gap-2">
+                <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
                 </div>
-                <button onclick="closeUploadPdfModal()" class="text-slate-400 hover:text-slate-600 p-1">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
+                <div>
+                    <h3 class="text-sm font-black text-slate-800">Upload Official IT Report</h3>
+                    <p class="text-[11px] text-slate-400">Otomatis filter & validasi ke sheet OFFICIAL_IT_REPORT</p>
+                </div>
+            </div>
+            <button onclick="closeUploadPdfModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Area Drop Zone -->
+            <div class="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center bg-slate-50/50 transition-all relative cursor-pointer">
+                <input type="file" id="officialPdfInput" accept=".pdf" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" onchange="previewPdfSelection(this)">
+                <i data-lucide="upload-cloud" class="w-8 h-8 text-emerald-500 mx-auto mb-2"></i>
+                <!-- Nama file dinamis: Jika belum dipilih akan kosong/default instruksi -->
+                <p id="pdfFileNameDisplay" class="text-xs font-bold text-slate-700">Klik atau seret file .PDF laporan ke sini</p>
+                <p class="text-[10px] text-slate-400 mt-1">Hanya toko yang ada di DATA_STORE yang akan disimpan.</p>
             </div>
 
-            <div class="space-y-4">
-                <div class="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center bg-slate-50/50 transition-all relative">
-                    <input type="file" id="officialPdfInput" accept=".pdf" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onchange="previewPdfSelection(this)">
-                    <i data-lucide="upload-cloud" class="w-8 h-8 text-emerald-500 mx-auto mb-2"></i>
-                    <p id="pdfFileNameDisplay" class="text-xs font-bold text-slate-700">Klik atau seret file .PDF laporan ke sini</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Hanya toko yang ada di DATA_STORE yang akan disimpan.</p>
+            <!-- Progress Bar Container (Hidden secara default) -->
+            <div id="uploadProgressContainer" class="hidden space-y-2">
+                <div class="flex justify-between text-xs font-bold text-slate-700">
+                    <span id="uploadStatusText">Mengunggah...</span>
+                    <span id="uploadProgressPct">0%</span>
                 </div>
-
-                <div id="pdfUploadStatus" class="hidden text-center p-3 rounded-xl text-xs font-bold"></div>
-
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeUploadPdfModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
-                        Batal
-                    </button>
-                    <button type="button" id="btnSubmitPdf" onclick="submitOfficialPdf()" class="px-5 py-2.5 bg-slate-900 hover:bg-emerald-600 text-white text-xs font-black rounded-xl transition flex items-center gap-1.5 shadow-sm">
-                        <i data-lucide="send" class="w-3.5 h-3.5"></i> Proses Upload
-                    </button>
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
+                    <div id="uploadProgressBar" class="bg-emerald-500 h-full w-0 transition-all duration-200"></div>
                 </div>
+            </div>
+
+            <!-- Notifikasi Status Text -->
+            <div id="pdfUploadStatus" class="hidden text-center p-3 rounded-xl text-xs font-bold"></div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeUploadPdfModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+                    Batal
+                </button>
+                <button type="button" id="btnSubmitPdf" onclick="submitOfficialPdf()" class="px-5 py-2.5 bg-slate-900 hover:bg-emerald-600 text-white text-xs font-black rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i> <span id="btnSubmitText">Proses Upload</span>
+                </button>
             </div>
         </div>
     </div>
+</div>
 
     <!-- PEMUATAN KUMPULAN SKRIP LOGIKA -->
     <script src="js/app.js"></script>
