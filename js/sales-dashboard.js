@@ -1,7 +1,6 @@
 /**
  * @file sales-dashboard.js
  * @description Core Dashboard Controller untuk Sales Intelligence Center.
- * Terintegrasi penuh dengan app.js dan Global Data Source Manager.
  */
 
 import dataSourceManager from './sales-data-source.js';
@@ -13,7 +12,6 @@ let currentSalesData = [];
 let salesChartInstance = null;
 let currentChartMode = 'mtd';
 
-// 1. DENGARKAN PERUBAHAN GLOBAL DATA SOURCE
 window.addEventListener('midnorth:datasource-change', async (event) => {
     const info = event.detail;
     updateBannerUI(info);
@@ -37,9 +35,6 @@ function updateBannerUI(info) {
     if (confEl) confEl.textContent = info.confidence;
 }
 
-/**
- * Fungsi penghubung agar kompatibel dengan pemanggilan existing di app.js
- */
 window.fetchSalesData = async function() {
     await reloadSalesDashboard(false);
 };
@@ -54,10 +49,8 @@ window.reloadSalesDashboard = async function(force = false) {
     renderSalesChart(currentSalesData, currentChartMode);
 };
 
-// Expose fungsi source changer ke window agar tombol di banner berfungsi
 window.changeSalesSource = function(mode) {
     dataSourceManager.setDataSourceMode(mode);
-    // Ubah status tombol aktif di banner
     ['store', 'official', 'auto'].forEach(id => {
         const btn = document.getElementById(`btn-src-${id}`);
         if (btn) {
@@ -95,7 +88,6 @@ function renderKPIHeader(data) {
     const gap = calculateGap(totalSales, totalTarget);
     const salesNeeded = calculateSalesNeeded(gap, 10);
 
-    // Assign ke DOM HTML (Mendukung ID existing & ID baru)
     const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
     setTxt('summary-total-sales', formatRupiah(totalSales));
@@ -233,4 +225,10 @@ function renderSalesChart(data, mode) {
 window.setSalesChartMode = function(mode) {
     currentChartMode = mode;
     renderSalesChart(currentSalesData, mode);
+};
+
+window.resetSalesFilters = function() {
+    const searchInput = document.getElementById('filterSearch');
+    if (searchInput) searchInput.value = '';
+    reloadSalesDashboard(false);
 };
