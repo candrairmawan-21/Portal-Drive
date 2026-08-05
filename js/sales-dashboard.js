@@ -2,6 +2,7 @@
    1. KONFIGURASI GLOBAL & MAPPING GID SHEETS
    ========================================================================== */
 const SALES_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?output=csv';
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJGzJvsP7o4O4zZbQzEZ2sbqPtRBCPbrgPwU4krc_mDn4xifZgTQdBQBT5G2QW0zMF/exec";
 
 let salesData = [];
 let salesChartInstance = null;
@@ -10,7 +11,7 @@ let currentSalesSource = 'SUBMISSION'; // 'SUBMISSION' atau 'OFFICIAL_IT'
 
 // GID Sheet Lengkap (Termasuk Official IT Report)
 const SHEET_GIDS = {
-    'OFFICIAL_IT': '1129267198', // GID Sheet OFFICIAL_IT_REPORT
+    'OFFICIAL_IT_REPORT': '1129267198', // GID Sheet OFFICIAL_IT_REPORT
     'Oct26': '1682478488', 
     'Sep26': '432381843', 
     'Aug26': '1766415704', 
@@ -55,7 +56,6 @@ window.switchSalesSource = function(sourceType) {
     if (sourceType === 'OFFICIAL_IT') {
         if (btnOff) btnOff.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
         if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
-        // Disable dropdown bulan jika membuka Official IT Report
         if (slicerBulan) slicerBulan.disabled = true;
     } else {
         if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
@@ -127,7 +127,7 @@ async function fetchSalesData() {
             gid = SHEET_GIDS[selectedKey] || '1766415704';
         }
         
-        const finalUrl = `${SALES_BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`;
+        const finalUrl = `${SALES_BASE_URL}&gid=${gid}`;
         const response = await fetch(finalUrl);
         const csvText = await response.text();
         
@@ -144,7 +144,6 @@ function parseSalesCSV(text, sourceMode) {
     let lines = text.split('\n');
     if (lines.length < 2) return [];
     
-    // Deteksi otomatis baris header
     let headerRowIdx = sourceMode === 'OFFICIAL_IT' ? 0 : (lines.length > 2 ? 2 : 0);
     let headers = parseCSVLine(lines[headerRowIdx]).map(h => h.trim().toLowerCase());
     let result = [];
@@ -320,7 +319,7 @@ function renderSalesChartFiltered(data) {
                 {
                     type: 'bar',
                     label: 'MTD Target',
-                    backgroundColor: 'rgba(244, 63, 94, 0.85)', // Warna Rose Red
+                    backgroundColor: 'rgba(244, 63, 94, 0.85)',
                     borderColor: '#f43f5e',
                     borderWidth: 1,
                     borderRadius: 6,
@@ -330,7 +329,7 @@ function renderSalesChartFiltered(data) {
                 {
                     type: 'bar',
                     label: 'MTD Sales',
-                    backgroundColor: 'rgba(249, 115, 22, 0.9)', // Warna Orange Menyala
+                    backgroundColor: 'rgba(249, 115, 22, 0.9)',
                     borderColor: '#f97316',
                     borderWidth: 1,
                     borderRadius: 6,
@@ -351,7 +350,6 @@ function renderSalesChartFiltered(data) {
             plugins: { legend: { position: 'top' } }
         },
         plugins: [{
-            // Plugin khusus untuk mencetak angka persentase di setiap titik/polygon
             id: 'polygonPercentageLabels',
             afterDatasetsDraw: (chart) => {
                 const ctx = chart.ctx;
@@ -387,7 +385,7 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
             const gid = SHEET_GIDS[mKey];
             if (!gid) return null;
             try {
-                const res = await fetch(`${SALES_BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`);
+                const res = await fetch(`${SALES_BASE_URL}&gid=${gid}`);
                 const parsed = parseSalesCSV(await res.text(), 'SUBMISSION');
                 let totalS = 0, totalT = 0;
                 parsed.forEach(i => { totalS += i.mtdSales; totalT += i.mtdTarget; });
@@ -405,7 +403,7 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
                 datasets: [{
                     label: 'Trend Achievement (%)',
                     data: validData.map(item => item.achPercent),
-                    borderColor: '#f97316', // Orange Menyala untuk garis tren
+                    borderColor: '#f97316',
                     backgroundColor: 'rgba(249, 115, 22, 0.1)',
                     borderWidth: 3,
                     pointRadius: 5,
@@ -422,7 +420,6 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
                 layout: { padding: { top: 25 } }
             },
             plugins: [{
-                // Plugin cetak angka persentase pada mode tren 6 bulan
                 id: 'trendPolygonLabels',
                 afterDatasetsDraw: (chart) => {
                     const ctx = chart.ctx;
@@ -482,19 +479,31 @@ function renderSalesTableFiltered(data) {
     }).join('');
 }
 
-// GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA YANG TERBARU
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJGzJvsP7o4O4zZbQzEZ2sbqPtRBCPbrgPwU4krc_mDn4xifZgTQdBQBT5G2QW0zMF/exec";
-
+/* ==========================================================================
+   8. MODAL HANDLER & UPLOAD PDF OFFICIAL IT REPORT
+   ========================================================================== */
 window.openUploadPdfModal = function() {
     const modal = document.getElementById('uploadPdfModal');
     if (modal) modal.classList.remove('hidden');
-    // Reset state modal saat dibuka
-    document.getElementById('officialPdfInput').value = '';
-    document.getElementById('pdfFileNameDisplay').textContent = "Klik atau seret file .PDF laporan ke sini";
-    document.getElementById('uploadProgressContainer').classList.add('hidden');
-    document.getElementById('pdfUploadStatus').classList.add('hidden');
-    document.getElementById('btnSubmitPdf').disabled = false;
-    document.getElementById('btnSubmitText').textContent = "Proses Upload";
+    
+    const input = document.getElementById('officialPdfInput');
+    if (input) input.value = '';
+    
+    const display = document.getElementById('pdfFileNameDisplay');
+    if (display) display.textContent = "Klik atau seret file .PDF laporan ke sini";
+    
+    const progContainer = document.getElementById('uploadProgressContainer');
+    if (progContainer) progContainer.classList.add('hidden');
+    
+    const statusBox = document.getElementById('pdfUploadStatus');
+    if (statusBox) statusBox.classList.add('hidden');
+    
+    const btnSubmit = document.getElementById('btnSubmitPdf');
+    if (btnSubmit) btnSubmit.disabled = false;
+    
+    const btnText = document.getElementById('btnSubmitText');
+    if (btnText) btnText.textContent = "Proses Upload";
+    
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
@@ -506,9 +515,8 @@ window.closeUploadPdfModal = function() {
 window.previewPdfSelection = function(input) {
     const display = document.getElementById('pdfFileNameDisplay');
     if (input.files && input.files[0] && display) {
-        // Menampilkan nama file yang dipilih secara informatif
         display.textContent = `📄 File terpilih: ${input.files[0].name}`;
-    } else {
+    } else if (display) {
         display.textContent = "Klik atau seret file .PDF laporan ke sini";
     }
 };
@@ -530,34 +538,24 @@ window.submitOfficialPdf = async function() {
 
     const file = input.files[0];
     
-    // UI Loading & Progress bar aktif
     if (statusBox) statusBox.classList.add('hidden');
-    progContainer.classList.remove('hidden');
-    btnSubmit.disabled = true;
-    btnText.textContent = "Mengunggah...";
+    if (progContainer) progContainer.classList.remove('hidden');
+    if (btnSubmit) btnSubmit.disabled = true;
+    if (btnText) btnText.textContent = "Mengunggah...";
 
-    let progress = 10;
-    progressBar.style.width = `${progress}%`;
-    progressPct.textContent = `${progress}%`;
-    statusText.textContent = "Membaca struktur file PDF...";
+    let progress = 15;
+    if (progressBar) progressBar.style.width = `${progress}%`;
+    if (progressPct) progressPct.textContent = `${progress}%`;
+    if (statusText) statusText.textContent = "Membaca struktur file PDF...";
 
     try {
-        // Menggunakan FileReader untuk membaca file sebagai Data URL / Base64
         const reader = new FileReader();
 
-        reader.onprogress = (event) => {
-            if (event.lengthComputable) {
-                let percent = Math.round((event.loaded / event.total) * 50); // 50% pertama untuk baca lokal
-                progressBar.style.width = `${percent}%`;
-                progressPct.textContent = `${percent}%`;
-            }
-        };
-
         reader.onload = async function(e) {
-            progress = 60;
-            progressBar.style.width = `${progress}%`;
-            progressPct.textContent = `${progress}%`;
-            statusText.textContent = "Mengirim data ke Google Sheet...";
+            progress = 50;
+            if (progressBar) progressBar.style.width = `${progress}%`;
+            if (progressPct) progressPct.textContent = `${progress}%`;
+            if (statusText) statusText.textContent = "Mengirim data ke Google Sheet...";
 
             const base64Content = e.target.result;
 
@@ -567,12 +565,11 @@ window.submitOfficialPdf = async function() {
                 fileData: base64Content
             };
 
-            progress = 85;
-            progressBar.style.width = `${progress}%`;
-            progressPct.textContent = `${progress}%`;
-            statusText.textContent = "Memvalidasi & mencocokkan DATA_STORE...";
+            progress = 80;
+            if (progressBar) progressBar.style.width = `${progress}%`;
+            if (progressPct) progressPct.textContent = `${progress}%`;
+            if (statusText) statusText.textContent = "Memvalidasi & mencocokkan DATA_STORE...";
 
-            // Kirim ke Google Apps Script Web App
             const response = await fetch(WEB_APP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -582,9 +579,9 @@ window.submitOfficialPdf = async function() {
             const result = await response.json();
 
             progress = 100;
-            progressBar.style.width = `100%`;
-            progressPct.textContent = `100%`;
-            statusText.textContent = "Selesai!";
+            if (progressBar) progressBar.style.width = `100%`;
+            if (progressPct) progressPct.textContent = `100%`;
+            if (statusText) statusText.textContent = "Selesai!";
 
             if (result.success) {
                 if (statusBox) {
@@ -592,15 +589,15 @@ window.submitOfficialPdf = async function() {
                     statusBox.textContent = `Sukses! ${result.count || ''} data toko berhasil disimpan ke OFFICIAL_IT_REPORT.`;
                     statusBox.classList.remove('hidden');
                 }
-                btnText.textContent = "Berhasil Disimpan";
+                if (btnText) btnText.textContent = "Berhasil Disimpan";
 
-                // Refresh data dashboard otomatis setelah 2 detik
                 setTimeout(() => {
                     closeUploadPdfModal();
                     if (typeof currentSalesSource !== 'undefined' && currentSalesSource === 'OFFICIAL_IT') {
                         fetchSalesData();
                     }
-                }, 2000);
+                }, 1500);
+
             } else {
                 throw new Error(result.message || "Gagal memproses data di Google Sheet.");
             }
@@ -610,17 +607,17 @@ window.submitOfficialPdf = async function() {
             throw new Error("Gagal membaca file dari perangkat.");
         };
 
-        reader.readAsDataURL(file); // Membaca file dengan aman tanpa corrupt
+        reader.readAsDataURL(file);
 
     } catch (error) {
         console.error("Upload Error:", error);
-        progContainer.classList.add('hidden');
+        if (progContainer) progContainer.classList.add('hidden');
         if (statusBox) {
             statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 mt-3";
             statusBox.textContent = "Gagal: " + (error.message || "Terjadi kesalahan koneksi.");
             statusBox.classList.remove('hidden');
         }
-        btnSubmit.disabled = false;
-        btnText.textContent = "Coba Lagi";
+        if (btnSubmit) btnSubmit.disabled = false;
+        if (btnText) btnText.textContent = "Coba Lagi";
     }
 };
