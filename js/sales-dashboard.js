@@ -483,7 +483,7 @@ function renderSalesTableFiltered(data) {
 }
 
 // GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA YANG TERBARU
-const WEB_APP_URL = "GANTI_DENGAN_WEB_APP_URL_ANDA";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJGzJvsP7o4O4zZbQzEZ2sbqPtRBCPbrgPwU4krc_mDn4xifZgTQdBQBT5G2QW0zMF/exec";
 
 window.openUploadPdfModal = function() {
     const modal = document.getElementById('uploadPdfModal');
