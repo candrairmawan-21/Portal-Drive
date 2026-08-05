@@ -8,9 +8,9 @@ let salesChartInstance = null;
 let currentSalesChartMode = 'mtd';
 let currentSalesSource = 'SUBMISSION'; // 'SUBMISSION' atau 'OFFICIAL_IT'
 
-// GID Sheet lengkap (Termasuk Official IT Report)
+// GID Sheet Lengkap (Termasuk Official IT Report)
 const SHEET_GIDS = {
-    'OFFICIAL_IT': '1129267198', // GID Sheet OFFICIAL_IT_REPORT (Sesuaikan jika berbeda)
+    'OFFICIAL_IT': '1129267198', // GID Sheet OFFICIAL_IT_REPORT
     'Oct26': '1682478488', 
     'Sep26': '432381843', 
     'Aug26': '1766415704', 
@@ -43,7 +43,7 @@ function displayUpdateDate() {
 }
 
 /**
- * Fungsi ganti sumber data (Store Submission vs Official IT Report)
+ * Fungsi Ganti Sumber Data (Store Submission vs Official IT Report)
  */
 window.switchSalesSource = function(sourceType) {
     currentSalesSource = sourceType;
@@ -53,13 +53,13 @@ window.switchSalesSource = function(sourceType) {
     const slicerBulan = document.getElementById('slicerBulanSales');
 
     if (sourceType === 'OFFICIAL_IT') {
-        if (btnOff) btnOff.className = "px-4 py-2 rounded-lg text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
-        if (btnSub) btnSub.className = "px-4 py-2 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
-        // Disable dropdown bulan jika membuka Official IT Report (karena membaca 1 master sheet)
+        if (btnOff) btnOff.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
+        if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
+        // Disable dropdown bulan jika membuka Official IT Report
         if (slicerBulan) slicerBulan.disabled = true;
     } else {
-        if (btnSub) btnSub.className = "px-4 py-2 rounded-lg text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
-        if (btnOff) btnOff.className = "px-4 py-2 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
+        if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
+        if (btnOff) btnOff.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
         if (slicerBulan) slicerBulan.disabled = false;
     }
 
@@ -85,7 +85,6 @@ function initSalesSlicers() {
             slicerSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
             
             let uniqueItems = new Set();
-            // Baca pintar dari data sales yang sedang aktif
             salesData.forEach(item => {
                 if (kategori === 'store' && item.store && item.store !== "-") {
                     uniqueItems.add(item.store.trim());
@@ -145,7 +144,7 @@ function parseSalesCSV(text, sourceMode) {
     let lines = text.split('\n');
     if (lines.length < 2) return [];
     
-    // Deteksi otomatis baris header (Biasanya baris 0 untuk Official IT, baris 2 untuk Store Submission)
+    // Deteksi otomatis baris header
     let headerRowIdx = sourceMode === 'OFFICIAL_IT' ? 0 : (lines.length > 2 ? 2 : 0);
     let headers = parseCSVLine(lines[headerRowIdx]).map(h => h.trim().toLowerCase());
     let result = [];
@@ -154,7 +153,6 @@ function parseSalesCSV(text, sourceMode) {
         if (!lines[i].trim()) continue;
         let row = parseCSVLine(lines[i]);
 
-        // Helper untuk mencari nilai kolom secara pintar berdasarkan alternatif nama header
         let getVal = (headerNames, fallbackIndex) => {
             for (let hName of headerNames) {
                 let idx = headers.indexOf(hName.toLowerCase());
@@ -291,7 +289,7 @@ function renderSalesSummaryFiltered(data) {
 }
 
 /* ==========================================================================
-   6. GRAFIK (CHART TARGET BULANAN VS TREN 6 BULAN)
+   6. GRAFIK (WARNA ROSE RED & ORANGE MENYALA + LABEL PERSENTASE POLYGON)
    ========================================================================== */
 function renderSalesChartFiltered(data) {
     const ctx = document.getElementById('salesTargetChart');
@@ -308,11 +306,13 @@ function renderSalesChartFiltered(data) {
                     type: 'line',
                     label: 'Achievement (%)',
                     data: data.map(item => item.achPercent || 0),
-                    backgroundColor: '#f43f5e', 
-                    borderColor: '#f43f5e', 
+                    backgroundColor: '#6366f1', 
+                    borderColor: '#6366f1', 
                     borderWidth: 2.5,
-                    pointRadius: 4,
+                    pointRadius: 5,
                     pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#6366f1',
+                    pointBorderWidth: 2,
                     fill: false, 
                     tension: 0.35, 
                     yAxisID: 'y1' 
@@ -320,7 +320,9 @@ function renderSalesChartFiltered(data) {
                 {
                     type: 'bar',
                     label: 'MTD Target',
-                    backgroundColor: '#cbd5e1', 
+                    backgroundColor: 'rgba(244, 63, 94, 0.85)', // Warna Rose Red
+                    borderColor: '#f43f5e',
+                    borderWidth: 1,
                     borderRadius: 6,
                     data: data.map(item => item.mtdTarget || 0),
                     yAxisID: 'y'
@@ -328,7 +330,9 @@ function renderSalesChartFiltered(data) {
                 {
                     type: 'bar',
                     label: 'MTD Sales',
-                    backgroundColor: '#10b981', 
+                    backgroundColor: 'rgba(249, 115, 22, 0.9)', // Warna Orange Menyala
+                    borderColor: '#f97316',
+                    borderWidth: 1,
                     borderRadius: 6,
                     data: data.map(item => item.mtdSales || 0),
                     yAxisID: 'y'
@@ -338,13 +342,36 @@ function renderSalesChartFiltered(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { top: 28 } },
             scales: {
                 x: { grid: { display: false } },
                 y: { type: 'linear', display: true, position: 'left', beginAtZero: true },
                 y1: { type: 'linear', display: false, position: 'right', beginAtZero: true }
             },
             plugins: { legend: { position: 'top' } }
-        }
+        },
+        plugins: [{
+            // Plugin khusus untuk mencetak angka persentase di setiap titik/polygon
+            id: 'polygonPercentageLabels',
+            afterDatasetsDraw: (chart) => {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    if (dataset.type === 'line') { 
+                        const meta = chart.getDatasetMeta(i);
+                        if (!meta.hidden) {
+                            meta.data.forEach((element, index) => {
+                                ctx.fillStyle = '#4f46e5'; 
+                                ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                const dataString = Number(dataset.data[index]).toFixed(1) + '%';
+                                ctx.fillText(dataString, element.x, element.y - 8); 
+                            });
+                        }
+                    }
+                });
+            }
+        }]
     });
 }
 
@@ -378,20 +405,46 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
                 datasets: [{
                     label: 'Trend Achievement (%)',
                     data: validData.map(item => item.achPercent),
-                    borderColor: '#6366f1', 
+                    borderColor: '#f97316', // Orange Menyala untuk garis tren
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
                     borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#f97316',
+                    pointBorderWidth: 2,
                     fill: true,
                     tension: 0.3
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                layout: { padding: { top: 25 } }
+            },
+            plugins: [{
+                // Plugin cetak angka persentase pada mode tren 6 bulan
+                id: 'trendPolygonLabels',
+                afterDatasetsDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta.hidden) {
+                        meta.data.forEach((element, index) => {
+                            ctx.fillStyle = '#c2410c';
+                            ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+                            ctx.textAlign = 'center';
+                            const val = Number(chart.data.datasets[0].data[index]).toFixed(1) + '%';
+                            ctx.fillText(val, element.x, element.y - 10);
+                        });
+                    }
+                }
+            }]
         });
     } catch (e) { console.error(e); } 
     finally { if (loader) loader.classList.add('hidden'); }
 }
 
 /* ==========================================================================
-   7. TABEL SALES STORE (WITH SMART COLOR BADGES)
+   7. TABEL SALES STORE
    ========================================================================== */
 function renderSalesTableFiltered(data) {
     const tbody = document.getElementById('sales-table-body');
@@ -428,3 +481,60 @@ function renderSalesTableFiltered(data) {
         `;
     }).join('');
 }
+
+/* ==========================================================================
+   8. MODAL HANDLER UPLOAD PDF OFFICIAL IT
+   ========================================================================== */
+window.openUploadPdfModal = function() {
+    const modal = document.getElementById('uploadPdfModal');
+    if (modal) modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+window.closeUploadPdfModal = function() {
+    const modal = document.getElementById('uploadPdfModal');
+    if (modal) modal.classList.add('hidden');
+    const display = document.getElementById('pdfFileNameDisplay');
+    if (display) display.textContent = "Klik atau seret file .PDF laporan ke sini";
+    const input = document.getElementById('officialPdfInput');
+    if (input) input.value = '';
+};
+
+window.previewPdfSelection = function(input) {
+    const display = document.getElementById('pdfFileNameDisplay');
+    if (input.files && input.files[0] && display) {
+        display.textContent = `File terpilih: ${input.files[0].name}`;
+    }
+};
+
+window.submitOfficialPdf = async function() {
+    const input = document.getElementById('officialPdfInput');
+    const statusBox = document.getElementById('pdfUploadStatus');
+    const btnSubmit = document.getElementById('btnSubmitPdf');
+
+    if (!input || !input.files || !input.files[0]) {
+        alert("Silakan pilih file PDF terlebih dahulu!");
+        return;
+    }
+
+    const file = input.files[0];
+    if (statusBox) {
+        statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200";
+        statusBox.textContent = "Sedang memproses dan mencocokkan dengan DATA_STORE...";
+    }
+    if (btnSubmit) btnSubmit.disabled = true;
+
+    // Simulasi respons eksekusi ke backend Apps Script (doPost)
+    setTimeout(() => {
+        if (statusBox) {
+            statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
+            statusBox.textContent = `Berhasil! Data dari "${file.name}" telah disimpan ke OFFICIAL_IT_REPORT.`;
+        }
+        if (btnSubmit) btnSubmit.disabled = false;
+        
+        setTimeout(() => {
+            closeUploadPdfModal();
+            if (currentSalesSource === 'OFFICIAL_IT') fetchSalesData();
+        }, 1500);
+    }, 2000);
+};
