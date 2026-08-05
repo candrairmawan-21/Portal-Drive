@@ -482,38 +482,46 @@ function renderSalesTableFiltered(data) {
     }).join('');
 }
 
-/* ==========================================================================
-   8. MODAL HANDLER UPLOAD PDF OFFICIAL IT
-   ========================================================================== */
+// GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA YANG TERBARU
+const WEB_APP_URL = "GANTI_DENGAN_WEB_APP_URL_ANDA";
+
 window.openUploadPdfModal = function() {
     const modal = document.getElementById('uploadPdfModal');
     if (modal) modal.classList.remove('hidden');
+    // Reset state modal saat dibuka
+    document.getElementById('officialPdfInput').value = '';
+    document.getElementById('pdfFileNameDisplay').textContent = "Klik atau seret file .PDF laporan ke sini";
+    document.getElementById('uploadProgressContainer').classList.add('hidden');
+    document.getElementById('pdfUploadStatus').classList.add('hidden');
+    document.getElementById('btnSubmitPdf').disabled = false;
+    document.getElementById('btnSubmitText').textContent = "Proses Upload";
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
 window.closeUploadPdfModal = function() {
     const modal = document.getElementById('uploadPdfModal');
     if (modal) modal.classList.add('hidden');
-    const display = document.getElementById('pdfFileNameDisplay');
-    if (display) display.textContent = "Klik atau seret file .PDF laporan ke sini";
-    const input = document.getElementById('officialPdfInput');
-    if (input) input.value = '';
 };
 
 window.previewPdfSelection = function(input) {
     const display = document.getElementById('pdfFileNameDisplay');
     if (input.files && input.files[0] && display) {
-        display.textContent = `File terpilih: ${input.files[0].name}`;
+        // Menampilkan nama file yang dipilih secara informatif
+        display.textContent = `📄 File terpilih: ${input.files[0].name}`;
+    } else {
+        display.textContent = "Klik atau seret file .PDF laporan ke sini";
     }
 };
-
-// GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA (Hasil Deploy sebagai Web App)
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx.../exec";
 
 window.submitOfficialPdf = async function() {
     const input = document.getElementById('officialPdfInput');
     const statusBox = document.getElementById('pdfUploadStatus');
     const btnSubmit = document.getElementById('btnSubmitPdf');
+    const btnText = document.getElementById('btnSubmitText');
+    const progContainer = document.getElementById('uploadProgressContainer');
+    const progressBar = document.getElementById('uploadProgressBar');
+    const progressPct = document.getElementById('uploadProgressPct');
+    const statusText = document.getElementById('uploadStatusText');
 
     if (!input || !input.files || !input.files[0]) {
         alert("Silakan pilih file PDF terlebih dahulu!");
@@ -521,70 +529,98 @@ window.submitOfficialPdf = async function() {
     }
 
     const file = input.files[0];
+    
+    // UI Loading & Progress bar aktif
+    if (statusBox) statusBox.classList.add('hidden');
+    progContainer.classList.remove('hidden');
+    btnSubmit.disabled = true;
+    btnText.textContent = "Mengunggah...";
 
-    // Tampilkan status loading
-    if (statusBox) {
-        statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200";
-        statusBox.textContent = "Membaca PDF & mengirim data ke Google Sheet...";
-    }
-    if (btnSubmit) btnSubmit.disabled = true;
+    let progress = 10;
+    progressBar.style.width = `${progress}%`;
+    progressPct.textContent = `${progress}%`;
+    statusText.textContent = "Membaca struktur file PDF...";
 
     try {
-        // 1. Baca file sebagai teks / Base64 menggunakan FileReader
+        // Menggunakan FileReader untuk membaca file sebagai Data URL / Base64
         const reader = new FileReader();
-        
+
+        reader.onprogress = (event) => {
+            if (event.lengthComputable) {
+                let percent = Math.round((event.loaded / event.total) * 50); // 50% pertama untuk baca lokal
+                progressBar.style.width = `${percent}%`;
+                progressPct.textContent = `${percent}%`;
+            }
+        };
+
         reader.onload = async function(e) {
-            const fileContent = e.target.result;
-            
-            // 2. Kirim payload ke Google Apps Script (doPost)
+            progress = 60;
+            progressBar.style.width = `${progress}%`;
+            progressPct.textContent = `${progress}%`;
+            statusText.textContent = "Mengirim data ke Google Sheet...";
+
+            const base64Content = e.target.result;
+
             const payload = {
                 action: "UPLOAD_PDF_OFFICIAL",
                 fileName: file.name,
-                fileData: fileContent // Mengirimkan content untuk diparsing di backend
+                fileData: base64Content
             };
 
+            progress = 85;
+            progressBar.style.width = `${progress}%`;
+            progressPct.textContent = `${progress}%`;
+            statusText.textContent = "Memvalidasi & mencocokkan DATA_STORE...";
+
+            // Kirim ke Google Apps Script Web App
             const response = await fetch(WEB_APP_URL, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "text/plain;charset=utf-8"
-                },
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             });
 
             const result = await response.json();
 
+            progress = 100;
+            progressBar.style.width = `100%`;
+            progressPct.textContent = `100%`;
+            statusText.textContent = "Selesai!";
+
             if (result.success) {
                 if (statusBox) {
-                    statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
-                    statusBox.textContent = `Berhasil! ${result.count || ''} baris data toko berhasil disimpan ke OFFICIAL_IT_REPORT.`;
+                    statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-3";
+                    statusBox.textContent = `Sukses! ${result.count || ''} data toko berhasil disimpan ke OFFICIAL_IT_REPORT.`;
+                    statusBox.classList.remove('hidden');
                 }
-                
-                // Refresh data setelah 1.5 detik
+                btnText.textContent = "Berhasil Disimpan";
+
+                // Refresh data dashboard otomatis setelah 2 detik
                 setTimeout(() => {
                     closeUploadPdfModal();
-                    if (currentSalesSource === 'OFFICIAL_IT') {
+                    if (typeof currentSalesSource !== 'undefined' && currentSalesSource === 'OFFICIAL_IT') {
                         fetchSalesData();
                     }
-                }, 1500);
+                }, 2000);
             } else {
-                throw new Error(result.message || "Gagal menyimpan ke Google Sheet.");
+                throw new Error(result.message || "Gagal memproses data di Google Sheet.");
             }
         };
 
-        reader.onerror = function() {
-            throw new Error("Gagal membaca file PDF dari perangkat Anda.");
+        reader.onerror = () => {
+            throw new Error("Gagal membaca file dari perangkat.");
         };
 
-        // Membaca isi file (dapat disesuaikan ke readAsText atau readAsDataURL tergantung parser backend)
-        reader.readAsText(file);
+        reader.readAsDataURL(file); // Membaca file dengan aman tanpa corrupt
 
     } catch (error) {
         console.error("Upload Error:", error);
+        progContainer.classList.add('hidden');
         if (statusBox) {
-            statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200";
-            statusBox.textContent = "Error: " + (error.message || "Gagal menghubungi Google Apps Script.");
+            statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 mt-3";
+            statusBox.textContent = "Gagal: " + (error.message || "Terjadi kesalahan koneksi.");
+            statusBox.classList.remove('hidden');
         }
-    } finally {
-        if (btnSubmit) btnSubmit.disabled = false;
+        btnSubmit.disabled = false;
+        btnText.textContent = "Coba Lagi";
     }
 };
