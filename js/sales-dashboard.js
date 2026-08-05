@@ -507,6 +507,9 @@ window.previewPdfSelection = function(input) {
     }
 };
 
+// GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA (Hasil Deploy sebagai Web App)
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx.../exec";
+
 window.submitOfficialPdf = async function() {
     const input = document.getElementById('officialPdfInput');
     const statusBox = document.getElementById('pdfUploadStatus');
@@ -518,23 +521,70 @@ window.submitOfficialPdf = async function() {
     }
 
     const file = input.files[0];
+
+    // Tampilkan status loading
     if (statusBox) {
         statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200";
-        statusBox.textContent = "Sedang memproses dan mencocokkan dengan DATA_STORE...";
+        statusBox.textContent = "Membaca PDF & mengirim data ke Google Sheet...";
     }
     if (btnSubmit) btnSubmit.disabled = true;
 
-    // Simulasi respons eksekusi ke backend Apps Script (doPost)
-    setTimeout(() => {
-        if (statusBox) {
-            statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
-            statusBox.textContent = `Berhasil! Data dari "${file.name}" telah disimpan ke OFFICIAL_IT_REPORT.`;
-        }
-        if (btnSubmit) btnSubmit.disabled = false;
+    try {
+        // 1. Baca file sebagai teks / Base64 menggunakan FileReader
+        const reader = new FileReader();
         
-        setTimeout(() => {
-            closeUploadPdfModal();
-            if (currentSalesSource === 'OFFICIAL_IT') fetchSalesData();
-        }, 1500);
-    }, 2000);
+        reader.onload = async function(e) {
+            const fileContent = e.target.result;
+            
+            // 2. Kirim payload ke Google Apps Script (doPost)
+            const payload = {
+                action: "UPLOAD_PDF_OFFICIAL",
+                fileName: file.name,
+                fileData: fileContent // Mengirimkan content untuk diparsing di backend
+            };
+
+            const response = await fetch(WEB_APP_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                if (statusBox) {
+                    statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
+                    statusBox.textContent = `Berhasil! ${result.count || ''} baris data toko berhasil disimpan ke OFFICIAL_IT_REPORT.`;
+                }
+                
+                // Refresh data setelah 1.5 detik
+                setTimeout(() => {
+                    closeUploadPdfModal();
+                    if (currentSalesSource === 'OFFICIAL_IT') {
+                        fetchSalesData();
+                    }
+                }, 1500);
+            } else {
+                throw new Error(result.message || "Gagal menyimpan ke Google Sheet.");
+            }
+        };
+
+        reader.onerror = function() {
+            throw new Error("Gagal membaca file PDF dari perangkat Anda.");
+        };
+
+        // Membaca isi file (dapat disesuaikan ke readAsText atau readAsDataURL tergantung parser backend)
+        reader.readAsText(file);
+
+    } catch (error) {
+        console.error("Upload Error:", error);
+        if (statusBox) {
+            statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200";
+            statusBox.textContent = "Error: " + (error.message || "Gagal menghubungi Google Apps Script.");
+        }
+    } finally {
+        if (btnSubmit) btnSubmit.disabled = false;
+    }
 };
