@@ -5,11 +5,8 @@
 
 import cacheManager from './sales-cache.js';
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJGzJvsP7o4O4zZbQzEZ2sbqPtRBCPbrgPwU4krc_mDn4xifZgTQdBQBT5G2QW0zMF/exec";
-
-// 1. PASTIKAN GID BERBEDA UNTUK MASING-MASING TAB/SHEET DI GOOGLE SPREADSHEET
 const CSV_SUBMISSION_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?gid=0&single=true&output=csv";
-const CSV_OFFICIAL_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?gid=1129267198&single=true&output=csv"; // Ganti angka 123456789 dengan GID tab OFFICIAL_IT_REPORT Anda
+const CSV_OFFICIAL_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?gid=1129267198&single=true&output=csv";
 
 export async function fetchSalesDataset(sourceType, forceRefresh = false) {
     const cacheKey = `sales_data_${sourceType}`;
@@ -26,7 +23,6 @@ export async function fetchSalesDataset(sourceType, forceRefresh = false) {
         const csvText = await response.text();
         const parsedData = parseCSVToObjects(csvText);
         
-        // Simpan ke cache selama 15 menit
         cacheManager.set(cacheKey, parsedData, 900);
         return parsedData;
     } catch (err) {
@@ -35,7 +31,6 @@ export async function fetchSalesDataset(sourceType, forceRefresh = false) {
     }
 }
 
-// 2. PARSER AMAN TERHADAP TANDA KUTIP (MENGIKUTI STANDAR MODUL EXISTING)
 function parseCSVToObjects(text) {
     const lines = text.split('\n');
     if (lines.length < 2) return [];
