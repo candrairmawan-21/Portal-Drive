@@ -20,9 +20,7 @@
 </head>
 <body class="min-h-screen text-slate-800 antialiased selection:bg-amber-500 selection:text-white overflow-hidden flex" id="mainBody">
 
-    <!-- =========================================================
-         MODAL 1: OVERLAY LOGIN PORTAL (EXISTING)
-         ========================================================= -->
+    <!-- MODAL 1: OVERLAY LOGIN PORTAL -->
     <div id="loginOverlay" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-[9999] p-4 transition-all duration-500">
         <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 p-8 text-center">
             <div class="flex justify-center mb-5">
@@ -50,9 +48,7 @@
         </div>
     </div>
 
-    <!-- =========================================================
-         MODAL 2: KONFIRMASI PASSWORD AKSES EKSTERNAL (EXISTING)
-         ========================================================= -->
+    <!-- MODAL 2: KONFIRMASI PASSWORD AKSES EKSTERNAL -->
     <div id="passwordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9998] p-4 hidden">
         <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-slate-100 p-6 text-center relative">
             <button onclick="closePasswordModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition">
@@ -77,9 +73,7 @@
         </div>
     </div>
 
-    <!-- =========================================================
-         MODAL 3: HANDBOOK ATTITUDE QUOTE POP-UP (EXISTING)
-         ========================================================= -->
+    <!-- MODAL 3: HANDBOOK ATTITUDE QUOTE POP-UP -->
     <div id="attitudeModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4 hidden">
         <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-100 p-6 sm:p-8 text-center relative animate-[fadeIn_0.3s_ease-out]">
             <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
@@ -107,9 +101,7 @@
         </div>
     </div>
 
-    <!-- =========================================================
-         NAVIGASI: SIDEBAR UTAMA & FOOTER (CLEANED)
-         ========================================================= -->
+    <!-- NAVIGASI: SIDEBAR UTAMA -->
     <aside id="sidebarMenu" class="w-64 sidebar-transition bg-slate-900 text-slate-400 h-screen flex-shrink-0 flex flex-col justify-between p-4 border-r border-slate-800 z-40 fixed md:static -translate-x-full md:translate-x-0 overflow-hidden">
         <div class="w-full">
             <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6 header-container">
@@ -151,7 +143,6 @@
                     <span class="sidebar-text-element">Monitoring Tugas</span>
                 </button>
 
-                <!-- MENU: AI SOP ASSISTANT -->
                 <button onclick="switchView('ai-sop')" id="menu-ai-sop" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group relative overflow-hidden">
                     <div class="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <i data-lucide="bot" class="w-4 h-4 flex-shrink-0 text-[#39FF14] animate-pulse"></i> 
@@ -161,7 +152,6 @@
                     </span>
                 </button>
 
-                <!-- MENU UTAMA: ANALYZE (COLLAPSE / DROPDOWN) -->
                 <div class="space-y-1">
                     <button id="nav-analyze-dropdown" class="w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800/70 hover:text-white transition-all group">
                         <div class="flex items-center gap-3">
@@ -216,9 +206,7 @@
 
     <div id="sidebarBackdrop" onclick="toggleSidebarMobile()" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
-    <!-- =========================================================
-         AREA KERJA UTAMA & HEADER
-         ========================================================= -->
+    <!-- AREA KERJA UTAMA & HEADER -->
     <div class="flex-1 flex flex-col h-screen overflow-y-auto w-full relative">
         <header class="bg-white/70 backdrop-blur-xl shadow-sm sticky top-0 z-20 border-b border-slate-200/50">
             <div class="container mx-auto px-6 py-4 flex justify-between items-center gap-4">
@@ -349,12 +337,10 @@
             </div>
         </main>
 
-        <!-- =========================================================
-             SEKSI 3: DASHBOARD SALES (WITH 2-BUTTON SOURCE SWITCHER)
-             ========================================================= -->
+        <!-- SEKSI 3: DASHBOARD SALES -->
         <main id="section-sales" class="container mx-auto px-6 py-8 flex-1 hidden">
             
-            <!-- A. LANDING PAGE STATUS BANNER -->
+            <!-- A. LANDING PAGE STATUS BANNER + SOURCE SELECTOR + UPLOAD BUTTON -->
             <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl mb-6 text-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div class="space-y-1.5">
                     <div class="flex items-center gap-3">
@@ -366,15 +352,24 @@
                     <p id="update-date" class="text-[10px] text-amber-400 font-bold uppercase tracking-widest mt-1"></p>
                 </div>
 
-                <!-- SELECTOR REALTIME DATA SOURCE (STORE SUBMISSION VS OFFICIAL IT) -->
-                <div class="inline-flex items-center bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/80 shadow-inner">
-                    <button id="btn-src-submission" onclick="switchSalesSource('SUBMISSION')" 
-                            class="px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-900 shadow-sm transition-all">
-                        Store Submission
-                    </button>
-                    <button id="btn-src-official" onclick="switchSalesSource('OFFICIAL_IT')" 
-                            class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all">
-                        Official IT Report
+                <!-- SELECTOR REALTIME DATA SOURCE + TOMBOL UPLOAD PDF -->
+                <div class="inline-flex flex-wrap items-center gap-2">
+                    <div class="inline-flex items-center bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/80 shadow-inner">
+                        <button id="btn-src-submission" onclick="switchSalesSource('SUBMISSION')" 
+                                class="px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-900 shadow-sm transition-all">
+                            Store Submission
+                        </button>
+                        <button id="btn-src-official" onclick="switchSalesSource('OFFICIAL_IT')" 
+                                class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all">
+                            Official IT Report
+                        </button>
+                    </div>
+
+                    <!-- TOMBOL UPLOAD PDF OFFICIAL -->
+                    <button onclick="openUploadPdfModal()" 
+                            class="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black rounded-2xl shadow-md transition-all">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                        <span>Upload PDF IT</span>
                     </button>
                 </div>
             </div>
@@ -490,9 +485,7 @@
             </div>
         </main>
 
-        <!-- =========================================================
-             SEKSI 4: F003 BUILDER (EXISTING)
-             ========================================================= -->
+        <!-- SEKSI 4: F003 BUILDER -->
         <main id="section-damage" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="mb-6">
                 <h2 class="text-2xl font-black text-slate-800">Form Pengajuan Damage Items</h2>
@@ -547,9 +540,7 @@
             </div>
         </main>
 
-        <!-- =========================================================
-             SEKSI 5: MONITORING PROGRESS TUGASAN & INBOX
-             ========================================================= -->
+        <!-- SEKSI 5: MONITORING PROGRESS TUGASAN -->
         <main id="section-monitoring" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-slate-100">
@@ -594,9 +585,7 @@
             </div>
         </main>
 
-        <!-- =========================================================
-             SEKSI: AI SOP ASSISTANT
-             ========================================================= -->
+        <!-- SEKSI: AI SOP ASSISTANT -->
         <main id="section-ai-sop" class="w-full px-4 sm:px-6 py-6 flex-1 hidden">
             <div class="bg-slate-50/50 rounded-3xl border border-slate-200/80 shadow-sm w-full flex flex-col h-[calc(100vh-110px)]">
                 <div class="p-5 bg-white border-b border-slate-200/60 rounded-t-3xl flex items-center justify-between">
@@ -637,9 +626,7 @@
             </div>
         </main>
 
-        <!-- =========================================================
-             SEKSI 6: ITEMIZE
-             ========================================================= -->
+        <!-- SEKSI 6: ITEMIZE -->
         <main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="mb-6 max-w-2xl">
                 <div class="flex items-center gap-2 mb-1">
@@ -681,9 +668,7 @@
             </div>
         </main>
 
-        <!-- =========================================================
-             SEKSI 7: FAST MOVING SKU FOR TF
-             ========================================================= -->
+        <!-- SEKSI 7: FAST MOVING SKU FOR TF -->
         <main id="section-fast-moving" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="mb-6 max-w-2xl">
                 <div class="flex items-center gap-2 mb-1">
@@ -746,36 +731,47 @@
         </div>
     </div>
 
-    <!-- MODAL 5: STORE DETAIL INTERACTIVE DRAWER -->
-    <div id="storeDetailDrawer" class="fixed inset-0 z-50 overflow-hidden hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeStoreDetailDrawer()"></div>
-        <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div class="w-screen max-w-xl bg-white shadow-2xl flex flex-col justify-between overflow-y-auto p-6 border-l border-slate-200 animate-[slideLeft_0.3s_ease-out]">
-                <div>
-                    <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
-                        <div>
-                            <span id="drawer-store-code" class="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 uppercase">CODE</span>
-                            <h2 id="drawer-store-name" class="text-xl font-black text-slate-800 mt-1">Store Name</h2>
-                        </div>
-                        <button onclick="closeStoreDetailDrawer()" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition">
-                            <i data-lucide="x" class="w-5 h-5"></i>
-                        </button>
+    <!-- MODAL 5: UPLOAD PDF OFFICIAL IT REPORT -->
+    <div id="uploadPdfModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 p-6 relative animate-[fadeIn_0.3s_ease-out]">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <i data-lucide="file-text" class="w-5 h-5"></i>
                     </div>
-                    <!-- Drawer Content: Trend, Achievement, Gap, History, Recommendation -->
-                    <div id="drawer-content-body" class="space-y-6"></div>
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800">Upload Official IT Report</h3>
+                        <p class="text-[11px] text-slate-400">Otomatis filter & validasi ke sheet OFFICIAL_IT_REPORT</p>
+                    </div>
                 </div>
-                <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                    <button onclick="closeStoreDetailDrawer()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
-                        Tutup Detail
+                <button onclick="closeUploadPdfModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center bg-slate-50/50 transition-all relative">
+                    <input type="file" id="officialPdfInput" accept=".pdf" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onchange="previewPdfSelection(this)">
+                    <i data-lucide="upload-cloud" class="w-8 h-8 text-emerald-500 mx-auto mb-2"></i>
+                    <p id="pdfFileNameDisplay" class="text-xs font-bold text-slate-700">Klik atau seret file .PDF laporan ke sini</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Hanya toko yang ada di DATA_STORE yang akan disimpan.</p>
+                </div>
+
+                <div id="pdfUploadStatus" class="hidden text-center p-3 rounded-xl text-xs font-bold"></div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeUploadPdfModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+                        Batal
+                    </button>
+                    <button type="button" id="btnSubmitPdf" onclick="submitOfficialPdf()" class="px-5 py-2.5 bg-slate-900 hover:bg-emerald-600 text-white text-xs font-black rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i> Proses Upload
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- =========================================================
-         PEMUATAN KUMPULAN SKRIP LOGIKA (STABLE STANDARD SCRIPTS)
-         ========================================================= -->
+    <!-- PEMUATAN KUMPULAN SKRIP LOGIKA -->
     <script src="js/app.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/sales-dashboard.js"></script>
