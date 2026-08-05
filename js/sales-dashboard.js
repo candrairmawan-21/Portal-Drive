@@ -1,7 +1,7 @@
 /* ==========================================================================
    1. KONFIGURASI GLOBAL & MAPPING GID SHEETS
    ========================================================================== */
-const SALES_BASE_URL = 'https://script.google.com/macros/s/AKfycbwJGzJvsP7o4O4zZbQzEZ2sbqPtRBCPbrgPwU4krc_mDn4xifZgTQdBQBT5G2QW0zMF/exec';
+const SALES_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?output=csv';
 
 let salesData = [];
 let salesChartInstance = null;
