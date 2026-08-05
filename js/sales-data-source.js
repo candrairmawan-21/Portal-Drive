@@ -1,7 +1,6 @@
 /**
  * @file sales-data-source.js
  * @description Global Data Source Manager untuk Midnorth Portal.
- * Mengelola pilihan sumber data secara global dan menyiarkannya melalui DOM CustomEvent.
  */
 
 class GlobalDataSourceManager {
@@ -10,9 +9,8 @@ class GlobalDataSourceManager {
             return GlobalDataSourceManager.instance;
         }
         
-        // Load persistensi dari localStorage, default ke 'AUTO'
         this.currentMode = localStorage.getItem('midnorth_global_datasource_mode') || 'AUTO';
-        this.activeSource = 'STORE_SUBMISSION'; // State aktual yang digunakan setelah evaluasi 'AUTO'
+        this.activeSource = 'STORE_SUBMISSION';
         this.sourceMetadata = {
             STORE_SUBMISSION: {
                 label: 'Store Submission',
@@ -35,11 +33,6 @@ class GlobalDataSourceManager {
         GlobalDataSourceManager.instance = this;
     }
 
-    /**
-     * Set mode sumber data dan evaluasi active source
-     * @param {'AUTO' | 'STORE_SUBMISSION' | 'OFFICIAL_IT'} mode 
-     * @param {Object} [availableMetadata] - Metadata ketersediaan file dari backend
-     */
     setDataSourceMode(mode, availableMetadata = null) {
         this.currentMode = mode;
         localStorage.setItem('midnorth_global_datasource_mode', mode);
@@ -55,7 +48,6 @@ class GlobalDataSourceManager {
             }
         }
 
-        // Auto-Fallback Behavior
         if (mode === 'AUTO') {
             const hasOfficial = this.sourceMetadata.OFFICIAL_IT.lastUpload !== '-';
             this.activeSource = hasOfficial ? 'OFFICIAL_IT' : 'STORE_SUBMISSION';
@@ -66,9 +58,6 @@ class GlobalDataSourceManager {
         this.broadcastChange();
     }
 
-    /**
-     * Mengembalikan informasi sumber data yang aktif saat ini
-     */
     getActiveSourceInfo() {
         const meta = this.sourceMetadata[this.activeSource];
         return {
@@ -83,9 +72,6 @@ class GlobalDataSourceManager {
         };
     }
 
-    /**
-     * Memancarkan event perubahan secara global
-     */
     broadcastChange() {
         const payload = this.getActiveSourceInfo();
         const event = new CustomEvent('midnorth:datasource-change', {
@@ -94,7 +80,6 @@ class GlobalDataSourceManager {
         });
         window.dispatchEvent(event);
         
-        // Update visual banner global jika ada
         const bannerTitle = document.getElementById('global-source-label');
         if (bannerTitle) bannerTitle.textContent = payload.label;
     }
