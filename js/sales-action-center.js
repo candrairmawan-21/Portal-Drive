@@ -3,8 +3,6 @@
  * @description Modul prioritas dan rekomendasi tindakan toko berdasarkan Rule Engine deterministik.
  */
 
-import { formatRupiah, getStatusColorClass } from './utils/sales-utils.js';
-
 export function executeRuleEngine(storeData) {
     const ach = parseFloat(storeData.Achievement) || 0;
     const atv = parseFloat(storeData.Average_Trx) || 0;
@@ -16,11 +14,10 @@ export function executeRuleEngine(storeData) {
     let priorityBadge = "bg-slate-100 text-slate-700 border-slate-300";
     const recommendations = [];
 
-    // Rule 1: Kritis bila pencapaian < 80%
     if (ach < 80) {
         priorityScore = "Critical";
         priorityBadge = "bg-rose-100 text-rose-800 border-rose-300";
-        recommendations.push("Evaluasi segera penyebab penurunan; lalukan kunjungan supervisor.");
+        recommendations.push("Evaluasi segera penyebab penurunan; lakukan kunjungan supervisor.");
     } else if (ach < 90) {
         priorityScore = "Warning";
         priorityBadge = "bg-amber-100 text-amber-800 border-amber-300";
@@ -29,17 +26,14 @@ export function executeRuleEngine(storeData) {
         priorityBadge = "bg-emerald-100 text-emerald-800 border-emerald-300";
     }
 
-    // Rule 2: Traffic Rendah (Trx di bawah rata-rata jaringan)
     if (trx < 500 && ach < 90) {
         recommendations.push("Fokus Traffic: Aktifkan promosi flyer keliling & sebar katalog di area radius 2 km.");
     }
 
-    // Rule 3: ATV / Basket Size Rendah (< Rp 45.000)
     if (atv < 45000) {
         recommendations.push("Fokus Basket Size: Tekankan tawar-menawar kasir (UPT & produk kasir promo).");
     }
 
-    // Rule 4: Best Estimate di bawah target meski achievement saat ini bagus
     if (bestEst < target && ach >= 85) {
         recommendations.push("Fokus Weekend Push: Optimalkan stok barang fast-moving menjelang hari Jumat-Minggu.");
     }
