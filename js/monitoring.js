@@ -108,6 +108,53 @@ function checkAndResetWeeklyStatus() {
     }
 }
 
+/* ==========================================================================
+   HELPER: VALIDASI TANGGAL KETAT (HANYA HARI INI, ABAIKAN MINGGU LALU)
+   ========================================================================== */
+function isLogFromToday(timestampStr) {
+    if (!timestampStr) return false;
+    const now = new Date();
+    const todayDay = now.getDate();
+    const todayMonth = now.getMonth();
+    const todayYear = now.getFullYear();
+
+    const datePart = timestampStr.split(' ')[0].trim();
+    const todayIdStr = now.toLocaleDateString('id-ID');
+    if (datePart === todayIdStr) return true;
+
+    if (datePart.includes('/')) {
+        const parts = datePart.split('/');
+        if (parts.length >= 3) {
+            const logDay = parseInt(parts[0], 10);
+            const logMonth = parseInt(parts[1], 10) - 1;
+            const logYear = parseInt(parts[2].substring(0, 4), 10);
+            return (logDay === todayDay && logMonth === todayMonth && logYear === todayYear);
+        }
+    }
+
+    if (datePart.includes('-')) {
+        const parts = datePart.split('-');
+        if (parts.length >= 3 && parts[0].length === 4) {
+            const logYear = parseInt(parts[0], 10);
+            const logMonth = parseInt(parts[1], 10) - 1;
+            const logDay = parseInt(parts[2], 10);
+            return (logDay === todayDay && logMonth === todayMonth && logYear === todayYear);
+        }
+    }
+
+    return false;
+}
+
+/* ==========================================================================
+   HELPER: GENERATOR KUNCI UNIK TUGAS
+   ========================================================================== */
+function getTaskUniqueKey(task) {
+    if (task.ID_Tugas && task.ID_Tugas.trim() !== '') {
+        return task.ID_Tugas.trim();
+    }
+    return `${(task.Judul_Tugas || '').trim()}_${(task.Detail_Jadwal || '').trim()}`.toLowerCase();
+}
+
 function isTaskCompletedByUser(task, userObj) {
     if (!userObj) return false;
     
@@ -118,7 +165,7 @@ function isTaskCompletedByUser(task, userObj) {
     const todayDateStr = new Date().toLocaleDateString('id-ID');
 
     const completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
-    const taskIdKey = task.ID_Tugas || `${task.Judul_Tugas}_${task.Detail_Jadwal}`;
+    const taskIdKey = getTaskUniqueKey(task);
     
     if (completedTasksMap[taskIdKey] && completedTasksMap[taskIdKey].date === todayDateStr) {
         return true;
@@ -131,7 +178,7 @@ function isTaskCompletedByUser(task, userObj) {
         
         const matchUser = (logUser === targetName || logUser === targetUsername);
         const matchTugas = (logTugas === taskTitle);
-        const matchDate = (logTimestamp.split(' ')[0] === todayDateStr);
+        const matchDate = isLogFromToday(logTimestamp);
 
         return matchUser && matchTugas && matchDate;
     });
@@ -227,7 +274,7 @@ function initRealtimeMonitoring() {
     if (monitoringInterval) clearInterval(monitoringInterval);
     monitoringInterval = setInterval(() => {
         fetchMonitoringData();
-    }, 5000); // Disesuaikan jadi 5 detik agar lebih stabil
+    }, 5000);
 }
 
 function removeTampilanTugasUI() {
@@ -280,7 +327,7 @@ window.resetAllTasksCache = async function() {
         return;
     }
 
-    if (confirm('Yakin ingin mereset seluruh status tugas hari ini? Tombol pengerjaan tim akan diaktifkan kembali.')) {
+    if (confirm('Yakin ingin mereset seluruh status tugas hari ini? Reset Button akan mengaktifkan kembali tombol pengerjaan tim.')) {
         localStorage.removeItem('portal_completed_tasks');
         allTaskLogs = [];
 
@@ -366,7 +413,7 @@ function renderSuperiorDashboard(tbody) {
                 <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Rekap Google Sheet
             </a>
             <button onclick="resetAllTasksCache()" class="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-rose-900/30 transition-all flex items-center gap-2 border border-rose-500/30 active:scale-95">
-                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Buka Kunci Tombol Tim
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset Button
             </button>
         </div>
     </div>
@@ -479,7 +526,6 @@ function renderSuperiorDashboard(tbody) {
             `;
         }).join('');
 
-        // Cek apakah accordion ini sebelumnya sedang terbuka di memori
         const isCurrentlyOpen = openTaskAccordions.has(index);
         const collapseClass = isCurrentlyOpen ? '' : 'hidden';
 
@@ -551,13 +597,11 @@ function renderSuperiorDashboard(tbody) {
     lucide.createIcons();
 }
 
-// Fungsi Toggle dengan memori pencatat agar tidak tertutup otomatis saat data ter-refresh
 window.toggleTaskCollapse = function(index) {
     const collapseRow = document.getElementById(`collapse-row-${index}`);
     if (collapseRow) {
         collapseRow.classList.toggle('hidden');
         
-        // Simpan status ke Set memori
         if (collapseRow.classList.contains('hidden')) {
             openTaskAccordions.delete(index);
         } else {
@@ -592,6 +636,7 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
     tasks.forEach((task, index) => {
         const isCompleted = isTaskCompletedByUser(task, currentUserObj);
         const statusObj = getTaskTemporalStatusForUser(task, currentUserObj);
+        const uniqueKey = getTaskUniqueKey(task);
         
         const statusBadge = isCompleted 
             ? `<span class="px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200">Selesai</span>`
@@ -599,7 +644,7 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
 
         const actionButton = isCompleted
             ? `<button disabled class="px-4 py-2 bg-slate-200 text-slate-400 text-xs font-bold rounded-xl cursor-not-allowed">Sudah Selesai</button>`
-            : `<button onclick="openResponseModal(this, '${task.ID_Tugas || index}', '${task.Judul_Tugas}')" class="px-4 py-2 bg-slate-900 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95">Selesaikan</button>`;
+            : `<button onclick="openResponseModal(this, '${uniqueKey}', '${task.Judul_Tugas}')" class="px-4 py-2 bg-slate-900 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95">Selesaikan</button>`;
 
         tbody.innerHTML += `
             <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 bg-white shadow-2xs">
@@ -616,9 +661,11 @@ function renderUserTaskTable(tbody, loggedInUser, userRole) {
     lucide.createIcons();
 }
 
-async function openResponseModal(buttonElement, taskId, taskTitle) {
-    const catatan = prompt(`Berikan catatan / remark pengerjaan untuk tugas:\n"${taskTitle}"`, "Selesai dikerjakan");
-    if (catatan !== null) {
+async function openResponseModal(buttonElement, taskIdKey, taskTitle) {
+    if (buttonElement && buttonElement.disabled) return;
+
+    const catatan = prompt(`Isi nama toko yang tugasannya sudah diselesaikan:\n"${taskTitle}"`, "Isi nama toko yang tugasannya sudah diselesaikan");
+    if (catatan !== null && catatan.trim() !== "") {
         if (buttonElement) {
             buttonElement.disabled = true;
             buttonElement.innerText = 'Menyimpan...';
@@ -629,8 +676,8 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
         const matchedUser = SYSTEM_TEAM.find(u => u.username === loggedInUser);
         const namaUserLengkap = matchedUser ? matchedUser.name : loggedInUser;
         const todayDateStr = new Date().toLocaleDateString('id-ID');
+        const formattedTimestamp = getFormattedTimestamp();
 
-        const taskIdKey = taskId || taskTitle;
         let completedTasksMap = JSON.parse(localStorage.getItem('portal_completed_tasks') || '{}');
         completedTasksMap[taskIdKey] = { 
             catatan: catatan, 
@@ -644,7 +691,7 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
             'Nama User': namaUserLengkap,
             'Tugas yang Selesai': taskTitle,
             'Remark': catatan,
-            'Tanggal & Jam Respons': getFormattedTimestamp()
+            'Tanggal & Jam Respons': formattedTimestamp
         });
 
         renderMonitoringTable();
@@ -655,7 +702,7 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
             nama_user: namaUserLengkap,
             tugas_selesai: taskTitle,
             remark: catatan,
-            timestamp: getFormattedTimestamp()
+            timestamp: formattedTimestamp
         };
 
         try {
@@ -666,7 +713,7 @@ async function openResponseModal(buttonElement, taskId, taskTitle) {
                 body: JSON.stringify(payload)
             });
             
-            setTimeout(fetchMonitoringData, 1000);
+            setTimeout(fetchMonitoringData, 2000);
         } catch (err) {
             console.error('Gagal mengirim update ke server:', err);
         }
