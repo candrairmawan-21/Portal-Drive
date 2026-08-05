@@ -13,7 +13,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <!-- Library SheetJS untuk export & read Excel Client-Side -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     
     <!-- Menghubungkan Style Khusus -->
@@ -22,7 +21,7 @@
 <body class="min-h-screen text-slate-800 antialiased selection:bg-amber-500 selection:text-white overflow-hidden flex" id="mainBody">
 
     <!-- =========================================================
-         MODAL 1: OVERLAY LOGIN PORTAL (EXISTING - TIDAK DIUBAH)
+         MODAL 1: OVERLAY LOGIN PORTAL (EXISTING)
          ========================================================= -->
     <div id="loginOverlay" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-[9999] p-4 transition-all duration-500">
         <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 p-8 text-center">
@@ -109,7 +108,7 @@
     </div>
 
     <!-- =========================================================
-         NAVIGASI: SIDEBAR UTAMA & FOOTER (EXISTING + SUBMENU SALES)
+         NAVIGASI: SIDEBAR UTAMA & FOOTER (CLEANED)
          ========================================================= -->
     <aside id="sidebarMenu" class="w-64 sidebar-transition bg-slate-900 text-slate-400 h-screen flex-shrink-0 flex flex-col justify-between p-4 border-r border-slate-800 z-40 fixed md:static -translate-x-full md:translate-x-0 overflow-hidden">
         <div class="w-full">
@@ -136,60 +135,23 @@
                     <span class="sidebar-text-element">Performa UPT</span>
                 </button>
                 
-                <!-- ACCORDION SALES MONITORING (ID menu-sales existing dipertahankan agar kompatibel dengan app.js) -->
-                <div class="space-y-1">
-                    <button onclick="switchView('sales', 'dashboard'); toggleSalesSubMenu(event);" id="menu-sales" class="w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all group whitespace-nowrap">
-                        <div class="flex items-center gap-3">
-                            <i data-lucide="trending-up" class="w-4 h-4 flex-shrink-0"></i> 
-                            <span class="sidebar-text-element">Sales Monitoring</span>
-                        </div>
-                        <i data-lucide="chevron-down" id="salesChevron" class="w-4 h-4 transition-transform duration-200 sidebar-text-element"></i>
-                    </button>
-                    <!-- Sub-Menu Tambahan Sales Intelligence Center -->
-                    <div id="salesSubMenu" class="pl-4 space-y-1 hidden sidebar-text-element">
-                        <button onclick="switchSalesSubView('dashboard')" id="nav-sales-dashboard" class="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-xs text-amber-400 bg-slate-800/60 transition-all">
-                            <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                            <span>Dashboard</span>
-                        </button>
-                        <button onclick="switchSalesSubView('upload')" id="nav-sales-upload" class="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i data-lucide="upload-cloud" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                            <span>Official IT Upload</span>
-                        </button>
-                        <button onclick="switchSalesSubView('compare')" id="nav-sales-compare" class="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i data-lucide="git-compare" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                            <span>Compare Sources</span>
-                        </button>
-                        <button onclick="switchSalesSubView('history')" id="nav-sales-history" class="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i data-lucide="history" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                            <span>Upload History</span>
-                        </button>
-                        <button onclick="switchSalesSubView('explorer')" id="nav-sales-explorer" class="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i data-lucide="table-2" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                            <span>Data Explorer</span>
-                        </button>
-                        <button onclick="switchSalesSubView('action')" id="nav-sales-action" class="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i data-lucide="target" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                            <span>Action Center</span>
-                        </button>
-                        <button onclick="switchSalesSubView('settings')" id="nav-sales-settings" class="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i data-lucide="settings" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                            <span>Settings</span>
-                        </button>
-                    </div>
-                </div>
+                <!-- MENU SALES MONITORING (CLEAN SINGLE ACTION) -->
+                <button onclick="switchView('sales')" id="menu-sales" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
+                    <i data-lucide="trending-up" class="w-4 h-4 flex-shrink-0"></i> 
+                    <span class="sidebar-text-element">Sales Monitoring</span>
+                </button>
 
                 <button onclick="switchView('damage')" id="nav-damage" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800/50 hover:text-white transition-all group">
                     <i data-lucide="file-warning" class="w-4 h-4 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
                     <span class="sidebar-text-element">F003 Builder</span>
                 </button>
                 
-                <!-- MENU MONITORING TUGAS -->
                 <button onclick="switchView('monitoring')" id="menu-monitoring" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
                     <i data-lucide="clipboard-check" class="w-4 h-4 flex-shrink-0"></i> 
                     <span class="sidebar-text-element">Monitoring Tugas</span>
                 </button>
 
-                <!-- MENU: AI SOP ASSISTANT DENGAN EFEK HIJAU MONSTER -->
+                <!-- MENU: AI SOP ASSISTANT -->
                 <button onclick="switchView('ai-sop')" id="menu-ai-sop" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group relative overflow-hidden">
                     <div class="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <i data-lucide="bot" class="w-4 h-4 flex-shrink-0 text-[#39FF14] animate-pulse"></i> 
@@ -255,7 +217,7 @@
     <div id="sidebarBackdrop" onclick="toggleSidebarMobile()" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
     <!-- =========================================================
-         AREA KERJA UTAMA & HEADER (EXISTING - TIDAK DIUBAH)
+         AREA KERJA UTAMA & HEADER
          ========================================================= -->
     <div class="flex-1 flex flex-col h-screen overflow-y-auto w-full relative">
         <header class="bg-white/70 backdrop-blur-xl shadow-sm sticky top-0 z-20 border-b border-slate-200/50">
@@ -290,7 +252,7 @@
             </div>
         </header>
 
-        <!-- SEKSI 1: FILE MANAGER (EXISTING) -->
+        <!-- SEKSI 1: FILE MANAGER -->
         <main id="section-files" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="flex items-center flex-wrap gap-2 text-sm text-slate-600 mb-6 bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/40 shadow-sm" id="breadcrumbs"></div>
             <div id="portalGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -303,7 +265,7 @@
             </div>
         </main>
 
-        <!-- SEKSI 2: DASHBOARD UPT (EXISTING - TIDAK DIUBAH) -->
+        <!-- SEKSI 2: DASHBOARD UPT -->
         <main id="section-dashboard" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
@@ -388,63 +350,38 @@
         </main>
 
         <!-- =========================================================
-             SEKSI 3: DASHBOARD SALES (ENHANCED - SALES INTELLIGENCE CENTER)
-             Seluruh ID existing dipertahankan & ditambahkan kontainer modul baru
+             SEKSI 3: DASHBOARD SALES (WITH 2-BUTTON SOURCE SWITCHER)
              ========================================================= -->
         <main id="section-sales" class="container mx-auto px-6 py-8 flex-1 hidden">
             
-            <!-- A. LANDING PAGE STATUS BANNER (NEW - REALTIME DATA SOURCE SELECTOR) -->
+            <!-- A. LANDING PAGE STATUS BANNER -->
             <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl mb-6 text-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div class="space-y-1.5">
                     <div class="flex items-center gap-3">
                         <span class="px-3 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-black rounded-full uppercase tracking-wider">
                             Sales Intelligence Center
                         </span>
-                        <span id="banner-source-badge" class="px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full uppercase tracking-wider border border-emerald-300">
-                            Validated • Official Report
-                        </span>
                     </div>
                     <h1 class="text-2xl font-black tracking-tight text-white">Sales & Revenue Performance Monitoring</h1>
                     <p id="update-date" class="text-[10px] text-amber-400 font-bold uppercase tracking-widest mt-1"></p>
-                    <div class="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-300 pt-1">
-                        <span>Source: <strong id="banner-source-label" class="text-white font-bold">Official IT Report</strong></span>
-                        <span>•</span>
-                        <span>Last Upload: <strong id="banner-last-upload" class="text-white font-bold">05 Aug 2026, 08:30 WIB</strong></span>
-                        <span>•</span>
-                        <span>Uploaded By: <strong id="banner-uploaded-by" class="text-white font-bold">IT Operations</strong></span>
-                        <span>•</span>
-                        <span>Confidence: <strong id="banner-confidence" class="text-emerald-400 font-extrabold">100%</strong></span>
-                    </div>
                 </div>
 
-                <!-- SELECTOR REALTIME DATA SOURCE (STORE SUBMISSION / OFFICIAL IT / AUTO) -->
-                <div class="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/80 shadow-inner">
-                    <button onclick="changeSalesSource('STORE_SUBMISSION')" id="btn-src-store" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all">
+                <!-- SELECTOR REALTIME DATA SOURCE (STORE SUBMISSION VS OFFICIAL IT) -->
+                <div class="inline-flex items-center bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/80 shadow-inner">
+                    <button id="btn-src-submission" onclick="switchSalesSource('SUBMISSION')" 
+                            class="px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-900 shadow-sm transition-all">
                         Store Submission
                     </button>
-                    <button onclick="changeSalesSource('OFFICIAL_IT')" id="btn-src-official" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-900 shadow-sm transition-all">
+                    <button id="btn-src-official" onclick="switchSalesSource('OFFICIAL_IT')" 
+                            class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all">
                         Official IT Report
-                    </button>
-                    <button onclick="changeSalesSource('AUTO')" id="btn-src-auto" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all flex items-center gap-1">
-                        <span>Auto</span>
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     </button>
                 </div>
             </div>
 
-            <!-- B. FILTER PANEL: SLICER EXISTING + NEW QUICK DIMENSIONAL FILTERS -->
+            <!-- B. FILTER PANEL -->
             <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm mb-6">
-                <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
-                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                        <i data-lucide="filter" class="w-4 h-4 text-amber-500"></i> Slicer & Quick Realtime Filter
-                    </h3>
-                    <button onclick="resetSalesFilters()" class="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1">
-                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Filter
-                    </button>
-                </div>
-
-                <!-- 1. Slicers Existing (ID Tidak Diubah) -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
                         <select id="slicerBulanSales" class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
@@ -478,79 +415,14 @@
                         </select>
                     </div>
                 </div>
-
-                <!-- 2. Tambahan Quick Filters Realtime -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 pt-3 border-t border-slate-100">
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Month</label>
-                        <select id="filterMonth" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700">
-                            <option value="all">All Month</option>
-                            <option value="08">August</option>
-                            <option value="07">July</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Year</label>
-                        <select id="filterYear" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700">
-                            <option value="2026" selected>2026</option>
-                            <option value="2025">2025</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Region</label>
-                        <select id="filterRegion" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700">
-                            <option value="all">All Region</option>
-                            <option value="JABAR">Jawa Barat</option>
-                            <option value="JATENG">Jawa Tengah</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Area / BM</label>
-                        <select id="filterArea" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700">
-                            <option value="all">All Area</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Store</label>
-                        <select id="filterStore" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700">
-                            <option value="all">All Stores</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Achievement</label>
-                        <select id="filterAch" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700">
-                            <option value="all">All Range</option>
-                            <option value="above100">> 100%</option>
-                            <option value="80to100">80% - 100%</option>
-                            <option value="below80">< 80%</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-                        <select id="filterStatus" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700">
-                            <option value="all">All Status</option>
-                            <option value="SAFE">Safe / On-Track</option>
-                            <option value="WARNING">Warning</option>
-                            <option value="CRITICAL">Critical</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Search</label>
-                        <div class="relative">
-                            <input type="text" id="filterSearch" placeholder="Cari..." class="w-full pl-7 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs text-slate-700">
-                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div id="sales-loading" class="hidden text-center py-8 skeleton rounded-3xl mb-6">
                 <p class="text-sm font-bold text-slate-500">Memuat data sales...</p>
             </div>
 
-            <!-- C. KPI CARDS (6 CARD EXISTING + 5 CARD BARU) -->
+            <!-- C. KPI CARDS -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-                <!-- 6 Card KPI Existing (ID Tidak Diubah) -->
                 <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">TOTAL MTD SALES</p>
                     <h3 id="summary-total-sales" class="text-xl font-black text-emerald-500">Rp 0</h3>
@@ -575,80 +447,9 @@
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">% PROJ SSSG</p>
                     <h3 id="summary-proj-sssg" class="text-xl font-black text-amber-500">0%</h3>
                 </div>
-
-                <!-- 5 Card KPI Tambahan Baru (Desain yang Sama) -->
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">GAP TO TARGET</p>
-                    <h3 id="kpi-gap-target" class="text-xl font-black text-rose-500">Rp 0</h3>
-                </div>
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">SALES NEEDED / DAY</p>
-                    <h3 id="kpi-sales-needed" class="text-xl font-black text-amber-600">Rp 0</h3>
-                </div>
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">STORES ABOVE TARGET</p>
-                    <h3 id="kpi-stores-above" class="text-xl font-black text-emerald-500">0</h3>
-                </div>
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">STORES BELOW TARGET</p>
-                    <h3 id="kpi-stores-below" class="text-xl font-black text-rose-500">0</h3>
-                </div>
-                <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm hover-lift transition-all col-span-1 sm:col-span-2">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">POTENTIAL RECOVERY</p>
-                    <h3 id="kpi-potential-recovery" class="text-xl font-black text-indigo-600">Rp 0</h3>
-                </div>
             </div>
 
-            <!-- D. QUICK SUMMARY CARDS (KLIK MEMBUKA DATA EXPLORER) -->
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-                <div onclick="switchSalesSubView('explorer', { achievement: 'below80' })" class="bg-rose-50/70 border border-rose-200/80 rounded-2xl p-4 cursor-pointer hover:bg-rose-100/80 transition-all group">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-extrabold text-rose-700">Store < 80%</span>
-                        <span id="summary-cnt-below80" class="text-lg font-black text-rose-800">0</span>
-                    </div>
-                    <p class="text-[10px] text-rose-500 font-semibold mt-1">Critical Attention &rarr;</p>
-                </div>
-                <div onclick="switchSalesSubView('explorer', { achievement: '80to90' })" class="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 cursor-pointer hover:bg-amber-100/80 transition-all group">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-extrabold text-amber-700">Store 80-90%</span>
-                        <span id="summary-cnt-80to90" class="text-lg font-black text-amber-800">0</span>
-                    </div>
-                    <p class="text-[10px] text-amber-600 font-semibold mt-1">Warning / Push &rarr;</p>
-                </div>
-                <div onclick="switchSalesSubView('explorer', { achievement: 'above100' })" class="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 cursor-pointer hover:bg-emerald-100/80 transition-all group">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-extrabold text-emerald-700">Store > 100%</span>
-                        <span id="summary-cnt-above100" class="text-lg font-black text-emerald-800">0</span>
-                    </div>
-                    <p class="text-[10px] text-emerald-600 font-semibold mt-1">Excellent Achievers &rarr;</p>
-                </div>
-                <div onclick="switchSalesSubView('explorer', { rank: 'top10' })" class="bg-indigo-50/70 border border-indigo-200/80 rounded-2xl p-4 cursor-pointer hover:bg-indigo-100/80 transition-all group">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-extrabold text-indigo-700">Top 10</span>
-                        <span id="summary-cnt-top10" class="text-lg font-black text-indigo-800">10</span>
-                    </div>
-                    <p class="text-[10px] text-indigo-600 font-semibold mt-1">Leaderboard &rarr;</p>
-                </div>
-                <div onclick="switchSalesSubView('explorer', { rank: 'bottom10' })" class="bg-slate-100 border border-slate-200 rounded-2xl p-4 cursor-pointer hover:bg-slate-200/80 transition-all group">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-extrabold text-slate-700">Bottom 10</span>
-                        <span id="summary-cnt-bottom10" class="text-lg font-black text-slate-800">10</span>
-                    </div>
-                    <p class="text-[10px] text-slate-500 font-semibold mt-1">Action Plan &rarr;</p>
-                </div>
-            </div>
-
-            <!-- E. TODAY'S INSIGHT PANEL (RULE-ENGINE OPERATIONAL ALERT) -->
-            <div class="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm mb-6">
-                <h3 class="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
-                    <i data-lucide="zap" class="w-4 h-4 text-amber-500"></i> Today's Insight & Automated Anomaly Alerts
-                </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="insights-grid">
-                    <!-- Konten dinamis diisi oleh sales-dashboard.js -->
-                </div>
-            </div>
-
-            <!-- F. CHART SECTION (EXISTING ID DIPERTAHANKAN + EXTENSION TOGGLES) -->
+            <!-- D. CHART SECTION -->
             <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm mb-6">
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
                     <div>
@@ -656,13 +457,8 @@
                         <p class="text-xs text-slate-400">Grafik otomatis menyesuaikan pilihan Data Source.</p>
                     </div>
                     <div class="bg-slate-100 p-1 rounded-xl inline-flex flex-wrap gap-1 relative shadow-inner">
-                        <!-- Button existing dipertahankan -->
-                        <button id="btnModeMtd" onclick="setSalesChartMode('mtd')" class="px-4 py-1.5 rounded-lg text-xs font-extrabold bg-white text-slate-800 shadow-sm transition-all">MTD vs Target</button>
-                        <button id="btnModeTrend" onclick="setSalesChartMode('trend')" class="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-all">Trend 6 Bulan</button>
-                        <!-- Tambahan Toggle Baru -->
-                        <button onclick="setSalesChartMode('trend7')" class="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-all">Trend 7 Hari</button>
-                        <button onclick="setSalesChartMode('trend30')" class="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-all">Trend 30 Hari</button>
-                        <button onclick="setSalesChartMode('ytd')" class="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-all">Trend YTD</button>
+                        <button id="btnModeMtd" onclick="setSalesChartMode('mtd')" class="px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all">MTD vs Target</button>
+                        <button id="btnModeTrend" onclick="setSalesChartMode('trend')" class="px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all">Trend 6 Bulan</button>
                     </div>
                 </div>
                 <div class="h-72 w-full relative">
@@ -670,10 +466,10 @@
                 </div>
             </div>
 
-            <!-- G. TABLE SECTION (EXISTING ID #sales-table-body DIPERTAHANKAN + KOLOM BARU) -->
+            <!-- E. TABLE SECTION -->
             <div class="bg-white border border-slate-200/60 rounded-3xl shadow-sm overflow-hidden mb-6">
                 <div class="p-5 border-b border-slate-100 flex justify-between items-center">
-                    <h3 class="text-sm font-black text-slate-800">Rincian Performa per Toko (Enhanced Table)</h3>
+                    <h3 class="text-sm font-black text-slate-800">Rincian Performa per Toko</h3>
                     <span id="table-record-count" class="text-xs font-bold text-slate-400">Menampilkan 0 Toko</span>
                 </div>
                 <div class="overflow-x-auto">
@@ -684,33 +480,18 @@
                                 <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider">Store</th>
                                 <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">MTD Sales</th>
                                 <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">MTD Target</th>
-                                <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">Best Estimate</th>
-                                <!-- Kolom Baru Tambahan -->
-                                <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">Gap</th>
-                                <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider">Sales Needed</th>
-                                <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider">Growth %</th>
+                                <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider">Best Estimate</th>
                                 <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider">Achv %</th>
-                                <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider">Status</th>
-                                <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider">Action</th>
                             </tr>
                         </thead>
                         <tbody id="sales-table-body" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- H. KONTAINER SUB-PAGE LAIN (UNTUK MODUL BARU SALES INTELLIGENCE CENTER) -->
-            <div id="sales-subview-upload" class="hidden"></div>
-            <div id="sales-subview-compare" class="hidden"></div>
-            <div id="sales-subview-history" class="hidden"></div>
-            <div id="sales-subview-explorer" class="hidden"></div>
-            <div id="sales-subview-action" class="hidden"></div>
-            <div id="sales-subview-settings" class="hidden"></div>
-
         </main>
 
         <!-- =========================================================
-             SEKSI 4: F003 BUILDER (EXISTING - TIDAK DIUBAH)
+             SEKSI 4: F003 BUILDER (EXISTING)
              ========================================================= -->
         <main id="section-damage" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="mb-6">
@@ -767,7 +548,7 @@
         </main>
 
         <!-- =========================================================
-             SEKSI 5: MONITORING PROGRESS TUGASAN & INBOX (EXISTING)
+             SEKSI 5: MONITORING PROGRESS TUGASAN & INBOX
              ========================================================= -->
         <main id="section-monitoring" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
@@ -814,7 +595,7 @@
         </main>
 
         <!-- =========================================================
-             SEKSI: AI SOP ASSISTANT (EXISTING - TIDAK DIUBAH)
+             SEKSI: AI SOP ASSISTANT
              ========================================================= -->
         <main id="section-ai-sop" class="w-full px-4 sm:px-6 py-6 flex-1 hidden">
             <div class="bg-slate-50/50 rounded-3xl border border-slate-200/80 shadow-sm w-full flex flex-col h-[calc(100vh-110px)]">
@@ -857,7 +638,7 @@
         </main>
 
         <!-- =========================================================
-             SEKSI 6: ITEMIZE (EXISTING - TIDAK DIUBAH)
+             SEKSI 6: ITEMIZE
              ========================================================= -->
         <main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="mb-6 max-w-2xl">
@@ -901,7 +682,7 @@
         </main>
 
         <!-- =========================================================
-             SEKSI 7: FAST MOVING SKU FOR TF (EXISTING - TIDAK DIUBAH)
+             SEKSI 7: FAST MOVING SKU FOR TF
              ========================================================= -->
         <main id="section-fast-moving" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="mb-6 max-w-2xl">
@@ -944,7 +725,7 @@
         </main>
     </div>
 
-    <!-- MODAL 4: INBOX POP-UP (EXISTING - TIDAK DIUBAH) -->
+    <!-- MODAL 4: INBOX POP-UP -->
     <div id="inboxModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4 hidden">
         <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-100 p-6 relative animate-[fadeIn_0.3s_ease-out]">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-3 border-b border-slate-100 gap-2">
@@ -965,7 +746,7 @@
         </div>
     </div>
 
-    <!-- MODAL 5: STORE DETAIL INTERACTIVE DRAWER (NEW - UNTUK DRILL-DOWN TANPA GANTI HALAMAN) -->
+    <!-- MODAL 5: STORE DETAIL INTERACTIVE DRAWER -->
     <div id="storeDetailDrawer" class="fixed inset-0 z-50 overflow-hidden hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeStoreDetailDrawer()"></div>
         <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
@@ -993,10 +774,8 @@
     </div>
 
     <!-- =========================================================
-         PEMUATAN KUMPULAN SKRIP LOGIKA
-         Semua file existing dipertahankan & ditambahkan file ES6 baru
+         PEMUATAN KUMPULAN SKRIP LOGIKA (STABLE STANDARD SCRIPTS)
          ========================================================= -->
-    <!-- 1. Script Existing (Tidak Ada yang Dihapus/Diubah) -->
     <script src="js/app.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/sales-dashboard.js"></script>
@@ -1006,5 +785,5 @@
     <script src="js/monitoring.js"></script>
     <script src="js/ai-sop.js"></script>
 
-    </body>
+</body>
 </html>
