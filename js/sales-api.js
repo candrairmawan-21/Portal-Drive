@@ -5,9 +5,9 @@
 
 import cacheManager from './sales-cache.js';
 
-const WEB_APP_URL = "https://script.google.com/macros/s/YOUR_APPS_SCRIPT_WEB_APP_URL/exec";
-const CSV_SUBMISSION_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=0&single=true&output=csv";
-const CSV_OFFICIAL_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=1&single=true&output=csv";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJGzJvsP7o4O4zZbQzEZ2sbqPtRBCPbrgPwU4krc_mDn4xifZgTQdBQBT5G2QW0zMF/exec";
+const CSV_SUBMISSION_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?output=csv";
+const CSV_OFFICIAL_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?output=csv";
 
 export async function fetchSalesDataset(sourceType, forceRefresh = false) {
     const cacheKey = `sales_data_${sourceType}`;
