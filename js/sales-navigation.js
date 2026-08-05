@@ -12,7 +12,6 @@ window.toggleSalesSubMenu = function(event) {
 };
 
 window.switchSalesSubView = function(subViewName, params = null) {
-    // Sembunyikan semua kontainer subview di dalam section sales
     const subViews = ['dashboard', 'upload', 'compare', 'history', 'explorer', 'action', 'settings'];
     subViews.forEach(v => {
         const el = document.getElementById(`sales-subview-${v}`);
@@ -21,13 +20,10 @@ window.switchSalesSubView = function(subViewName, params = null) {
         if (navBtn) navBtn.classList.remove('bg-slate-800', 'text-amber-400');
     });
 
-    // Highlight menu aktif di sidebar
     const activeNav = document.getElementById(`nav-sales-${subViewName}`);
     if (activeNav) activeNav.classList.add('bg-slate-800', 'text-amber-400');
 
     if (subViewName === 'dashboard') {
-        // Tampilkan kembali elemen landing dashboard sales
-        // (Elemen KPI, Slicer, Table sudah ada di section-sales)
         if (typeof window.reloadSalesDashboard === 'function') {
             window.reloadSalesDashboard(false);
         }
