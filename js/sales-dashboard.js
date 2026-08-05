@@ -112,22 +112,27 @@ function initSalesSlicers() {
 }
 
 /* ==========================================================================
-   3. DATA FETCHING & SMART PARSER CSV
+   3. DATA FETCHING & SMART PARSER CSV (UPDATED)
    ========================================================================== */
 async function fetchSalesData() {
     const loader = document.getElementById('sales-loading');
     if (loader) loader.classList.remove('hidden');
 
     try {
-        let gid = '1766415704'; // Default Aug26
+        let finalUrl = '';
+        
         if (currentSalesSource === 'OFFICIAL_IT') {
-            gid = SHEET_GIDS['OFFICIAL_IT'];
+            // Menggunakan direct export CSV khusus Spreadsheet ID utama tempat PDF di-upload
+            const spreadsheetId = '1OyMAQwlGlbP8eZ4zwXnDIYZ9WQrMXoHYTA5MZBGZp7zcxZQljxC8hqW6';
+            const gid = SHEET_GIDS['OFFICIAL_IT']; // 1129267198
+            finalUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}&t=${Date.now()}`;
         } else {
+            // Menggunakan link publikasi pub?output=csv untuk data bulanan
             const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Aug26';
-            gid = SHEET_GIDS[selectedKey] || '1766415704';
+            let gid = SHEET_GIDS[selectedKey] || '1766415704';
+            finalUrl = `${SALES_BASE_URL}&gid=${gid}&t=${Date.now()}`;
         }
         
-        const finalUrl = `${SALES_BASE_URL}&gid=${gid}`;
         const response = await fetch(finalUrl);
         const csvText = await response.text();
         
