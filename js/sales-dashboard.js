@@ -1,234 +1,430 @@
-/**
- * @file sales-dashboard.js
- * @description Core Dashboard Controller untuk Sales Intelligence Center.
- */
+/* ==========================================================================
+   1. KONFIGURASI GLOBAL & MAPPING GID SHEETS
+   ========================================================================== */
+const SALES_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub';
 
-import dataSourceManager from './sales-data-source.js';
-import { fetchSalesDataset } from './sales-api.js';
-import { formatRupiah, formatPercentage, calculateGap, calculateSalesNeeded, getStatusColorClass } from './sales-utils.js';
-import { executeRuleEngine } from './sales-action-center.js';
-
-let currentSalesData = [];
+let salesData = [];
 let salesChartInstance = null;
-let currentChartMode = 'mtd';
+let currentSalesChartMode = 'mtd';
+let currentSalesSource = 'SUBMISSION'; // 'SUBMISSION' atau 'OFFICIAL_IT'
 
-window.addEventListener('midnorth:datasource-change', async (event) => {
-    const info = event.detail;
-    updateBannerUI(info);
-    await reloadSalesDashboard(true);
+// GID Sheet lengkap (Termasuk Official IT Report)
+const SHEET_GIDS = {
+    'OFFICIAL_IT': '1129267198', // GID Sheet OFFICIAL_IT_REPORT (Sesuaikan jika berbeda)
+    'Oct26': '1682478488', 
+    'Sep26': '432381843', 
+    'Aug26': '1766415704', 
+    'Jul26': '1248782513', 
+    'Jun26': '511605214', 
+    'May26': '2012772985',
+    'Apr26': '544207481', 
+    'Mar26': '90936589', 
+    'Feb26': '472876079',
+    'Jan26': '171319040', 
+    'Dec25': '236016326', 
+    'Nov25': '564328385'
+};
+
+/* ==========================================================================
+   2. INITIALIZATION & SOURCE SWITCHER
+   ========================================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+    displayUpdateDate();
+    initSalesSlicers();
+    fetchSalesData();
 });
 
-function updateBannerUI(info) {
-    const badgeEl = document.getElementById('banner-source-badge');
-    const labelEl = document.getElementById('banner-source-label');
-    const uploaderEl = document.getElementById('banner-uploaded-by');
-    const uploadTimeEl = document.getElementById('banner-last-upload');
-    const confEl = document.getElementById('banner-confidence');
-
-    if (badgeEl) {
-        badgeEl.className = `px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider border ${info.badgeClass}`;
-        badgeEl.textContent = `${info.statusText} • ${info.label}`;
+function displayUpdateDate() {
+    const dateEl = document.getElementById('update-date');
+    if (dateEl) {
+        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        dateEl.innerText = "Update Terakhir: " + today;
     }
-    if (labelEl) labelEl.textContent = info.label;
-    if (uploaderEl) uploaderEl.textContent = info.uploadedBy;
-    if (uploadTimeEl) uploadTimeEl.textContent = info.lastUpload;
-    if (confEl) confEl.textContent = info.confidence;
 }
 
-window.fetchSalesData = async function() {
-    await reloadSalesDashboard(false);
-};
-
-window.reloadSalesDashboard = async function(force = false) {
-    const activeSource = dataSourceManager.activeSource;
-    currentSalesData = await fetchSalesDataset(activeSource, force);
+/**
+ * Fungsi ganti sumber data (Store Submission vs Official IT Report)
+ */
+window.switchSalesSource = function(sourceType) {
+    currentSalesSource = sourceType;
     
-    renderKPIHeader(currentSalesData);
-    renderEnhancedTable(currentSalesData);
-    renderInsightsPanel(currentSalesData);
-    renderSalesChart(currentSalesData, currentChartMode);
+    const btnSub = document.getElementById('btn-src-submission');
+    const btnOff = document.getElementById('btn-src-official');
+    const slicerBulan = document.getElementById('slicerBulanSales');
+
+    if (sourceType === 'OFFICIAL_IT') {
+        if (btnOff) btnOff.className = "px-4 py-2 rounded-lg text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
+        if (btnSub) btnSub.className = "px-4 py-2 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
+        // Disable dropdown bulan jika membuka Official IT Report (karena membaca 1 master sheet)
+        if (slicerBulan) slicerBulan.disabled = true;
+    } else {
+        if (btnSub) btnSub.className = "px-4 py-2 rounded-lg text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
+        if (btnOff) btnOff.className = "px-4 py-2 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
+        if (slicerBulan) slicerBulan.disabled = false;
+    }
+
+    fetchSalesData();
 };
 
-window.changeSalesSource = function(mode) {
-    dataSourceManager.setDataSourceMode(mode);
-    ['store', 'official', 'auto'].forEach(id => {
-        const btn = document.getElementById(`btn-src-${id}`);
-        if (btn) {
-            btn.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all";
+function initSalesSlicers() {
+    const slicerBulan = document.getElementById('slicerBulanSales');
+    const slicerKategori = document.getElementById('slicerKategoriSales');
+    const slicerSpesifik = document.getElementById('slicerSpesifikSales');
+
+    if (!slicerKategori || !slicerSpesifik) return;
+
+    slicerKategori.addEventListener('change', function() {
+        const kategori = this.value;
+        slicerSpesifik.innerHTML = '<option value="all">-- Semua --</option>';
+        
+        if (kategori === 'all') {
+            slicerSpesifik.disabled = true;
+            slicerSpesifik.classList.add('bg-slate-100', 'cursor-not-allowed');
+        } else {
+            slicerSpesifik.disabled = false;
+            slicerSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
+            
+            let uniqueItems = new Set();
+            // Baca pintar dari data sales yang sedang aktif
+            salesData.forEach(item => {
+                if (kategori === 'store' && item.store && item.store !== "-") {
+                    uniqueItems.add(item.store.trim());
+                } else if (kategori === 'bm' && item.bm && item.bm !== "-") {
+                    uniqueItems.add(item.bm.trim());
+                } else if (kategori === 'abm' && item.abm && item.abm !== "-") {
+                    uniqueItems.add(item.abm.trim());
+                }
+            });
+
+            Array.from(uniqueItems).sort().forEach(name => {
+                slicerSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
+            });
         }
+        applySalesFilters();
     });
-    const activeBtnId = mode === 'STORE_SUBMISSION' ? 'btn-src-store' : (mode === 'OFFICIAL_IT' ? 'btn-src-official' : 'btn-src-auto');
-    const activeBtn = document.getElementById(activeBtnId);
-    if (activeBtn) {
-        activeBtn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-900 shadow-sm transition-all";
+
+    slicerSpesifik.addEventListener('change', applySalesFilters);
+    if (slicerBulan) {
+        slicerBulan.addEventListener('change', () => {
+            fetchSalesData();
+            if (typeof fetchAndRenderUptSalesTable === "function") fetchAndRenderUptSalesTable();
+        });
     }
+}
+
+/* ==========================================================================
+   3. DATA FETCHING & SMART PARSER CSV
+   ========================================================================== */
+async function fetchSalesData() {
+    const loader = document.getElementById('sales-loading');
+    if (loader) loader.classList.remove('hidden');
+
+    try {
+        let gid = '1766415704'; // Default Aug26
+        if (currentSalesSource === 'OFFICIAL_IT') {
+            gid = SHEET_GIDS['OFFICIAL_IT'];
+        } else {
+            const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Aug26';
+            gid = SHEET_GIDS[selectedKey] || '1766415704';
+        }
+        
+        const finalUrl = `${SALES_BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`;
+        const response = await fetch(finalUrl);
+        const csvText = await response.text();
+        
+        salesData = parseSalesCSV(csvText, currentSalesSource);
+        applySalesFilters();
+    } catch (error) { 
+        console.error('Error fetching data:', error); 
+    } finally {
+        if (loader) loader.classList.add('hidden');
+    }
+}
+
+function parseSalesCSV(text, sourceMode) {
+    let lines = text.split('\n');
+    if (lines.length < 2) return [];
+    
+    // Deteksi otomatis baris header (Biasanya baris 0 untuk Official IT, baris 2 untuk Store Submission)
+    let headerRowIdx = sourceMode === 'OFFICIAL_IT' ? 0 : (lines.length > 2 ? 2 : 0);
+    let headers = parseCSVLine(lines[headerRowIdx]).map(h => h.trim().toLowerCase());
+    let result = [];
+    
+    for (let i = headerRowIdx + 1; i < lines.length; i++) { 
+        if (!lines[i].trim()) continue;
+        let row = parseCSVLine(lines[i]);
+
+        // Helper untuk mencari nilai kolom secara pintar berdasarkan alternatif nama header
+        let getVal = (headerNames, fallbackIndex) => {
+            for (let hName of headerNames) {
+                let idx = headers.indexOf(hName.toLowerCase());
+                if (idx !== -1 && row[idx] !== undefined) {
+                    return parseFloat(String(row[idx]).replace(/[^0-9.-]+/g, "")) || 0;
+                }
+            }
+            return parseFloat(String(row[fallbackIndex] || "").replace(/[^0-9.-]+/g, "")) || 0;
+        };
+
+        let getStr = (headerNames, fallbackIndex) => {
+            for (let hName of headerNames) {
+                let idx = headers.indexOf(hName.toLowerCase());
+                if (idx !== -1 && row[idx] !== undefined) return String(row[idx]).trim();
+            }
+            return String(row[fallbackIndex] || "-").trim();
+        };
+
+        let storeName = getStr(['store name', 'store_name', 'store', 'nama toko'], 2);
+        if (!storeName || storeName === "" || storeName === "-") continue; 
+
+        result.push({
+            storeCode: getStr(['store code', 'store_code', 'kode toko'], 1),
+            store: storeName,
+            bm: getStr(['nama bm', 'bm', 'branch manager'], 3),
+            abm: getStr(['nama abm', 'abm', 'asst branch manager'], 4),
+            mtdSales: getVal(['net sales', 'net_sales', 'mtd sales', 'sales mtd'], 5),
+            mtdTarget: getVal(['target sales', 'target_sales', 'mtd target', 'target'], 6),
+            bestEstimate: getStr(['best estimate', 'best_estimate', 'estimate'], 16),
+            achPercent: getVal(['achievement', 'ach percent', '% ach', 'ach'], 17),
+            salesLY: getVal(['sales ly', 'ly sales', 'ly'], 18),
+            sssg: getVal(['sssg', 'ach sssg'], 20),
+            projSssg: getVal(['projection sssg', 'proj sssg', 'projection'], 21)
+        });
+    }
+    return result;
+}
+
+function parseCSVLine(textLine) {
+    let row = [];
+    let inQuotes = false;
+    let currentStr = "";
+    for (let char of textLine) {
+        if (char === '"') inQuotes = !inQuotes;
+        else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; }
+        else currentStr += char;
+    }
+    row.push(currentStr.trim());
+    return row.map(cell => cell.replace(/^"|"$/g, '').trim());
+}
+
+/* ==========================================================================
+   4. SYSTEM FILTERING SALES
+   ========================================================================== */
+function applySalesFilters() {
+    const kategori = document.getElementById('slicerKategoriSales')?.value || 'all';
+    const spesifik = document.getElementById('slicerSpesifikSales')?.value || 'all';
+
+    let filteredSales = [...salesData]; 
+
+    if (kategori !== 'all' && spesifik !== 'all') {
+        filteredSales = salesData.filter(item => {
+            if (kategori === 'bm') return item.bm.toLowerCase() === spesifik.toLowerCase();
+            if (kategori === 'abm') return item.abm.toLowerCase() === spesifik.toLowerCase();
+            if (kategori === 'store') return item.store.toLowerCase() === spesifik.toLowerCase();
+            return true;
+        });
+    }
+
+    renderSalesSummaryFiltered(filteredSales);
+    renderSalesTableFiltered(filteredSales);
+
+    if (currentSalesChartMode === 'mtd') {
+        renderSalesChartFiltered(filteredSales);
+    } else {
+        fetchAndRenderTrendChart(kategori, spesifik);
+    }
+}
+
+window.setSalesChartMode = function(mode) {
+    currentSalesChartMode = mode;
+    const btnMtd = document.getElementById('btnModeMtd');
+    const btnTrend = document.getElementById('btnModeTrend');
+    
+    if (mode === 'mtd') {
+        if (btnMtd) btnMtd.className = "px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all";
+        if (btnTrend) btnTrend.className = "px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all";
+    } else {
+        if (btnTrend) btnTrend.className = "px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all";
+        if (btnMtd) btnMtd.className = "px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all";
+    }
+    applySalesFilters();
 };
 
-function renderKPIHeader(data) {
-    let totalSales = 0, totalTarget = 0, totalLY = 0, totalBE = 0;
-    let cntAbove = 0, cntBelow = 0;
+/* ==========================================================================
+   5. SUMMARY METRICS & CARDS
+   ========================================================================== */
+function renderSalesSummaryFiltered(data) {
+    let totalSales = 0, totalTarget = 0, totalLY = 0;
+    let totalSSSG = 0, totalProjSSSG = 0;
+    let count = 0;
 
     data.forEach(item => {
-        const sales = parseFloat(item.Net_Sales || item.MTD_Sales) || 0;
-        const target = parseFloat(item.Target_Sales || item.MTD_Target) || 0;
-        const ly = parseFloat(item.LY_Sales) || 0;
-        const be = parseFloat(item.Best_Estimate) || 0;
-
-        totalSales += sales;
-        totalTarget += target;
-        totalLY += ly;
-        totalBE += be;
-
-        if (sales >= target) cntAbove++;
-        else cntBelow++;
+        totalSales += item.mtdSales || 0;
+        totalTarget += item.mtdTarget || 0;
+        totalLY += item.salesLY || 0;
+        totalSSSG += item.sssg || 0;
+        totalProjSSSG += item.projSssg || 0;
+        count++;
     });
-
-    const ach = totalTarget > 0 ? (totalSales / totalTarget) * 100 : 0;
-    const growth = totalLY > 0 ? ((totalSales - totalLY) / totalLY) * 100 : 0;
-    const gap = calculateGap(totalSales, totalTarget);
-    const salesNeeded = calculateSalesNeeded(gap, 10);
-
-    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-
-    setTxt('summary-total-sales', formatRupiah(totalSales));
-    setTxt('summary-total-target', formatRupiah(totalTarget));
-    setTxt('summary-avg-ach', formatPercentage(ach));
-    setTxt('summary-total-ly', formatRupiah(totalLY));
-    setTxt('summary-sssg', formatPercentage(growth));
-    setTxt('summary-proj-sssg', formatPercentage(ach));
-
-    setTxt('kpi-gap-target', formatRupiah(gap));
-    setTxt('kpi-sales-needed', formatRupiah(salesNeeded));
-    setTxt('kpi-stores-above', cntAbove);
-    setTxt('kpi-stores-below', cntBelow);
-    setTxt('kpi-potential-recovery', formatRupiah(totalBE * 0.1));
-}
-
-function renderEnhancedTable(data) {
-    const tbody = document.getElementById('sales-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-
-    const recordCountEl = document.getElementById('table-record-count');
-    if (recordCountEl) recordCountEl.textContent = `Menampilkan ${data.length} Toko`;
-
-    if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-slate-400 font-bold">Tidak ada data sales yang tersedia.</td></tr>`;
-        return;
+    
+    const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
+    const avgSSSG = count > 0 ? (totalSSSG / count) : 0;
+    const avgProjSSSG = count > 0 ? (totalProjSSSG / count) : 0;
+    
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+    
+    setTxt('summary-total-sales', "Rp " + totalSales.toLocaleString('id-ID'));
+    setTxt('summary-total-target', "Rp " + totalTarget.toLocaleString('id-ID'));
+    setTxt('summary-avg-ach', avgAch + "%");
+    setTxt('summary-total-ly', "Rp " + totalLY.toLocaleString('id-ID'));
+    
+    const elSSSG = document.getElementById('summary-sssg');
+    const elProjSSSG = document.getElementById('summary-proj-sssg');
+    
+    if (elSSSG) {
+        elSSSG.innerText = avgSSSG.toFixed(2) + "%";
+        elSSSG.className = avgSSSG >= 0 ? "text-xl font-black text-emerald-500" : "text-xl font-black text-rose-500";
     }
-
-    const sorted = [...data].sort((a, b) => (parseFloat(b.Net_Sales || b.MTD_Sales) || 0) - (parseFloat(a.Net_Sales || b.MTD_Sales) || 0));
-
-    sorted.forEach((store, index) => {
-        const sales = parseFloat(store.Net_Sales || store.MTD_Sales) || 0;
-        const target = parseFloat(store.Target_Sales || store.MTD_Target) || 0;
-        const gap = calculateGap(sales, target);
-        const ach = target > 0 ? (sales / target) * 100 : 0;
-        const status = getStatusColorClass(ach);
-        const rule = executeRuleEngine(store);
-
-        tbody.innerHTML += `
-            <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
-                <td class="px-4 py-3 text-center font-bold text-slate-400">${index + 1}</td>
-                <td class="px-4 py-3">
-                    <p class="font-extrabold text-slate-800">${store.Store_Name || store.Store || '-'}</p>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">${store.Store_Code || '-'}</p>
-                </td>
-                <td class="px-4 py-3 text-right font-black text-slate-800">${formatRupiah(sales)}</td>
-                <td class="px-4 py-3 text-right font-semibold text-slate-500">${formatRupiah(target)}</td>
-                <td class="px-4 py-3 text-right text-indigo-600 font-bold">${formatRupiah(store.Best_Estimate || 0)}</td>
-                <td class="px-4 py-3 text-right font-bold text-rose-500">${formatRupiah(gap)}</td>
-                <td class="px-4 py-3 text-right text-slate-600">${formatRupiah(calculateSalesNeeded(gap, 10))}</td>
-                <td class="px-4 py-3 text-center font-bold text-emerald-600">+12.5%</td>
-                <td class="px-4 py-3 text-center font-black ${status.text}">${formatPercentage(ach)}</td>
-                <td class="px-4 py-3 text-center">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${status.badge}">${rule.score}</span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                    <button onclick="openStoreDetailDrawer('${store.Store_Code || ''}')" class="p-1.5 bg-slate-100 hover:bg-amber-50 text-slate-600 hover:text-amber-600 rounded-lg transition">
-                        <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    lucide.createIcons();
-}
-
-function renderInsightsPanel(data) {
-    const container = document.getElementById('insights-grid');
-    if (!container) return;
-
-    if (data.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400">Belum ada data untuk dianalisis.</p>`;
-        return;
+    if (elProjSSSG) {
+        elProjSSSG.innerText = avgProjSSSG.toFixed(2) + "%";
+        elProjSSSG.className = avgProjSSSG >= 0 ? "text-xl font-black text-amber-500" : "text-xl font-black text-rose-500";
     }
-
-    let worstStore = data[0] || {}, bestStore = data[0] || {};
-    data.forEach(item => {
-        const ach = parseFloat(item.Achievement) || 0;
-        if (ach < (parseFloat(worstStore.Achievement) || 0)) worstStore = item;
-        if (ach > (parseFloat(bestStore.Achievement) || 0)) bestStore = item;
-    });
-
-    container.innerHTML = `
-        <div class="bg-rose-50/60 border border-rose-200/80 p-4 rounded-2xl">
-            <span class="text-[10px] font-extrabold uppercase text-rose-600">Perhatian Kritis (Terburuk)</span>
-            <h4 class="text-base font-black text-rose-900 mt-1">${worstStore.Store_Name || worstStore.Store || '-'}</h4>
-            <p class="text-xs text-rose-700 font-semibold mt-0.5">Achievement: ${formatPercentage(worstStore.Achievement || 0)}</p>
-        </div>
-        <div class="bg-emerald-50/60 border border-emerald-200/80 p-4 rounded-2xl">
-            <span class="text-[10px] font-extrabold uppercase text-emerald-600">Performa Terbaik (Top Achiever)</span>
-            <h4 class="text-base font-black text-emerald-900 mt-1">${bestStore.Store_Name || bestStore.Store || '-'}</h4>
-            <p class="text-xs text-emerald-700 font-semibold mt-0.5">Achievement: ${formatPercentage(bestStore.Achievement || 0)}</p>
-        </div>
-    `;
 }
 
-function renderSalesChart(data, mode) {
+/* ==========================================================================
+   6. GRAFIK (CHART TARGET BULANAN VS TREN 6 BULAN)
+   ========================================================================== */
+function renderSalesChartFiltered(data) {
     const ctx = document.getElementById('salesTargetChart');
     if (!ctx) return;
-
+    
     if (salesChartInstance) salesChartInstance.destroy();
-
+    
     salesChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.slice(0, 15).map(item => item.Store_Name || item.Store || 'Store'),
+            labels: data.map(item => item.store),
             datasets: [
                 {
-                    label: 'MTD Sales',
-                    data: data.slice(0, 15).map(item => parseFloat(item.Net_Sales || item.MTD_Sales) || 0),
-                    backgroundColor: 'rgba(16, 185, 129, 0.85)',
-                    borderRadius: 6
+                    type: 'line',
+                    label: 'Achievement (%)',
+                    data: data.map(item => item.achPercent || 0),
+                    backgroundColor: '#f43f5e', 
+                    borderColor: '#f43f5e', 
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ffffff',
+                    fill: false, 
+                    tension: 0.35, 
+                    yAxisID: 'y1' 
                 },
                 {
-                    label: 'Target',
-                    data: data.slice(0, 15).map(item => parseFloat(item.Target_Sales || item.MTD_Target) || 0),
-                    backgroundColor: 'rgba(203, 213, 225, 0.85)',
-                    borderRadius: 6
+                    type: 'bar',
+                    label: 'MTD Target',
+                    backgroundColor: '#cbd5e1', 
+                    borderRadius: 6,
+                    data: data.map(item => item.mtdTarget || 0),
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'bar',
+                    label: 'MTD Sales',
+                    backgroundColor: '#10b981', 
+                    borderRadius: 6,
+                    data: data.map(item => item.mtdSales || 0),
+                    yAxisID: 'y'
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { weight: '700' } } } },
             scales: {
-                x: { grid: { display: false }, ticks: { font: { size: 10, weight: '600' } } },
-                y: { grid: { color: '#f1f5f9' } }
-            }
+                x: { grid: { display: false } },
+                y: { type: 'linear', display: true, position: 'left', beginAtZero: true },
+                y1: { type: 'linear', display: false, position: 'right', beginAtZero: true }
+            },
+            plugins: { legend: { position: 'top' } }
         }
     });
 }
 
-window.setSalesChartMode = function(mode) {
-    currentChartMode = mode;
-    renderSalesChart(currentSalesData, mode);
-};
+async function fetchAndRenderTrendChart(kategori, spesifik) {
+    const loader = document.getElementById('sales-loading');
+    if (loader) loader.classList.remove('hidden');
+    const ctx = document.getElementById('salesTargetChart');
+    if (!ctx) return;
 
-window.resetSalesFilters = function() {
-    const searchInput = document.getElementById('filterSearch');
-    if (searchInput) searchInput.value = '';
-    reloadSalesDashboard(false);
-};
+    try {
+        const monthKeys = ['Oct26', 'Sep26', 'Aug26', 'Jul26', 'Jun26', 'May26'].reverse(); 
+        let promises = monthKeys.map(async (mKey) => {
+            const gid = SHEET_GIDS[mKey];
+            if (!gid) return null;
+            try {
+                const res = await fetch(`${SALES_BASE_URL}?gid=${gid}&single=true&output=csv&t=${Date.now()}`);
+                const parsed = parseSalesCSV(await res.text(), 'SUBMISSION');
+                let totalS = 0, totalT = 0;
+                parsed.forEach(i => { totalS += i.mtdSales; totalT += i.mtdTarget; });
+                return { month: mKey, achPercent: totalT > 0 ? (totalS / totalT) * 100 : 0 };
+            } catch (e) { return null; }
+        });
+
+        let validData = (await Promise.all(promises)).filter(item => item !== null);
+        if (salesChartInstance) salesChartInstance.destroy();
+
+        salesChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: validData.map(item => item.month),
+                datasets: [{
+                    label: 'Trend Achievement (%)',
+                    data: validData.map(item => item.achPercent),
+                    borderColor: '#6366f1', 
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    } catch (e) { console.error(e); } 
+    finally { if (loader) loader.classList.add('hidden'); }
+}
+
+/* ==========================================================================
+   7. TABEL SALES STORE (WITH SMART COLOR BADGES)
+   ========================================================================== */
+function renderSalesTableFiltered(data) {
+    const tbody = document.getElementById('sales-table-body');
+    if (!tbody) return;
+
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;
+        return;
+    }
+
+    let sortedData = [...data].sort((a, b) => (b.achPercent || 0) - (a.achPercent || 0));
+
+    tbody.innerHTML = sortedData.map((item, index) => {
+        let ach = item.achPercent || 0;
+        let badgeBg = ach >= 100 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
+                     (ach >= 80 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-rose-50 text-rose-600 border-rose-200');
+
+        return `
+        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
+            <td class="px-4 py-4 text-center font-bold text-xs text-slate-400">${index + 1}</td>
+            <td class="px-5 py-4">
+                <p class="font-bold text-sm text-slate-800">${item.store}</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase">${item.storeCode || '-'}</p>
+            </td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdSales || 0).toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdTarget || 0).toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate || '-'}</td>
+            <td class="px-5 py-4 text-center">
+                <span class="px-3 py-1.5 rounded-xl text-[11px] font-black border ${badgeBg}">
+                    ${ach.toFixed(2)}%
+                </span>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
