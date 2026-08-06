@@ -508,6 +508,11 @@ window.openUploadPdfModal = function() {
     
     const btnText = document.getElementById('btnSubmitText');
     if (btnText) btnText.textContent = "Proses Upload";
+
+    // BARU: default tanggal report = hari ini, tapi tetap bisa diubah user.
+    // Tanggal ini yang dipakai backend untuk cek duplikat & disimpan ke kolom "Report Date".
+    const dateInput = document.getElementById('officialReportDate');
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
     
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
@@ -528,6 +533,7 @@ window.previewPdfSelection = function(input) {
 
 window.submitOfficialPdf = async function() {
     const input = document.getElementById('officialPdfInput');
+    const dateInput = document.getElementById('officialReportDate'); // BARU
     const statusBox = document.getElementById('pdfUploadStatus');
     const btnSubmit = document.getElementById('btnSubmitPdf');
     const btnText = document.getElementById('btnSubmitText');
@@ -541,7 +547,15 @@ window.submitOfficialPdf = async function() {
         return;
     }
 
+    // BARU: tanggal report wajib diisi SEBELUM kirim ke server — ini dipakai
+    // untuk validasi duplikat, jadi tidak boleh kosong atau ditebak otomatis.
+    if (!dateInput || !dateInput.value) {
+        alert("Silakan pilih Tanggal Report terlebih dahulu!");
+        return;
+    }
+
     const file = input.files[0];
+    const reportDate = dateInput.value; // format yyyy-MM-dd
     
     if (statusBox) statusBox.classList.add('hidden');
     if (progContainer) progContainer.classList.remove('hidden');
@@ -567,7 +581,8 @@ window.submitOfficialPdf = async function() {
             const payload = {
                 action: "UPLOAD_PDF_OFFICIAL",
                 fileName: file.name,
-                fileData: base64Content
+                fileData: base64Content,
+                reportDate: reportDate // BARU: dikirim ke backend untuk cek duplikat & disimpan
             };
 
             progress = 80;
@@ -591,7 +606,7 @@ window.submitOfficialPdf = async function() {
             if (result.success) {
                 if (statusBox) {
                     statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-3";
-                    statusBox.textContent = `Sukses! ${result.count || ''} data toko berhasil disimpan ke OFFICIAL_IT_REPORT.`;
+                    statusBox.textContent = result.message || `Sukses! ${result.count || ''} data toko berhasil disimpan ke OFFICIAL_IT_REPORT.`;
                     statusBox.classList.remove('hidden');
                 }
                 if (btnText) btnText.textContent = "Berhasil Disimpan";
@@ -604,6 +619,8 @@ window.submitOfficialPdf = async function() {
                 }, 1500);
 
             } else {
+                // BARU: pesan error dari backend ditampilkan apa adanya (sudah spesifik,
+                // misal "Data tanggal 2026-08-03 sudah pernah diupload.")
                 throw new Error(result.message || "Gagal memproses data di Google Sheet.");
             }
         };
