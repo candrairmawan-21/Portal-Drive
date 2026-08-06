@@ -4,14 +4,18 @@
 const SALES_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?output=csv';
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz0OP_PZzwnj5LJFfus99KyLSqwiD5PFDQK6QX9Br2FTHrEFOM8pMgEXZpsLhd26ZWz/exec";
 
+// Disinkronkan dengan SPREADSHEET_ID pada Code.gs (Single Source of Truth)
+const SPREADSHEET_ID_OFFICIAL = "1P70howhagUA_H4H0cSXUWB5MjDhCKuOirVLSmh39Z_E";
+
 let salesData = [];
 let salesChartInstance = null;
 let currentSalesChartMode = 'mtd';
 let currentSalesSource = 'SUBMISSION'; // 'SUBMISSION' atau 'OFFICIAL_IT'
 
-// GID Sheet Lengkap (Termasuk Official IT Report)
+// GID Sheet Lengkap (Termasuk Alias untuk Official IT Report)
 const SHEET_GIDS = {
-    'OFFICIAL_IT_REPORT': '1129267198', // GID Sheet OFFICIAL_IT_REPORT
+    'OFFICIAL_IT_REPORT': '1129267198',
+    'OFFICIAL_IT': '1129267198', // Alias agar aman dari bug pemanggilan key
     'Oct26': '1682478488', 
     'Sep26': '432381843', 
     'Aug26': '1766415704', 
@@ -112,7 +116,7 @@ function initSalesSlicers() {
 }
 
 /* ==========================================================================
-   3. DATA FETCHING & SMART PARSER CSV (UPDATED)
+   3. DATA FETCHING & SMART PARSER CSV
    ========================================================================== */
 async function fetchSalesData() {
     const loader = document.getElementById('sales-loading');
@@ -121,11 +125,10 @@ async function fetchSalesData() {
     try {
         let finalUrl = '';
         
-        if (currentSalesSource === 'OFFICIAL_IT') {
-            // Menggunakan direct export CSV khusus Spreadsheet ID utama tempat PDF di-upload
-            const spreadsheetId = '1OyMAQwlGlbP8eZ4zwXnDIYZ9WQrMXoHYTA5MZBGZp7zcxZQljxC8hqW6';
-            const gid = SHEET_GIDS['OFFICIAL_IT']; // 1129267198
-            finalUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}&t=${Date.now()}`;
+        if (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT') {
+            // Gunakan Spreadsheet ID yang disinkronkan dengan Code.gs
+            const gid = SHEET_GIDS['OFFICIAL_IT_REPORT'] || '1129267198';
+            finalUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_OFFICIAL}/export?format=csv&gid=${gid}&t=${Date.now()}`;
         } else {
             // Menggunakan link publikasi pub?output=csv untuk data bulanan
             const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Aug26';
@@ -149,7 +152,7 @@ function parseSalesCSV(text, sourceMode) {
     let lines = text.split('\n');
     if (lines.length < 2) return [];
     
-    let headerRowIdx = sourceMode === 'OFFICIAL_IT' ? 0 : (lines.length > 2 ? 2 : 0);
+    let headerRowIdx = (sourceMode === 'OFFICIAL_IT' || sourceMode === 'OFFICIAL_IT_REPORT') ? 0 : (lines.length > 2 ? 2 : 0);
     let headers = parseCSVLine(lines[headerRowIdx]).map(h => h.trim().toLowerCase());
     let result = [];
     
@@ -175,18 +178,27 @@ function parseSalesCSV(text, sourceMode) {
             return String(row[fallbackIndex] || "-").trim();
         };
 
-        let storeName = getStr(['store name', 'store_name', 'store', 'nama toko'], 2);
+        let storeName = getStr(['store name', 'store_name', 'store', 'nama toko'], 1);
         if (!storeName || storeName === "" || storeName === "-") continue; 
 
+        let mtdSalesVal = getVal(['net sales', 'net_sales', 'mtd sales', 'sales mtd'], 4);
+        let mtdTargetVal = getVal(['target sales', 'target_sales', 'mtd target', 'target'], 5);
+        let achVal = getVal(['achievement', 'ach percent', '% ach', 'ach'], 17);
+
+        // Fallback persentase achievement agar tidak 0 jika target tersedia
+        if (achVal === 0 && mtdTargetVal > 0) {
+            achVal = (mtdSalesVal / mtdTargetVal) * 100;
+        }
+
         result.push({
-            storeCode: getStr(['store code', 'store_code', 'kode toko'], 1),
+            storeCode: getStr(['store code', 'store_code', 'kode toko'], 0),
             store: storeName,
-            bm: getStr(['nama bm', 'bm', 'branch manager'], 3),
-            abm: getStr(['nama abm', 'abm', 'asst branch manager'], 4),
-            mtdSales: getVal(['net sales', 'net_sales', 'mtd sales', 'sales mtd'], 5),
-            mtdTarget: getVal(['target sales', 'target_sales', 'mtd target', 'target'], 6),
+            bm: getStr(['nama bm', 'bm', 'branch manager'], 2),
+            abm: getStr(['nama abm', 'abm', 'asst branch manager'], 3),
+            mtdSales: mtdSalesVal,
+            mtdTarget: mtdTargetVal,
             bestEstimate: getStr(['best estimate', 'best_estimate', 'estimate'], 16),
-            achPercent: getVal(['achievement', 'ach percent', '% ach', 'ach'], 17),
+            achPercent: achVal,
             salesLY: getVal(['sales ly', 'ly sales', 'ly'], 18),
             sssg: getVal(['sssg', 'ach sssg'], 20),
             projSssg: getVal(['projection sssg', 'proj sssg', 'projection'], 21)
@@ -450,6 +462,12 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
    ========================================================================== */
 function renderSalesTableFiltered(data) {
     const tbody = document.getElementById('sales-table-body');
+    const countLabel = document.getElementById('table-record-count');
+    
+    if (countLabel) {
+        countLabel.textContent = `Menampilkan ${data.length} Toko`;
+    }
+
     if (!tbody) return;
 
     if (data.length === 0) {
@@ -509,8 +527,6 @@ window.openUploadPdfModal = function() {
     const btnText = document.getElementById('btnSubmitText');
     if (btnText) btnText.textContent = "Proses Upload";
 
-    // BARU: default tanggal report = hari ini, tapi tetap bisa diubah user.
-    // Tanggal ini yang dipakai backend untuk cek duplikat & disimpan ke kolom "Report Date".
     const dateInput = document.getElementById('officialReportDate');
     if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
     
@@ -533,7 +549,7 @@ window.previewPdfSelection = function(input) {
 
 window.submitOfficialPdf = async function() {
     const input = document.getElementById('officialPdfInput');
-    const dateInput = document.getElementById('officialReportDate'); // BARU
+    const dateInput = document.getElementById('officialReportDate');
     const statusBox = document.getElementById('pdfUploadStatus');
     const btnSubmit = document.getElementById('btnSubmitPdf');
     const btnText = document.getElementById('btnSubmitText');
@@ -547,15 +563,13 @@ window.submitOfficialPdf = async function() {
         return;
     }
 
-    // BARU: tanggal report wajib diisi SEBELUM kirim ke server — ini dipakai
-    // untuk validasi duplikat, jadi tidak boleh kosong atau ditebak otomatis.
     if (!dateInput || !dateInput.value) {
         alert("Silakan pilih Tanggal Report terlebih dahulu!");
         return;
     }
 
     const file = input.files[0];
-    const reportDate = dateInput.value; // format yyyy-MM-dd
+    const reportDate = dateInput.value;
     
     if (statusBox) statusBox.classList.add('hidden');
     if (progContainer) progContainer.classList.remove('hidden');
@@ -582,7 +596,7 @@ window.submitOfficialPdf = async function() {
                 action: "UPLOAD_PDF_OFFICIAL",
                 fileName: file.name,
                 fileData: base64Content,
-                reportDate: reportDate // BARU: dikirim ke backend untuk cek duplikat & disimpan
+                reportDate: reportDate
             };
 
             progress = 80;
@@ -613,14 +627,12 @@ window.submitOfficialPdf = async function() {
 
                 setTimeout(() => {
                     closeUploadPdfModal();
-                    if (typeof currentSalesSource !== 'undefined' && currentSalesSource === 'OFFICIAL_IT') {
+                    if (typeof currentSalesSource !== 'undefined' && (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT')) {
                         fetchSalesData();
                     }
                 }, 1500);
 
             } else {
-                // BARU: pesan error dari backend ditampilkan apa adanya (sudah spesifik,
-                // misal "Data tanggal 2026-08-03 sudah pernah diupload.")
                 throw new Error(result.message || "Gagal memproses data di Google Sheet.");
             }
         };
