@@ -508,35 +508,28 @@ function renderSalesTableFiltered(data) {
 window.openUploadPdfModal = function() {
     const modal = document.getElementById('uploadPdfModal');
     if (modal) modal.classList.remove('hidden');
-
+    
     const input = document.getElementById('officialPdfInput');
     if (input) input.value = '';
-
+    
     const display = document.getElementById('pdfFileNameDisplay');
     if (display) display.textContent = "Klik atau seret file .PDF laporan ke sini";
-
+    
     const progContainer = document.getElementById('uploadProgressContainer');
     if (progContainer) progContainer.classList.add('hidden');
-
-    const progressBar = document.getElementById('uploadProgressBar');
-    const progressPct = document.getElementById('uploadProgressPct');
-    const statusText = document.getElementById('uploadStatusText');
-    if (progressBar) progressBar.style.width = "0%";
-    if (progressPct) progressPct.textContent = "0%";
-    if (statusText) statusText.textContent = "Menunggu file...";
-
+    
     const statusBox = document.getElementById('pdfUploadStatus');
     if (statusBox) statusBox.classList.add('hidden');
-
+    
     const btnSubmit = document.getElementById('btnSubmitPdf');
     if (btnSubmit) btnSubmit.disabled = false;
-
+    
     const btnText = document.getElementById('btnSubmitText');
     if (btnText) btnText.textContent = "Proses Upload";
 
     const dateInput = document.getElementById('officialReportDate');
     if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
-
+    
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
@@ -555,25 +548,30 @@ window.previewPdfSelection = function(input) {
 };
 
 /**
- * Membaca FileReader dengan Promise.
- * Ini penting agar error di dalam reader.onload benar-benar
- * masuk ke catch utama. Versi sebelumnya memakai callback async
- * sehingga error server/FileReader dapat lolos dari catch.
+ * Helper: bungkus FileReader dalam Promise agar bisa di-await di dalam
+ * satu blok try/catch yang sama dengan fetch() ke GAS.
+ *
+ * BUG LAMA: reader.onload di-assign sebagai `async function(e) {...}`.
+ * Callback ini dipanggil browser secara terpisah (event loop tick lain)
+ * SETELAH fungsi submitOfficialPdf() sudah selesai lewat try/catch-nya.
+ * Akibatnya, setiap `throw` di dalam reader.onload (termasuk error dari
+ * fetch, response.json(), atau result.success === false) menjadi
+ * "unhandled promise rejection" yang TIDAK PERNAH tertangkap oleh
+ * try/catch di luar -> itulah sebabnya UI nyangkut di progress bar
+ * tanpa pesan sukses maupun error.
  */
 function readFileAsDataURL_(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error("Gagal membaca file PDF dari perangkat."));
-        reader.onabort = () => reject(new Error("Pembacaan file PDF dibatalkan."));
-
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error("Gagal membaca file dari perangkat."));
         reader.readAsDataURL(file);
     });
 }
 
 window.submitOfficialPdf = async function() {
     const input = document.getElementById('officialPdfInput');
+    const dateInput = document.getElementById('officialReportDate');
     const statusBox = document.getElementById('pdfUploadStatus');
     const btnSubmit = document.getElementById('btnSubmitPdf');
     const btnText = document.getElementById('btnSubmitText');
@@ -582,129 +580,103 @@ window.submitOfficialPdf = async function() {
     const progressPct = document.getElementById('uploadProgressPct');
     const statusText = document.getElementById('uploadStatusText');
 
+    const setProgress = (pct, label) => {
+        if (progressBar) progressBar.style.width = `${pct}%`;
+        if (progressPct) progressPct.textContent = `${pct}%`;
+        if (statusText && label) statusText.textContent = label;
+    };
+
+    const showStatus = (isSuccess, message) => {
+        if (!statusBox) return;
+        statusBox.className = isSuccess
+            ? "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-3"
+            : "block text-center p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 mt-3";
+        statusBox.textContent = message;
+        statusBox.classList.remove('hidden');
+    };
+
     if (!input || !input.files || !input.files[0]) {
         alert("Silakan pilih file PDF terlebih dahulu!");
         return;
     }
 
-    const file = input.files[0];
-
-    if (file.type && file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-        alert("File harus berformat PDF.");
+    if (!dateInput || !dateInput.value) {
+        alert("Silakan pilih Tanggal Report terlebih dahulu!");
         return;
     }
 
-    const setProgress = (value, message) => {
-        if (progressBar) progressBar.style.width = `${value}%`;
-        if (progressPct) progressPct.textContent = `${value}%`;
-        if (statusText && message) statusText.textContent = message;
-    };
-
-    const showError = (message) => {
-        if (progContainer) progContainer.classList.add('hidden');
-
-        if (statusBox) {
-            statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 mt-3";
-            statusBox.textContent = message;
-            statusBox.classList.remove('hidden');
-        }
-
-        if (btnSubmit) btnSubmit.disabled = false;
-        if (btnText) btnText.textContent = "Coba Lagi";
-    };
+    const file = input.files[0];
+    const reportDate = dateInput.value;
 
     if (statusBox) statusBox.classList.add('hidden');
     if (progContainer) progContainer.classList.remove('hidden');
     if (btnSubmit) btnSubmit.disabled = true;
-    if (btnText) btnText.textContent = "Memproses...";
+    if (btnText) btnText.textContent = "Mengunggah...";
+    setProgress(15, "Membaca file PDF dari perangkat...");
 
+    // SATU try/catch untuk SELURUH alur async -> tidak ada lagi error yang "hilang".
     try {
-        setProgress(10, "Mempersiapkan file PDF...");
-
         const base64Content = await readFileAsDataURL_(file);
 
-        setProgress(35, "File siap. Mengirim ke Google Apps Script...");
+        setProgress(45, "Mengirim & memvalidasi ke Google Sheet...");
 
         const payload = {
             action: "UPLOAD_PDF_OFFICIAL",
             fileName: file.name,
-            fileData: base64Content
+            fileData: base64Content,
+            reportDate: reportDate
         };
 
-        setProgress(55, "Google Apps Script sedang membaca PDF...");
+        const response = await fetch(WEB_APP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
 
-        let response;
-
-        try {
-            response = await fetch(WEB_APP_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(payload)
-            });
-        } catch (networkError) {
-            throw new Error(
-                "Koneksi ke Google Apps Script gagal. " +
-                "Periksa WEB_APP_URL / deployment Web App dan koneksi internet."
-            );
-        }
-
-        setProgress(75, "Memvalidasi tanggal, DATA_STORE, dan duplikat...");
-
-        const responseText = await response.text();
-
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (jsonError) {
-            throw new Error(
-                "Respons Google Apps Script bukan JSON yang valid. " +
-                "HTTP " + response.status + ". Respons: " +
-                responseText.substring(0, 300)
-            );
-        }
+        setProgress(80, "Memproses respons server...");
 
         if (!response.ok) {
-            throw new Error(
-                (result && result.message ? result.message : "HTTP Error " + response.status)
-            );
+            throw new Error(`Server merespons dengan status HTTP ${response.status}. Cek deployment Web App GAS (akses "Anyone").`);
+        }
+
+        const rawText = await response.text();
+        let result;
+        try {
+            result = JSON.parse(rawText);
+        } catch (parseErr) {
+            // Ini terjadi kalau GAS mengembalikan halaman HTML (mis. error izin),
+            // bukan JSON. Tampilkan potongan responsnya agar mudah didiagnosis.
+            throw new Error("Respons server bukan JSON yang valid (kemungkinan URL Web App salah / deployment error). Cuplikan: " + rawText.slice(0, 120));
         }
 
         if (!result.success) {
-            const stage = result.stage ? `[${result.stage}] ` : "";
-            throw new Error(stage + (result.message || "Upload ditolak oleh backend."));
+            const stageLabel = result.stage ? ` [tahap: ${result.stage}]` : '';
+            throw new Error((result.message || "Gagal memproses data di Google Sheet.") + stageLabel);
         }
 
-        setProgress(100, "Berhasil disimpan ke OFFICIAL_IT_REPORT.");
+        setProgress(100, "Selesai!");
 
-        if (statusBox) {
-            statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-3";
-            statusBox.textContent =
-                result.message ||
-                `Berhasil! ${result.count || 0} data toko berhasil disimpan.`;
-            statusBox.classList.remove('hidden');
-        }
-
+        const skippedNote = result.skippedCount
+            ? ` (${result.skippedCount} baris dilewati karena tidak cocok DATA_STORE / format tabel.)`
+            : '';
+        showStatus(true, (result.message || `Sukses! ${result.count || ''} data toko tersimpan ke OFFICIAL_IT_REPORT.`) + skippedNote);
         if (btnText) btnText.textContent = "Berhasil Disimpan";
 
-        // Modal otomatis ditutup setelah hasil sukses benar-benar diterima.
+        // Auto-close HANYA saat sukses, popup tidak lagi nyangkut di pesan "Berhasil".
         setTimeout(() => {
             closeUploadPdfModal();
-
-            if (
-                typeof currentSalesSource !== 'undefined' &&
-                (currentSalesSource === 'OFFICIAL_IT' ||
-                 currentSalesSource === 'OFFICIAL_IT_REPORT')
-            ) {
+            if (typeof currentSalesSource !== 'undefined' && (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT')) {
                 fetchSalesData();
             }
-        }, 1200);
+        }, 1800);
 
     } catch (error) {
-        console.error("Upload Official IT Error:", error);
-        showError(
-            "Gagal: " + (error && error.message
-                ? error.message
-                : "Terjadi kesalahan yang tidak diketahui.")
-        );
+        // Sekarang SEMUA jenis error (baca file, network, HTTP non-200, JSON invalid,
+        // atau success:false dari backend) pasti tertangkap di sini.
+        console.error("Upload Error:", error);
+        if (progContainer) progContainer.classList.add('hidden');
+        showStatus(false, "Gagal: " + (error.message || "Terjadi kesalahan koneksi."));
+        if (btnSubmit) btnSubmit.disabled = false;
+        if (btnText) btnText.textContent = "Coba Lagi";
     }
 };
