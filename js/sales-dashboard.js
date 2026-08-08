@@ -1,545 +1,710 @@
-/**
- * ============================================================================
- * SALES DASHBOARD — FRONTEND JAVASCRIPT CONTROLLER (sales-dashboard.js)
- * ============================================================================
- * Fitur:
- * 1. Manajemen State & Pengambilan Data dari Google Apps Script Web App
- * 2. Filter Tanggal & Toko (Store)
- * 3. Rendering KPI Card, Tabel Laporan, & Grafik (Chart.js opsional)
- * 4. Integrasi Upload PDF Laporan Resmi (OFFICIAL_IT_REPORT) + Auto-Close
- * ============================================================================
- */
+/* ==========================================================================
+   1. KONFIGURASI GLOBAL & MAPPING GID SHEETS
+   ========================================================================== */
+const SALES_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?output=csv';
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz0OP_PZzwnj5LJFfus99KyLSqwiD5PFDQK6QX9Br2FTHrEFOM8pMgEXZpsLhd26ZWz/exec";
+
+// Disinkronkan dengan SPREADSHEET_ID pada Code.gs (Single Source of Truth)
+const SPREADSHEET_ID_OFFICIAL = "1P70howhagUA_H4H0cSXUWB5MjDhCKuOirVLSmh39Z_E";
+
+let salesData = [];
+let salesChartInstance = null;
+let currentSalesChartMode = 'mtd';
+let currentSalesSource = 'SUBMISSION'; // 'SUBMISSION' atau 'OFFICIAL_IT_REPORT'
+
+// GID Sheet Lengkap (Termasuk Alias untuk Official IT Report)
+const SHEET_GIDS = {
+    'OFFICIAL_IT_REPORT': '1129267198',
+    'OFFICIAL_IT': '1129267198', // Alias agar aman dari bug pemanggilan key
+    'Oct26': '1682478488', 
+    'Sep26': '432381843', 
+    'Aug26': '1766415704', 
+    'Jul26': '1248782513', 
+    'Jun26': '511605214', 
+    'May26': '2012772985',
+    'Apr26': '544207481', 
+    'Mar26': '90936589', 
+    'Feb26': '472876079',
+    'Jan26': '171319040', 
+    'Dec25': '236016326', 
+    'Nov25': '564328385'
+};
 
 /* ==========================================================================
-   1. KONFIGURASI UTAMA & GLOBAL STATE
+   2. INITIALIZATION & SOURCE SWITCHER
    ========================================================================== */
-// Ganti dengan URL Web App Deployment Google Apps Script Anda yang aktif
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx.../exec";
-
-// Global State
-let currentSalesSource = "OFFICIAL_IT_REPORT"; // Pilihan sumber data aktif
-let allSalesData = [];                         // Menyimpan seluruh baris data dari server
-let filteredSalesData = [];                    // Menyimpan data setelah difilter
-let salesChartInstance = null;                 // Menyimpan instance Chart.js agar bisa di-destroy/redraw
-
-/* ==========================================================================
-   2. INISIALISASI APLIKASI (DOM LOADED)
-   ========================================================================== */
-document.addEventListener("DOMContentLoaded", () => {
-  initDashboard();
-  setupEventListeners();
-  if (typeof lucide !== "undefined") {
-    lucide.createIcons();
-  }
+document.addEventListener('DOMContentLoaded', () => {
+    displayUpdateDate();
+    initSalesSlicers();
+    fetchSalesData();
 });
 
-function initDashboard() {
-  // Set default nilai filter tanggal (opsional: 30 hari terakhir atau hari ini)
-  const today = new Date().toISOString().split("T")[0];
-  const filterDateInput = document.getElementById("filterDate");
-  if (filterDateInput && !filterDateInput.value) {
-    filterDateInput.value = today;
-  }
-
-  // Muat data dari server
-  fetchSalesData();
+function displayUpdateDate() {
+    const dateEl = document.getElementById('update-date');
+    if (dateEl) {
+        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        dateEl.innerText = "Update Terakhir: " + today;
+    }
 }
 
-function setupEventListeners() {
-  // Tombol Filter / Refresh
-  const btnRefresh = document.getElementById("btnRefreshData");
-  if (btnRefresh) {
-    btnRefresh.addEventListener("click", () => fetchSalesData());
-  }
+/**
+ * Fungsi Ganti Sumber Data (Store Submission vs Official IT Report)
+ */
+window.switchSalesSource = function(sourceType) {
+    currentSalesSource = sourceType;
+    
+    const btnSub = document.getElementById('btn-src-submission');
+    const btnOff = document.getElementById('btn-src-official');
+    const slicerBulan = document.getElementById('slicerBulanSales');
 
-  const filterStore = document.getElementById("filterStore");
-  if (filterStore) {
-    filterStore.addEventListener("change", () => applyFiltersAndRender());
-  }
+    if (sourceType === 'OFFICIAL_IT') {
+        if (btnOff) btnOff.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
+        if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
+        if (slicerBulan) slicerBulan.disabled = true;
+    } else {
+        if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
+        if (btnOff) btnOff.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
+        if (slicerBulan) slicerBulan.disabled = false;
+    }
 
-  const filterDate = document.getElementById("filterDate");
-  if (filterDate) {
-    filterDate.addEventListener("change", () => applyFiltersAndRender());
-  }
+    fetchSalesData();
+};
 
-  // Switcher Sumber Data (jika ada tombol/select untuk pindah source)
-  const sourceSelector = document.getElementById("salesSourceSelector");
-  if (sourceSelector) {
-    sourceSelector.addEventListener("change", (e) => {
-      currentSalesSource = e.target.value;
-      fetchSalesData();
+function initSalesSlicers() {
+    const slicerBulan = document.getElementById('slicerBulanSales');
+    const slicerKategori = document.getElementById('slicerKategoriSales');
+    const slicerSpesifik = document.getElementById('slicerSpesifikSales');
+
+    if (!slicerKategori || !slicerSpesifik) return;
+
+    slicerKategori.addEventListener('change', function() {
+        const kategori = this.value;
+        slicerSpesifik.innerHTML = '<option value="all">-- Semua --</option>';
+        
+        if (kategori === 'all') {
+            slicerSpesifik.disabled = true;
+            slicerSpesifik.classList.add('bg-slate-100', 'cursor-not-allowed');
+        } else {
+            slicerSpesifik.disabled = false;
+            slicerSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
+            
+            let uniqueItems = new Set();
+            salesData.forEach(item => {
+                if (kategori === 'store' && item.store && item.store !== "-") {
+                    uniqueItems.add(item.store.trim());
+                } else if (kategori === 'bm' && item.bm && item.bm !== "-") {
+                    uniqueItems.add(item.bm.trim());
+                } else if (kategori === 'abm' && item.abm && item.abm !== "-") {
+                    uniqueItems.add(item.abm.trim());
+                }
+            });
+
+            Array.from(uniqueItems).sort().forEach(name => {
+                slicerSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
+        applySalesFilters();
     });
-  }
 
-  // Event listener tombol upload di luar modal (tombol Buka Modal Upload PDF)
-  const btnOpenUpload = document.getElementById("btnOpenUploadModal");
-  if (btnOpenUpload) {
-    btnOpenUpload.addEventListener("click", openUploadPdfModal);
-  }
+    slicerSpesifik.addEventListener('change', applySalesFilters);
+    if (slicerBulan) {
+        slicerBulan.addEventListener('change', () => {
+            fetchSalesData();
+            if (typeof fetchAndRenderUptSalesTable === "function") fetchAndRenderUptSalesTable();
+        });
+    }
 }
 
 /* ==========================================================================
-   3. PENGAMBILAN DATA DARI BACKEND GOOGLE APPS SCRIPT
+   3. DATA FETCHING & SMART PARSER CSV
    ========================================================================== */
 async function fetchSalesData() {
-  showLoadingState(true);
+    const loader = document.getElementById('sales-loading');
+    if (loader) loader.classList.remove('hidden');
 
-  try {
-    const url = `${WEB_APP_URL}?action=GET_SALES&source=${encodeURIComponent(currentSalesSource)}`;
-    const response = await fetch(url, { method: "GET" });
+    try {
+        let finalUrl = '';
+        
+        if (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT') {
+            // Gunakan Spreadsheet ID yang disinkronkan dengan Code.gs
+            const gid = SHEET_GIDS['OFFICIAL_IT_REPORT'] || '1129267198';
+            finalUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_OFFICIAL}/export?format=csv&gid=${gid}&t=${Date.now()}`;
+        } else {
+            // Menggunakan link publikasi pub?output=csv untuk data bulanan
+            const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Aug26';
+            let gid = SHEET_GIDS[selectedKey] || '1766415704';
+            finalUrl = `${SALES_BASE_URL}&gid=${gid}&t=${Date.now()}`;
+        }
+        
+        const response = await fetch(finalUrl);
+        const csvText = await response.text();
+        
+        salesData = parseSalesCSV(csvText, currentSalesSource);
+        applySalesFilters();
+    } catch (error) { 
+        console.error('Error fetching data:', error); 
+    } finally {
+        if (loader) loader.classList.add('hidden');
+    }
+}
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+function parseSalesCSV(text, sourceMode) {
+    let lines = text.split('\n');
+    if (lines.length < 2) return [];
+    
+    let headerRowIdx = (sourceMode === 'OFFICIAL_IT' || sourceMode === 'OFFICIAL_IT_REPORT') ? 0 : (lines.length > 2 ? 2 : 0);
+    let headers = parseCSVLine(lines[headerRowIdx]).map(h => h.trim().toLowerCase());
+    let result = [];
+    
+    for (let i = headerRowIdx + 1; i < lines.length; i++) { 
+        if (!lines[i].trim()) continue;
+        let row = parseCSVLine(lines[i]);
+
+        let getVal = (headerNames, fallbackIndex) => {
+            for (let hName of headerNames) {
+                let idx = headers.indexOf(hName.toLowerCase());
+                if (idx !== -1 && row[idx] !== undefined) {
+                    return parseFloat(String(row[idx]).replace(/[^0-9.-]+/g, "")) || 0;
+                }
+            }
+            return parseFloat(String(row[fallbackIndex] || "").replace(/[^0-9.-]+/g, "")) || 0;
+        };
+
+        let getStr = (headerNames, fallbackIndex) => {
+            for (let hName of headerNames) {
+                let idx = headers.indexOf(hName.toLowerCase());
+                if (idx !== -1 && row[idx] !== undefined) return String(row[idx]).trim();
+            }
+            return String(row[fallbackIndex] || "-").trim();
+        };
+
+        let storeName = getStr(['store name', 'store_name', 'store', 'nama toko'], 1);
+        if (!storeName || storeName === "" || storeName === "-") continue; 
+
+        let mtdSalesVal = getVal(['net sales', 'net_sales', 'mtd sales', 'sales mtd'], 4);
+        let mtdTargetVal = getVal(['target sales', 'target_sales', 'mtd target', 'target'], 5);
+        let achVal = getVal(['achievement', 'ach percent', '% ach', 'ach'], 17);
+
+        // Fallback persentase achievement agar tidak 0 jika target tersedia
+        if (achVal === 0 && mtdTargetVal > 0) {
+            achVal = (mtdSalesVal / mtdTargetVal) * 100;
+        }
+
+        result.push({
+            storeCode: getStr(['store code', 'store_code', 'kode toko'], 0),
+            store: storeName,
+            bm: getStr(['nama bm', 'bm', 'branch manager'], 2),
+            abm: getStr(['nama abm', 'abm', 'asst branch manager'], 3),
+            mtdSales: mtdSalesVal,
+            mtdTarget: mtdTargetVal,
+            bestEstimate: getStr(['best estimate', 'best_estimate', 'estimate'], 16),
+            achPercent: achVal,
+            salesLY: getVal(['sales ly', 'ly sales', 'ly'], 18),
+            sssg: getVal(['sssg', 'ach sssg'], 20),
+            projSssg: getVal(['projection sssg', 'proj sssg', 'projection'], 21)
+        });
+    }
+    return result;
+}
+
+function parseCSVLine(textLine) {
+    let row = [];
+    let inQuotes = false;
+    let currentStr = "";
+    for (let char of textLine) {
+        if (char === '"') inQuotes = !inQuotes;
+        else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; }
+        else currentStr += char;
+    }
+    row.push(currentStr.trim());
+    return row.map(cell => cell.replace(/^"|"$/g, '').trim());
+}
+
+/* ==========================================================================
+   4. SYSTEM FILTERING SALES
+   ========================================================================== */
+function applySalesFilters() {
+    const kategori = document.getElementById('slicerKategoriSales')?.value || 'all';
+    const spesifik = document.getElementById('slicerSpesifikSales')?.value || 'all';
+
+    let filteredSales = [...salesData]; 
+
+    if (kategori !== 'all' && spesifik !== 'all') {
+        filteredSales = salesData.filter(item => {
+            if (kategori === 'bm') return item.bm.toLowerCase() === spesifik.toLowerCase();
+            if (kategori === 'abm') return item.abm.toLowerCase() === spesifik.toLowerCase();
+            if (kategori === 'store') return item.store.toLowerCase() === spesifik.toLowerCase();
+            return true;
+        });
     }
 
-    const result = await response.json();
+    renderSalesSummaryFiltered(filteredSales);
+    renderSalesTableFiltered(filteredSales);
 
-    if (result && result.success) {
-      allSalesData = Array.isArray(result.data) ? result.data : [];
-      populateStoreFilter(allSalesData);
-      applyFiltersAndRender();
+    if (currentSalesChartMode === 'mtd') {
+        renderSalesChartFiltered(filteredSales);
     } else {
-      // Fallback jika API mengembalikan data langsung berupa array
-      if (Array.isArray(result)) {
-        allSalesData = result;
-        populateStoreFilter(allSalesData);
-        applyFiltersAndRender();
-      } else {
-        throw new Error(result.message || "Gagal memuat data dari server.");
-      }
+        fetchAndRenderTrendChart(kategori, spesifik);
     }
-  } catch (error) {
-    console.error("Error fetching sales data:", error);
-    showErrorMessage("Gagal memuat data penjualan. Periksa koneksi atau URL Web App.");
-    allSalesData = [];
-    applyFiltersAndRender();
-  } finally {
-    showLoadingState(false);
-  }
 }
 
-/* ==========================================================================
-   4. MANAJEMEN FILTER DATA
-   ========================================================================== */
-function populateStoreFilter(data) {
-  const selectStore = document.getElementById("filterStore");
-  if (!selectStore) return;
-
-  const currentSelection = selectStore.value;
-  selectStore.innerHTML = `<option value="ALL">Semua Toko</option>`;
-
-  const storeMap = new Map();
-  data.forEach((item) => {
-    const code = String(item["Store Code"] || item.storeCode || "").trim().toUpperCase();
-    const name = String(item["Store Name"] || item.storeName || "").trim().toUpperCase();
-    if (code && !storeMap.has(code)) {
-      storeMap.set(code, name || code);
+window.setSalesChartMode = function(mode) {
+    currentSalesChartMode = mode;
+    const btnMtd = document.getElementById('btnModeMtd');
+    const btnTrend = document.getElementById('btnModeTrend');
+    
+    if (mode === 'mtd') {
+        if (btnMtd) btnMtd.className = "px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all";
+        if (btnTrend) btnTrend.className = "px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all";
+    } else {
+        if (btnTrend) btnTrend.className = "px-5 py-2 rounded-lg text-sm font-extrabold bg-white text-slate-800 shadow-sm transition-all";
+        if (btnMtd) btnMtd.className = "px-5 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all";
     }
-  });
-
-  // Urutkan toko berdasarkan kode
-  const sortedCodes = Array.from(storeMap.keys()).sort();
-  sortedCodes.forEach((code) => {
-    const option = document.createElement("option");
-    option.value = code;
-    option.textContent = `${code} - ${storeMap.get(code)}`;
-    selectStore.appendChild(option);
-  });
-
-  if (storeMap.has(currentSelection)) {
-    selectStore.value = currentSelection;
-  }
-}
-
-function applyFiltersAndRender() {
-  const selectStore = document.getElementById("filterStore");
-  const inputDate = document.getElementById("filterDate");
-
-  const selectedStore = selectStore ? selectStore.value : "ALL";
-  const selectedDate = inputDate ? inputDate.value : "";
-
-  filteredSalesData = allSalesData.filter((row) => {
-    const storeCode = String(row["Store Code"] || row.storeCode || "").trim().toUpperCase();
-    const matchStore = selectedStore === "ALL" || storeCode === selectedStore;
-
-    let matchDate = true;
-    if (selectedDate) {
-      const rowDateRaw = row["Report Date"] || row.reportDate || "";
-      const rowDateStr = String(rowDateRaw).substring(0, 10);
-      matchDate = rowDateStr === selectedDate;
-    }
-
-    return matchStore && matchDate;
-  });
-
-  renderSummaryCards(filteredSalesData);
-  renderSalesTable(filteredSalesData);
-  renderSalesChart(filteredSalesData);
-}
-
-/* ==========================================================================
-   5. RENDERING KPI SUMMARY CARDS
-   ========================================================================== */
-function renderSummaryCards(data) {
-  let totalGross = 0;
-  let totalNet = 0;
-  let totalTrx = 0;
-  let totalQty = 0;
-
-  data.forEach((row) => {
-    totalGross += Number(row["Gross Sales"] || row.grossSales || 0);
-    totalNet += Number(row["Net Sales"] || row.netSales || 0);
-    totalTrx += Number(row["Trx Count"] || row.trxCount || 0);
-    totalQty += Number(row["Qty Sold"] || row.qtySold || 0);
-  });
-
-  const avgTrx = totalTrx > 0 ? totalNet / totalTrx : 0;
-
-  setTextContent("summaryGrossSales", formatRupiah(totalGross));
-  setTextContent("summaryNetSales", formatRupiah(totalNet));
-  setTextContent("summaryTotalTrx", formatNumber(totalTrx));
-  setTextContent("summaryTotalQty", formatNumber(totalQty));
-  setTextContent("summaryAvgTrx", formatRupiah(avgTrx));
-}
-
-/* ==========================================================================
-   6. RENDERING DATA TABLE
-   ========================================================================== */
-function renderSalesTable(data) {
-  const tbody = document.getElementById("salesTableBody");
-  const emptyState = document.getElementById("salesTableEmptyState");
-  if (!tbody) return;
-
-  tbody.innerHTML = "";
-
-  if (!data || data.length === 0) {
-    if (emptyState) emptyState.classList.remove("hidden");
-    return;
-  }
-
-  if (emptyState) emptyState.classList.add("hidden");
-
-  data.forEach((row, index) => {
-    const storeCode = row["Store Code"] || row.storeCode || "-";
-    const storeName = row["Store Name"] || row.storeName || "-";
-    const reportDate = formatDateID(row["Report Date"] || row.reportDate);
-    const grossSales = formatRupiah(row["Gross Sales"] || row.grossSales || 0);
-    const netSales = formatRupiah(row["Net Sales"] || row.netSales || 0);
-    const qtySold = formatNumber(row["Qty Sold"] || row.qtySold || 0);
-    const trxCount = formatNumber(row["Trx Count"] || row.trxCount || 0);
-
-    const tr = document.createElement("tr");
-    tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
-    tr.innerHTML = `
-      <td class="py-3 px-4 text-xs font-semibold text-slate-700">${index + 1}</td>
-      <td class="py-3 px-4 text-xs font-bold text-slate-800">${storeCode}</td>
-      <td class="py-3 px-4 text-xs text-slate-600">${storeName}</td>
-      <td class="py-3 px-4 text-xs text-slate-600">${reportDate}</td>
-      <td class="py-3 px-4 text-xs text-right text-slate-600">${grossSales}</td>
-      <td class="py-3 px-4 text-xs text-right font-bold text-emerald-600">${netSales}</td>
-      <td class="py-3 px-4 text-xs text-right text-slate-600">${qtySold}</td>
-      <td class="py-3 px-4 text-xs text-right text-slate-600">${trxCount}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-/* ==========================================================================
-   7. RENDERING CHARTS (CHART.JS SAFE CHECK)
-   ========================================================================== */
-function renderSalesChart(data) {
-  const canvas = document.getElementById("salesChartCanvas");
-  if (!canvas || typeof Chart === "undefined") return;
-
-  const ctx = canvas.getContext("2d");
-  if (salesChartInstance) {
-    salesChartInstance.destroy();
-  }
-
-  const storeNetMap = new Map();
-  data.forEach((row) => {
-    const code = String(row["Store Code"] || row.storeCode || "").trim().toUpperCase();
-    const net = Number(row["Net Sales"] || row.netSales || 0);
-    if (code) {
-      storeNetMap.set(code, (storeNetMap.get(code) || 0) + net);
-    }
-  });
-
-  const labels = Array.from(storeNetMap.keys()).slice(0, 15);
-  const values = labels.map((label) => storeNetMap.get(label));
-
-  salesChartInstance = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: "Net Sales (Rp)",
-          data: values,
-          backgroundColor: "rgba(16, 185, 129, 0.8)",
-          borderColor: "rgba(16, 185, 129, 1)",
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (context) => `Net Sales: ${formatRupiah(context.raw)}`,
-          },
-        },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: (value) => formatRupiahShort(value),
-          },
-        },
-      },
-    },
-  });
-}
-
-/* ==========================================================================
-   8. FITUR UPLOAD PDF LAPORAN RESMI (OFFICIAL_IT_REPORT)
-   ========================================================================== */
-window.openUploadPdfModal = function () {
-  const modal = document.getElementById("uploadPdfModal");
-  if (modal) modal.classList.remove("hidden");
-
-  const input = document.getElementById("officialPdfInput");
-  if (input) input.value = "";
-
-  const display = document.getElementById("pdfFileNameDisplay");
-  if (display) display.textContent = "Klik atau seret file .PDF laporan ke sini";
-
-  const progContainer = document.getElementById("uploadProgressContainer");
-  if (progContainer) progContainer.classList.add("hidden");
-
-  const statusBox = document.getElementById("pdfUploadStatus");
-  if (statusBox) statusBox.classList.add("hidden");
-
-  const btnSubmit = document.getElementById("btnSubmitPdf");
-  if (btnSubmit) {
-    btnSubmit.disabled = false;
-    btnSubmit.classList.remove("opacity-50", "cursor-not-allowed");
-  }
-
-  const btnText = document.getElementById("btnSubmitText");
-  if (btnText) btnText.textContent = "Proses Upload";
-
-  const dateInput = document.getElementById("officialReportDate");
-  if (dateInput) dateInput.value = new Date().toISOString().split("T")[0];
-
-  if (typeof lucide !== "undefined") lucide.createIcons();
+    applySalesFilters();
 };
 
-window.closeUploadPdfModal = function () {
-  const modal = document.getElementById("uploadPdfModal");
-  if (modal) modal.classList.add("hidden");
+/* ==========================================================================
+   5. SUMMARY METRICS & CARDS
+   ========================================================================== */
+function renderSalesSummaryFiltered(data) {
+    let totalSales = 0, totalTarget = 0, totalLY = 0;
+    let totalSSSG = 0, totalProjSSSG = 0;
+    let count = 0;
+
+    data.forEach(item => {
+        totalSales += item.mtdSales || 0;
+        totalTarget += item.mtdTarget || 0;
+        totalLY += item.salesLY || 0;
+        totalSSSG += item.sssg || 0;
+        totalProjSSSG += item.projSssg || 0;
+        count++;
+    });
+    
+    const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
+    const avgSSSG = count > 0 ? (totalSSSG / count) : 0;
+    const avgProjSSSG = count > 0 ? (totalProjSSSG / count) : 0;
+    
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+    
+    setTxt('summary-total-sales', "Rp " + totalSales.toLocaleString('id-ID'));
+    setTxt('summary-total-target', "Rp " + totalTarget.toLocaleString('id-ID'));
+    setTxt('summary-avg-ach', avgAch + "%");
+    setTxt('summary-total-ly', "Rp " + totalLY.toLocaleString('id-ID'));
+    
+    const elSSSG = document.getElementById('summary-sssg');
+    const elProjSSSG = document.getElementById('summary-proj-sssg');
+    
+    if (elSSSG) {
+        elSSSG.innerText = avgSSSG.toFixed(2) + "%";
+        elSSSG.className = avgSSSG >= 0 ? "text-xl font-black text-emerald-500" : "text-xl font-black text-rose-500";
+    }
+    if (elProjSSSG) {
+        elProjSSSG.innerText = avgProjSSSG.toFixed(2) + "%";
+        elProjSSSG.className = avgProjSSSG >= 0 ? "text-xl font-black text-amber-500" : "text-xl font-black text-rose-500";
+    }
+}
+
+/* ==========================================================================
+   6. GRAFIK (WARNA ROSE RED & ORANGE MENYALA + LABEL PERSENTASE POLYGON)
+   ========================================================================== */
+function renderSalesChartFiltered(data) {
+    const ctx = document.getElementById('salesTargetChart');
+    if (!ctx) return;
+    
+    if (salesChartInstance) salesChartInstance.destroy();
+    
+    salesChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(item => item.store),
+            datasets: [
+                {
+                    type: 'line',
+                    label: 'Achievement (%)',
+                    data: data.map(item => item.achPercent || 0),
+                    backgroundColor: '#6366f1', 
+                    borderColor: '#6366f1', 
+                    borderWidth: 2.5,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#6366f1',
+                    pointBorderWidth: 2,
+                    fill: false, 
+                    tension: 0.35, 
+                    yAxisID: 'y1' 
+                },
+                {
+                    type: 'bar',
+                    label: 'MTD Target',
+                    backgroundColor: 'rgba(244, 63, 94, 0.85)',
+                    borderColor: '#f43f5e',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    data: data.map(item => item.mtdTarget || 0),
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'bar',
+                    label: 'MTD Sales',
+                    backgroundColor: 'rgba(249, 115, 22, 0.9)',
+                    borderColor: '#f97316',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    data: data.map(item => item.mtdSales || 0),
+                    yAxisID: 'y'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 28 } },
+            scales: {
+                x: { grid: { display: false } },
+                y: { type: 'linear', display: true, position: 'left', beginAtZero: true },
+                y1: { type: 'linear', display: false, position: 'right', beginAtZero: true }
+            },
+            plugins: { legend: { position: 'top' } }
+        },
+        plugins: [{
+            id: 'polygonPercentageLabels',
+            afterDatasetsDraw: (chart) => {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    if (dataset.type === 'line') { 
+                        const meta = chart.getDatasetMeta(i);
+                        if (!meta.hidden) {
+                            meta.data.forEach((element, index) => {
+                                ctx.fillStyle = '#4f46e5'; 
+                                ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                const dataString = Number(dataset.data[index]).toFixed(1) + '%';
+                                ctx.fillText(dataString, element.x, element.y - 8); 
+                            });
+                        }
+                    }
+                });
+            }
+        }]
+    });
+}
+
+async function fetchAndRenderTrendChart(kategori, spesifik) {
+    const loader = document.getElementById('sales-loading');
+    if (loader) loader.classList.remove('hidden');
+    const ctx = document.getElementById('salesTargetChart');
+    if (!ctx) return;
+
+    try {
+        const monthKeys = ['Oct26', 'Sep26', 'Aug26', 'Jul26', 'Jun26', 'May26'].reverse(); 
+        let promises = monthKeys.map(async (mKey) => {
+            const gid = SHEET_GIDS[mKey];
+            if (!gid) return null;
+            try {
+                const res = await fetch(`${SALES_BASE_URL}&gid=${gid}`);
+                const parsed = parseSalesCSV(await res.text(), 'SUBMISSION');
+                let totalS = 0, totalT = 0;
+                parsed.forEach(i => { totalS += i.mtdSales; totalT += i.mtdTarget; });
+                return { month: mKey, achPercent: totalT > 0 ? (totalS / totalT) * 100 : 0 };
+            } catch (e) { return null; }
+        });
+
+        let validData = (await Promise.all(promises)).filter(item => item !== null);
+        if (salesChartInstance) salesChartInstance.destroy();
+
+        salesChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: validData.map(item => item.month),
+                datasets: [{
+                    label: 'Trend Achievement (%)',
+                    data: validData.map(item => item.achPercent),
+                    borderColor: '#f97316',
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#f97316',
+                    pointBorderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                layout: { padding: { top: 25 } }
+            },
+            plugins: [{
+                id: 'trendPolygonLabels',
+                afterDatasetsDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta.hidden) {
+                        meta.data.forEach((element, index) => {
+                            ctx.fillStyle = '#c2410c';
+                            ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+                            ctx.textAlign = 'center';
+                            const val = Number(chart.data.datasets[0].data[index]).toFixed(1) + '%';
+                            ctx.fillText(val, element.x, element.y - 10);
+                        });
+                    }
+                }
+            }]
+        });
+    } catch (e) { console.error(e); } 
+    finally { if (loader) loader.classList.add('hidden'); }
+}
+
+/* ==========================================================================
+   7. TABEL SALES STORE
+   ========================================================================== */
+function renderSalesTableFiltered(data) {
+    const tbody = document.getElementById('sales-table-body');
+    const countLabel = document.getElementById('table-record-count');
+    
+    if (countLabel) {
+        countLabel.textContent = `Menampilkan ${data.length} Toko`;
+    }
+
+    if (!tbody) return;
+
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;
+        return;
+    }
+
+    let sortedData = [...data].sort((a, b) => (b.achPercent || 0) - (a.achPercent || 0));
+
+    tbody.innerHTML = sortedData.map((item, index) => {
+        let ach = item.achPercent || 0;
+        let badgeBg = ach >= 100 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
+                     (ach >= 80 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-rose-50 text-rose-600 border-rose-200');
+
+        return `
+        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
+            <td class="px-4 py-4 text-center font-bold text-xs text-slate-400">${index + 1}</td>
+            <td class="px-5 py-4">
+                <p class="font-bold text-sm text-slate-800">${item.store}</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase">${item.storeCode || '-'}</p>
+            </td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdSales || 0).toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdTarget || 0).toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate || '-'}</td>
+            <td class="px-5 py-4 text-center">
+                <span class="px-3 py-1.5 rounded-xl text-[11px] font-black border ${badgeBg}">
+                    ${ach.toFixed(2)}%
+                </span>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+/* ==========================================================================
+   8. MODAL HANDLER & UPLOAD PDF OFFICIAL IT REPORT
+   ========================================================================== */
+window.openUploadPdfModal = function() {
+    const modal = document.getElementById('uploadPdfModal');
+    if (modal) modal.classList.remove('hidden');
+
+    const input = document.getElementById('officialPdfInput');
+    if (input) input.value = '';
+
+    const display = document.getElementById('pdfFileNameDisplay');
+    if (display) display.textContent = "Klik atau seret file .PDF laporan ke sini";
+
+    const progContainer = document.getElementById('uploadProgressContainer');
+    if (progContainer) progContainer.classList.add('hidden');
+
+    const progressBar = document.getElementById('uploadProgressBar');
+    const progressPct = document.getElementById('uploadProgressPct');
+    const statusText = document.getElementById('uploadStatusText');
+    if (progressBar) progressBar.style.width = "0%";
+    if (progressPct) progressPct.textContent = "0%";
+    if (statusText) statusText.textContent = "Menunggu file...";
+
+    const statusBox = document.getElementById('pdfUploadStatus');
+    if (statusBox) statusBox.classList.add('hidden');
+
+    const btnSubmit = document.getElementById('btnSubmitPdf');
+    if (btnSubmit) btnSubmit.disabled = false;
+
+    const btnText = document.getElementById('btnSubmitText');
+    if (btnText) btnText.textContent = "Proses Upload";
+
+    const dateInput = document.getElementById('officialReportDate');
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-window.previewPdfSelection = function (input) {
-  const display = document.getElementById("pdfFileNameDisplay");
-  if (input.files && input.files[0] && display) {
-    display.textContent = `📄 File terpilih: ${input.files[0].name}`;
-  } else if (display) {
-    display.textContent = "Klik atau seret file .PDF laporan ke sini";
-  }
+window.closeUploadPdfModal = function() {
+    const modal = document.getElementById('uploadPdfModal');
+    if (modal) modal.classList.add('hidden');
 };
 
-window.submitOfficialPdf = async function () {
-  const input = document.getElementById("officialPdfInput");
-  const dateInput = document.getElementById("officialReportDate");
-  const statusBox = document.getElementById("pdfUploadStatus");
-  const btnSubmit = document.getElementById("btnSubmitPdf");
-  const btnText = document.getElementById("btnSubmitText");
-  const progContainer = document.getElementById("uploadProgressContainer");
-  const progressBar = document.getElementById("uploadProgressBar");
-  const progressPct = document.getElementById("uploadProgressPct");
-  const statusText = document.getElementById("uploadStatusText");
+window.previewPdfSelection = function(input) {
+    const display = document.getElementById('pdfFileNameDisplay');
+    if (input.files && input.files[0] && display) {
+        display.textContent = `📄 File terpilih: ${input.files[0].name}`;
+    } else if (display) {
+        display.textContent = "Klik atau seret file .PDF laporan ke sini";
+    }
+};
 
-  if (!input || !input.files || !input.files[0]) {
-    alert("Silakan pilih file PDF terlebih dahulu!");
-    return;
-  }
+/**
+ * Membaca FileReader dengan Promise.
+ * Ini penting agar error di dalam reader.onload benar-benar
+ * masuk ke catch utama. Versi sebelumnya memakai callback async
+ * sehingga error server/FileReader dapat lolos dari catch.
+ */
+function readFileAsDataURL_(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-  const file = input.files[0];
-  const reportDate = dateInput ? dateInput.value : "";
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Gagal membaca file PDF dari perangkat."));
+        reader.onabort = () => reject(new Error("Pembacaan file PDF dibatalkan."));
 
-  if (statusBox) statusBox.classList.add("hidden");
-  if (progContainer) progContainer.classList.remove("hidden");
-  if (btnSubmit) {
-    btnSubmit.disabled = true;
-    btnSubmit.classList.add("opacity-50", "cursor-not-allowed");
-  }
-  if (btnText) btnText.textContent = "Mengunggah...";
+        reader.readAsDataURL(file);
+    });
+}
 
-  const updateProgress = (pct, text) => {
-    if (progressBar) progressBar.style.width = `${pct}%`;
-    if (progressPct) progressPct.textContent = `${pct}%`;
-    if (statusText) statusText.textContent = text;
-  };
+window.submitOfficialPdf = async function() {
+    const input = document.getElementById('officialPdfInput');
+    const statusBox = document.getElementById('pdfUploadStatus');
+    const btnSubmit = document.getElementById('btnSubmitPdf');
+    const btnText = document.getElementById('btnSubmitText');
+    const progContainer = document.getElementById('uploadProgressContainer');
+    const progressBar = document.getElementById('uploadProgressBar');
+    const progressPct = document.getElementById('uploadProgressPct');
+    const statusText = document.getElementById('uploadStatusText');
 
-  try {
-    updateProgress(15, "[1/4] Membaca file PDF di browser...");
+    if (!input || !input.files || !input.files[0]) {
+        alert("Silakan pilih file PDF terlebih dahulu!");
+        return;
+    }
 
-    const reader = new FileReader();
+    const file = input.files[0];
 
-    reader.onload = async function (e) {
-      updateProgress(40, "[2/4] Mengirim file ke server Google Script...");
+    if (file.type && file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+        alert("File harus berformat PDF.");
+        return;
+    }
 
-      const base64Content = e.target.result;
-      const payload = {
-        action: "UPLOAD_PDF_OFFICIAL",
-        fileName: file.name,
-        fileData: base64Content,
-        reportDate: reportDate,
-      };
+    const setProgress = (value, message) => {
+        if (progressBar) progressBar.style.width = `${value}%`;
+        if (progressPct) progressPct.textContent = `${value}%`;
+        if (statusText && message) statusText.textContent = message;
+    };
 
-      updateProgress(75, "[3/4] Ekstraksi OCR & pengecekan DATA_STORE...");
-
-      const response = await fetch(WEB_APP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        updateProgress(100, "[4/4] Berhasil disimpan!");
+    const showError = (message) => {
+        if (progContainer) progContainer.classList.add('hidden');
 
         if (statusBox) {
-          statusBox.className =
-            "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-3";
-          statusBox.innerHTML = `✅ ${result.message}<br><span class="font-normal text-[11px] text-emerald-600">Jendela menutup otomatis dalam 2 detik...</span>`;
-          statusBox.classList.remove("hidden");
+            statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 mt-3";
+            statusBox.textContent = message;
+            statusBox.classList.remove('hidden');
         }
-        if (btnText) btnText.textContent = "Berhasil!";
 
-        // AUTO-CLOSE MODAL & REFRESH DATA DASHBOARD
+        if (btnSubmit) btnSubmit.disabled = false;
+        if (btnText) btnText.textContent = "Coba Lagi";
+    };
+
+    if (statusBox) statusBox.classList.add('hidden');
+    if (progContainer) progContainer.classList.remove('hidden');
+    if (btnSubmit) btnSubmit.disabled = true;
+    if (btnText) btnText.textContent = "Memproses...";
+
+    try {
+        setProgress(10, "Mempersiapkan file PDF...");
+
+        const base64Content = await readFileAsDataURL_(file);
+
+        setProgress(35, "File siap. Mengirim ke Google Apps Script...");
+
+        const payload = {
+            action: "UPLOAD_PDF_OFFICIAL",
+            fileName: file.name,
+            fileData: base64Content
+        };
+
+        setProgress(55, "Google Apps Script sedang membaca PDF...");
+
+        let response;
+
+        try {
+            response = await fetch(WEB_APP_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            });
+        } catch (networkError) {
+            throw new Error(
+                "Koneksi ke Google Apps Script gagal. " +
+                "Periksa WEB_APP_URL / deployment Web App dan koneksi internet."
+            );
+        }
+
+        setProgress(75, "Memvalidasi tanggal, DATA_STORE, dan duplikat...");
+
+        const responseText = await response.text();
+
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (jsonError) {
+            throw new Error(
+                "Respons Google Apps Script bukan JSON yang valid. " +
+                "HTTP " + response.status + ". Respons: " +
+                responseText.substring(0, 300)
+            );
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                (result && result.message ? result.message : "HTTP Error " + response.status)
+            );
+        }
+
+        if (!result.success) {
+            const stage = result.stage ? `[${result.stage}] ` : "";
+            throw new Error(stage + (result.message || "Upload ditolak oleh backend."));
+        }
+
+        setProgress(100, "Berhasil disimpan ke OFFICIAL_IT_REPORT.");
+
+        if (statusBox) {
+            statusBox.className = "block text-center p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-3";
+            statusBox.textContent =
+                result.message ||
+                `Berhasil! ${result.count || 0} data toko berhasil disimpan.`;
+            statusBox.classList.remove('hidden');
+        }
+
+        if (btnText) btnText.textContent = "Berhasil Disimpan";
+
+        // Modal otomatis ditutup setelah hasil sukses benar-benar diterima.
         setTimeout(() => {
-          closeUploadPdfModal();
-          if (
-            typeof currentSalesSource !== "undefined" &&
-            (currentSalesSource === "OFFICIAL_IT" || currentSalesSource === "OFFICIAL_IT_REPORT")
-          ) {
-            fetchSalesData();
-          }
-        }, 2000);
-      } else {
-        // Tampilkan Error Spesifik dari Server (Di Tahap Mana Gagalnya)
-        const errorStep = result.step || "ERROR";
-        throw new Error(
-          `[Tahap: ${errorStep}] ${result.message || "Gagal memproses data di Google Sheet."}`
+            closeUploadPdfModal();
+
+            if (
+                typeof currentSalesSource !== 'undefined' &&
+                (currentSalesSource === 'OFFICIAL_IT' ||
+                 currentSalesSource === 'OFFICIAL_IT_REPORT')
+            ) {
+                fetchSalesData();
+            }
+        }, 1200);
+
+    } catch (error) {
+        console.error("Upload Official IT Error:", error);
+        showError(
+            "Gagal: " + (error && error.message
+                ? error.message
+                : "Terjadi kesalahan yang tidak diketahui.")
         );
-      }
-    };
-
-    reader.onerror = () => {
-      throw new Error("[Tahap: BACA_FILE] Gagal membaca file dari perangkat browser.");
-    };
-
-    reader.readAsDataURL(file);
-  } catch (error) {
-    console.error("Upload Error:", error);
-    updateProgress(0, "Proses terhenti karena error");
-    if (progContainer) progContainer.classList.add("hidden");
-
-    if (statusBox) {
-      statusBox.className =
-        "block text-left p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 mt-3";
-      statusBox.innerHTML = `❌ <b>Terjadi Kesalahan:</b><br>${error.message}`;
-      statusBox.classList.remove("hidden");
     }
-
-    if (btnSubmit) {
-      btnSubmit.disabled = false;
-      btnSubmit.classList.remove("opacity-50", "cursor-not-allowed");
-    }
-    if (btnText) btnText.textContent = "Coba Lagi";
-  }
 };
-
-/* ==========================================================================
-   9. UTILITAS PENDUKUNG (FORMATTER & UI HELPER)
-   ========================================================================== */
-function formatRupiah(number) {
-  const num = Number(number) || 0;
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num);
-}
-
-function formatRupiahShort(number) {
-  const num = Number(number) || 0;
-  if (num >= 1_000_000_000) {
-    return `Rp ${(num / 1_000_000_000).toFixed(1)}M`;
-  }
-  if (num >= 1_000_000) {
-    return `Rp ${(num / 1_000_000).toFixed(1)}Jt`;
-  }
-  if (num >= 1_000) {
-    return `Rp ${(num / 1_000).toFixed(0)}Rb`;
-  }
-  return formatRupiah(num);
-}
-
-function formatNumber(number) {
-  const num = Number(number) || 0;
-  return new Intl.NumberFormat("id-ID").format(num);
-}
-
-function formatDateID(dateStr) {
-  if (!dateStr) return "-";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return String(dateStr).substring(0, 10);
-    return new Intl.DateTimeFormat("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(d);
-  } catch (e) {
-    return String(dateStr).substring(0, 10);
-  }
-}
-
-function setTextContent(elementId, text) {
-  const el = document.getElementById(elementId);
-  if (el) el.textContent = text;
-}
-
-function showLoadingState(isLoading) {
-  const loader = document.getElementById("dashboardLoader");
-  const content = document.getElementById("dashboardContent");
-
-  if (loader) {
-    loader.classList.toggle("hidden", !isLoading);
-  }
-  if (content) {
-    content.classList.toggle("opacity-50", isLoading);
-    content.style.pointerEvents = isLoading ? "none" : "auto";
-  }
-}
-
-function showErrorMessage(message) {
-  const alertBox = document.getElementById("dashboardErrorAlert");
-  if (alertBox) {
-    alertBox.textContent = message;
-    alertBox.classList.remove("hidden");
-    setTimeout(() => {
-      alertBox.classList.add("hidden");
-    }, 5000);
-  }
-}
