@@ -13,8 +13,9 @@ let pendingPassword = '';
 const userDatabase = {
     'candra': 'admin', 'guest': 'guest',
     'bm agus': 'BM', 'bm didik': 'BM', 'bm galih': 'BM',
-    'abm anas': 'ABM', 'abm bayu': 'ABM', 'abm ika': 'ABM', 'abm adinda': 'ABM',
+    'abm dani': 'ABM', 'abm bayu': 'ABM', 'abm ika': 'ABM', 'abm adinda': 'ABM',
     'abm ridho': 'ABM', 'abm fachri': 'ABM', 'abm gading': 'ABM', 'abm wildan': 'ABM', 'abm satria': 'ABM',
+    'abm nuryanto': 'ABM', 'abm rhoby': 'ABM', 'abm noval': 'ABM', 'abm adi': 'ABM', 
     'jc2017': 'staff', 'jc8001': 'staff', 'jc2021': 'staff', 'jc1029': 'staff', 'jc1020': 'staff',
     'jc3001': 'staff', 'jc2001': 'staff', 'jc2008': 'staff', 'jc5005': 'staff', 'jc6003': 'staff',
     'jc2012': 'staff', 'jc1014': 'staff', 'jc2018': 'staff', 'jc4006': 'staff', 'jc8005': 'staff',
