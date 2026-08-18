@@ -263,3 +263,190 @@ function renderChartPerforma(chartData) {
         }
     });
 }
+/* ==========================================================================
+   ADD-ON: Ambil UPT (kolom H/I/J) dari sumber Sales dan render tabel UPT di Dashboard
+   Letakkan setelah fungsi renderChartPerforma(...) atau di bagian bawah file.
+   ========================================================================== */
+
+const SALES_FALLBACK_BASE_URL = typeof SALES_BASE_URL !== 'undefined' ? SALES_BASE_URL : 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKeatOjhIzr5g8A0umcfsB-ve_YwoyiF3mG9rk_DZKlg6li4v01JKrFg2FnFTk9ot7WIOfjDNXvOvN/pub?output=csv';
+
+// Fallback mapping kalau sales-dashboard.js belum didefinisikan di global scope.
+// Jika sales-dashboard.js diload terlebih dahulu, window.SHEET_GIDS akan dipakai.
+const SALES_GIDS_FALLBACK = {
+    'Oct26': '1682478488', 
+    'Sep26': '432381843', 
+    'Aug26': '1766415704', 
+    'Jul26': '1248782513', 
+    'Jun26': '511605214', 
+    'May26': '2012772985',
+    'Apr26': '544207481', 
+    'Mar26': '90936589', 
+    'Feb26': '472876079',
+    'Jan26': '171319040', 
+    'Dec25': '236016326', 
+    'Nov25': '564328385'
+};
+
+// Pemetaan sederhana dari nilai slicer di Dashboard (mis. 'august') ke key sheet yang dipakai sales-dashboard ('Aug26').
+const MONTH_SLICER_TO_SALES_KEY = {
+    'august': 'Aug26',
+    'july': 'Jul26',
+    'june': 'Jun26',
+    'may': 'May26',
+    'april': 'Apr26',
+    'march': 'Mar26',
+    'february': 'Feb26',
+    'january': 'Jan26',
+    'december': 'Dec25',
+    'november': 'Nov25',
+    'october': 'Oct26',
+    'september': 'Sep26'
+};
+
+function getDefaultSalesMonthKey() {
+    // Coba ambil dari slicerBulan jika ada
+    const slicer = document.getElementById('slicerBulan');
+    if (slicer && slicer.value) {
+        const val = slicer.value.toLowerCase();
+        if (MONTH_SLICER_TO_SALES_KEY[val]) return MONTH_SLICER_TO_SALES_KEY[val];
+        // jika value sudah dalam format seperti 'Aug26', kembalikan langsung
+        if (/^[A-Za-z]{3}\d{2}$/.test(slicer.value)) return slicer.value;
+    }
+
+    // fallback: bulan saat ini (format: 'Aug26')
+    const now = new Date();
+    const monthAbbr = now.toLocaleString('en-US', { month: 'short' }); // e.g. "Aug"
+    const yy = String(now.getFullYear()).slice(-2); // "26"
+    return `${monthAbbr}${yy}`;
+}
+
+function parseLineCSVCells(line) {
+    // parser CSV sederhana yang aman terhadap koma di dalam quotes
+    const cells = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+            inQuotes = !inQuotes;
+            continue;
+        }
+        if (ch === ',' && !inQuotes) {
+            cells.push(cur.trim());
+            cur = '';
+            continue;
+        }
+        cur += ch;
+    }
+    cells.push(cur.trim());
+    return cells.map(c => c.replace(/^"|"$/g, '').trim());
+}
+
+async function fetchAndRenderUptSalesTable() {
+    const tbody = document.getElementById('upt-sales-table-body');
+    if (!tbody) return;
+
+    // Tentukan key bulan sheet sales
+    const salesKey = getDefaultSalesMonthKey();
+
+    // Ambil base url & gids dari sales-dashboard (jika tersedia), kalau tidak gunakan fallback
+    const baseUrl = (typeof SALES_BASE_URL !== 'undefined') ? SALES_BASE_URL : SALES_FALLBACK_BASE_URL;
+    const gidsSource = (typeof SHEET_GIDS !== 'undefined') ? SHEET_GIDS : SALES_GIDS_FALLBACK;
+
+    const gid = gidsSource[salesKey] || gidsSource['Aug26'] || Object.values(gidsSource)[0];
+    const finalUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}gid=${gid}&t=${Date.now()}`;
+
+    // Tampilkan placeholder loading di tabel
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Memuat data UPT untuk ${salesKey}...</td></tr>`;
+
+    try {
+        const res = await fetch(finalUrl);
+        if (!res.ok) throw new Error('Gagal mengambil sumber data sales (HTTP ' + res.status + ')');
+        const txt = await res.text();
+        const lines = txt.split(/\r?\n/).filter(l => l.trim() !== '');
+        if (lines.length < 2) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data di sheet ini.</td></tr>`;
+            return;
+        }
+
+        // Jika file punya header di baris pertama, kita mulai dari baris 1 (index 1) untuk data.
+        // Kolom yang diminta: B (index 1) = store, H (index 7)=UPT, I (8)=Target, J (9)=%Ach
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cells = parseLineCSVCells(lines[i]);
+            // Pastikan ada minimal kolom index 9
+            if (cells.length < 2) continue; // minimal store harus ada
+            const store = cells[1] || '-';
+            // Ambil nilai dari index 7/8/9 jika ada, else 0 / '-'
+            const uptRaw = cells[7] || '';
+            const targetRaw = cells[8] || '';
+            const achRaw = cells[9] || '';
+
+            const parseNum = s => {
+                if (!s) return 0;
+                const n = parseFloat(String(s).replace(/[^0-9.-]+/g, ''));
+                return isNaN(n) ? 0 : n;
+            };
+            const upt = parseNum(uptRaw);
+            const target = parseNum(targetRaw);
+            // achievement mungkin sudah persen atau angka; pastikan angka (0-100)
+            let ach = parseNum(achRaw);
+            if (ach > 100 && target > 0) { // kalau ach disimpan dalam absolute (rare), coba hitung
+                ach = target > 0 ? (upt / target) * 100 : 0;
+            }
+
+            // Lewati baris tanpa nama toko
+            if (!store || store === '-' || store.toLowerCase().includes('store') || store.toLowerCase().includes('nama')) continue;
+
+            rows.push({
+                store: store,
+                mtdUpt: upt,
+                targetUpt: target,
+                achPercent: ach
+            });
+        }
+
+        if (rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data UPT yang valid di sheet ini.</td></tr>`;
+            return;
+        }
+
+        // Render tabel di Dashboard UPT (kolom: No, Store, MTD UPT, Target UPT Lv1, %Ach)
+        // Urutkan berdasarkan MTD UPT descending
+        const sorted = rows.sort((a, b) => (b.mtdUpt || 0) - (a.mtdUpt || 0));
+        tbody.innerHTML = sorted.map((r, idx) => `
+            <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} border-b border-slate-100">
+                <td class="px-5 py-4 text-center text-xs font-bold text-slate-400">${idx + 1}</td>
+                <td class="px-5 py-4">
+                    <p class="font-bold text-sm text-slate-800">${r.store}</p>
+                </td>
+                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${Number(r.mtdUpt || 0).toLocaleString('id-ID')}</td>
+                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${Number(r.targetUpt || 0).toLocaleString('id-ID')}</td>
+                <td class="px-5 py-4 text-center text-sm font-black ${ (r.achPercent||0) >= 100 ? 'text-emerald-500' : (r.achPercent||0) >= 80 ? 'text-amber-500' : 'text-rose-500' }">
+                    ${(Number(r.achPercent || 0)).toFixed(2)}%
+                </td>
+            </tr>
+        `).join('');
+
+        // Panggil renderChartPerforma dengan data yang cocok (field 'store', 'mtdUpt', 'targetUpt')
+        if (typeof renderChartPerforma === 'function') {
+            // Batasi jumlah label untuk chart (mis. top 12) agar chart tidak terlalu padat
+            const chartData = sorted.slice(0, 12).map(r => ({ store: r.store, mtdUpt: r.mtdUpt, targetUpt: r.targetUpt }));
+            renderChartPerforma(chartData);
+        }
+
+    } catch (err) {
+        console.error('fetchAndRenderUptSalesTable error:', err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-rose-600">Gagal memuat data UPT: ${err.message}</td></tr>`;
+    }
+}
+
+// Pastikan fungsi terpanggil saat inisialisasi halaman dan saat slicer bulan berubah.
+// fetchDashboardData() sudah memanggil fetchAndRenderUptSalesTable() jika fungsi ditemukan,
+// namun untuk jaminan, tambahkan pemanggilan awal (jika dashboard sudah dimuat).
+document.addEventListener('DOMContentLoaded', () => {
+    // Delay kecil agar elemen slicer sudah di-initialize oleh initSlicers
+    setTimeout(() => {
+        if (typeof fetchAndRenderUptSalesTable === 'function') fetchAndRenderUptSalesTable();
+    }, 300);
+});
