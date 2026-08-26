@@ -20,8 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnText = document.getElementById("btn-text-analyze");
   const statusText = document.getElementById("status-analyze");
 
-  // Fungsi Toggle View Portal[cite: 9]
+  // Fungsi Toggle View Portal
   function openAnalyzeView() {
+    // 1. Logika yang sudah ada (Mengganti Halaman Konten)
     document.querySelectorAll("main[id^='section-']").forEach((sec) => {
       sec.classList.add("hidden");
     });
@@ -35,26 +36,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     localStorage.setItem("activePortalMenu", "analyze");
-  }
 
-  // Cek Status Halaman saat Load[cite: 9]
-  if (localStorage.getItem("activePortalMenu") === "analyze") {
-    openAnalyzeView();
-  }
-
-  // Sidebar Menu Click Event[cite: 9]
-  if (navBtnAnalyze && sectionAnalyze) {
-    navBtnAnalyze.addEventListener("click", (e) => {
-      e.preventDefault();
-      openAnalyzeView();
-
-      const sidebarMenu = document.getElementById("sidebarMenu");
-      const sidebarBackdrop = document.getElementById("sidebarBackdrop");
-      if (sidebarMenu && !sidebarMenu.classList.contains("-translate-x-full") && window.innerWidth < 768) {
-        sidebarMenu.classList.add("-translate-x-full");
-        if (sidebarBackdrop) sidebarBackdrop.classList.add("hidden");
-      }
+    // ==========================================
+    // 2. TAMBAHAN BARU: Update Highlight Sidebar
+    // ==========================================
+    
+    // a. Cari semua elemen menu di sidebar (Pastikan selector ini sesuai dengan struktur HTML Anda, 
+    //    misalnya menggunakan tag <a> atau <button> di dalam container sidebar)
+    const allMenuBtns = document.querySelectorAll("#sidebarMenu a, #sidebarMenu button"); 
+    
+    // b. Loop semua menu dan hapus class 'aktif' (warna orange)
+    allMenuBtns.forEach((btn) => {
+      // CATATAN: Ubah class warna di bawah ini agar persis dengan yang Anda gunakan di HTML Tailwind Anda
+      // Contoh di bawah mengasumsikan warna orange menggunakan 'bg-yellow-500' atau 'bg-orange-500'
+      btn.classList.remove("bg-yellow-500", "bg-orange-500", "text-white", "font-semibold");
+      
+      // Kembalikan ke warna teks default menu yang tidak aktif (misal abu-abu/putih redup)
+      btn.classList.add("text-gray-300", "hover:bg-gray-800"); 
     });
+
+    // c. Berikan class 'aktif' (warna orange) HANYA kepada menu Analyze Center
+    if (navBtnAnalyze) {
+      navBtnAnalyze.classList.remove("text-gray-300", "hover:bg-gray-800");
+      
+      // Berikan class warna background orange/kuning sesuai desain Anda
+      navBtnAnalyze.classList.add("bg-orange-500", "text-white", "font-semibold", "rounded-md"); 
+    }
   }
 
   // ==========================================
