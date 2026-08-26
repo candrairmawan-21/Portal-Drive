@@ -548,17 +548,10 @@ window.previewPdfSelection = function(input) {
 };
 
 /**
- * Helper: bungkus FileReader dalam Promise agar bisa di-await di dalam
- * satu blok try/catch yang sama dengan fetch() ke GAS.
- *
- * BUG LAMA: reader.onload di-assign sebagai `async function(e) {...}`.
- * Callback ini dipanggil browser secara terpisah (event loop tick lain)
- * SETELAH fungsi submitOfficialPdf() sudah selesai lewat try/catch-nya.
- * Akibatnya, setiap `throw` di dalam reader.onload (termasuk error dari
- * fetch, response.json(), atau result.success === false) menjadi
- * "unhandled promise rejection" yang TIDAK PERNAH tertangkap oleh
- * try/catch di luar -> itulah sebabnya UI nyangkut di progress bar
- * tanpa pesan sukses maupun error.
+ * Helper: Membaca file PDF dan mengonversinya ke format Data URL (Base64)
+ * agar backend Google Apps Script dapat melakukan parsing, konversi,
+ * lookup ke sheet DATA_STORE berdasarkan Store Code (Kolom A), 
+ * dan menyimpan hasilnya ke Google Sheet Master.
  */
 function readFileAsDataURL_(file) {
     return new Promise((resolve, reject) => {
@@ -612,19 +605,21 @@ window.submitOfficialPdf = async function() {
     if (progContainer) progContainer.classList.remove('hidden');
     if (btnSubmit) btnSubmit.disabled = true;
     if (btnText) btnText.textContent = "Mengunggah...";
-    setProgress(15, "Membaca file PDF dari perangkat...");
+    setProgress(15, "Membaca dan menyiapkan konversi file PDF...");
 
-    // SATU try/catch untuk SELURUH alur async -> tidak ada lagi error yang "hilang".
     try {
+        // 1. Convert/baca PDF ke Base64 untuk dikirim ke backend Google Apps Script
         const base64Content = await readFileAsDataURL_(file);
 
-        setProgress(45, "Mengirim & memvalidasi ke Google Sheet...");
+        setProgress(40, "Mengirim data ke server untuk ekstraksi & lookup DATA_STORE...");
 
         const payload = {
             action: "UPLOAD_PDF_OFFICIAL",
             fileName: file.name,
             fileData: base64Content,
-            reportDate: reportDate
+            reportDate: reportDate,
+            gidDataStore: "1124553459",          // GID DATA_STORE sesuai permintaan
+            gidOfficialReport: "1129267198"      // GID OFFICIAL_IT_REPORT sesuai permintaan
         };
 
         const response = await fetch(WEB_APP_URL, {
@@ -633,10 +628,10 @@ window.submitOfficialPdf = async function() {
             body: JSON.stringify(payload)
         });
 
-        setProgress(80, "Memproses respons server...");
+        setProgress(80, "Melakukan lookup Store Code dan menyimpan ke Master...");
 
         if (!response.ok) {
-            throw new Error(`Server merespons dengan status HTTP ${response.status}. Cek deployment Web App GAS (akses "Anyone").`);
+            throw new Error(`Server merespons dengan status HTTP ${response.status}. Periksa deployment Web App GAS.`);
         }
 
         const rawText = await response.text();
@@ -644,9 +639,7 @@ window.submitOfficialPdf = async function() {
         try {
             result = JSON.parse(rawText);
         } catch (parseErr) {
-            // Ini terjadi kalau GAS mengembalikan halaman HTML (mis. error izin),
-            // bukan JSON. Tampilkan potongan responsnya agar mudah didiagnosis.
-            throw new Error("Respons server bukan JSON yang valid (kemungkinan URL Web App salah / deployment error). Cuplikan: " + rawText.slice(0, 120));
+            throw new Error("Respons server bukan JSON yang valid. Cuplikan: " + rawText.slice(0, 120));
         }
 
         if (!result.success) {
@@ -657,12 +650,13 @@ window.submitOfficialPdf = async function() {
         setProgress(100, "Selesai!");
 
         const skippedNote = result.skippedCount
-            ? ` (${result.skippedCount} baris dilewati karena tidak cocok DATA_STORE / format tabel.)`
+            ? ` (${result.skippedCount} baris dilewati karena Store Code tidak ditemukan di sheet DATA_STORE.)`
             : '';
-        showStatus(true, (result.message || `Sukses! ${result.count || ''} data toko tersimpan ke OFFICIAL_IT_REPORT.`) + skippedNote);
+        
+        showStatus(true, (result.message || `Sukses! ${result.count || ''} data toko berhasil di-lookup dan disimpan ke Master.`) + skippedNote);
         if (btnText) btnText.textContent = "Berhasil Disimpan";
 
-        // Auto-close HANYA saat sukses, popup tidak lagi nyangkut di pesan "Berhasil".
+        // Auto-close modal saat sukses dan refresh data dashboard
         setTimeout(() => {
             closeUploadPdfModal();
             if (typeof currentSalesSource !== 'undefined' && (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT')) {
@@ -671,8 +665,6 @@ window.submitOfficialPdf = async function() {
         }, 1800);
 
     } catch (error) {
-        // Sekarang SEMUA jenis error (baca file, network, HTTP non-200, JSON invalid,
-        // atau success:false dari backend) pasti tertangkap di sini.
         console.error("Upload Error:", error);
         if (progContainer) progContainer.classList.add('hidden');
         showStatus(false, "Gagal: " + (error.message || "Terjadi kesalahan koneksi."));
