@@ -346,6 +346,10 @@ async function fetchAndRenderUptSalesTable() {
     const tbody = document.getElementById('upt-sales-table-body');
     if (!tbody) return;
 
+    // 1. Tangkap Nilai Slicer Saat Ini
+    const kategori = document.getElementById('slicerKategori')?.value || 'all';
+    const spesifik = document.getElementById('slicerSpesifik')?.value || 'all';
+
     // Tentukan key bulan sheet sales
     const salesKey = getDefaultSalesMonthKey();
 
@@ -369,16 +373,25 @@ async function fetchAndRenderUptSalesTable() {
             return;
         }
 
-        // PERUBAHAN DIREKTORI KOLOM:
-        // C (index 2) = Store, N (index 13) = UPT, O (index 14) = Target, P (index 15) = %Ach
+        // DIREKTORI KOLOM:
+        // A (0) = BM, B (1) = ABM, C (2) = Store, N (13) = UPT, O (14) = Target, P (15) = %Ach
         const rows = [];
         for (let i = 1; i < lines.length; i++) {
             const cells = parseLineCSVCells(lines[i]);
             
-            // Cek apakah data mencapai kolom ke-3 (index 2) untuk Nama Toko
+            // Cek apakah data mencapai kolom ke-3 (index 2)
             if (cells.length < 3) continue; 
             
-            const store = cells[2] || '-'; // Mengambil dari Kolom C
+            const bmName = cells[0] || '-';   // Kolom A
+            const abmName = cells[1] || '-';  // Kolom B
+            const store = cells[2] || '-';    // Kolom C
+            
+            // 2. LOGIKA FILTERING BERDASARKAN SLICER
+            if (kategori === 'bm' && spesifik !== 'all') {
+                if (bmName.toLowerCase().trim() !== spesifik.toLowerCase().trim()) continue; // Lewati jika tidak cocok
+            } else if (kategori === 'abm' && spesifik !== 'all') {
+                if (abmName.toLowerCase().trim() !== spesifik.toLowerCase().trim()) continue; // Lewati jika tidak cocok
+            }
             
             // Ambil nilai dari index 13, 14, 15 (Kolom N, O, P)
             const uptRaw = cells[13] || '';
@@ -411,7 +424,7 @@ async function fetchAndRenderUptSalesTable() {
         }
 
         if (rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data UPT yang valid di sheet ini.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data Toko yang sesuai dengan Slicer yang dipilih.</td></tr>`;
             return;
         }
 
@@ -420,7 +433,7 @@ async function fetchAndRenderUptSalesTable() {
         const sorted = rows.sort((a, b) => (b.achPercent || 0) - (a.achPercent || 0));
         
         tbody.innerHTML = sorted.map((r, idx) => `
-            <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} border-b border-slate-100">
+            <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} border-b border-slate-100 transition-colors hover:bg-blue-50">
                 <td class="px-5 py-4 text-center text-xs font-bold text-slate-400">${idx + 1}</td>
                 <td class="px-5 py-4">
                     <p class="font-bold text-sm text-slate-800">${r.store}</p>
