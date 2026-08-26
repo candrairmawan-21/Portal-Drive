@@ -70,7 +70,13 @@
         }
         #sidebarMenu .border-b, #sidebarMenu .border-t { border-color: rgba(255,255,255,.075) !important; }
         #sidebarMenu .header-container { margin-bottom: 16px; }
-        #sidebarMenu .logo-text-group img { border-radius: 10px; }
+        #sidebarMenu .logo-text-group img {
+            border-radius: 10px;
+            height: 40px !important;
+            width: auto !important;
+            max-width: 40px;
+            max-height: 40px;
+        }
         #sidebarMenu [id^="menu-"].bg-slate-800,
         #sidebarMenu button:focus-visible {
             outline: none;
@@ -429,7 +435,7 @@
     <div id="sidebarBackdrop" onclick="toggleSidebarMobile()" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
     <!-- AREA KERJA UTAMA & HEADER -->
-    <div class="flex-1 flex flex-col h-screen overflow-y-auto w-full relative">
+    <div class="flex-1 flex flex-col h-screen overflow-y-auto w-full min-w-0 relative">
         <header class="bg-white/70 backdrop-blur-xl shadow-sm sticky top-0 z-20 border-b border-slate-200/50">
             <div class="container mx-auto px-6 py-4 flex justify-between items-center gap-4">
                 <div class="flex items-center gap-3">
@@ -763,7 +769,7 @@
         </main>
 
         <!-- SEKSI 5: MONITORING PROGRESS TUGASAN -->
-        <main id="section-monitoring" class="container mx-auto px-6 py-8 flex-1 hidden">
+        <main id="section-monitoring" class="container mx-auto px-6 py-8 flex-1 min-w-0 w-full hidden">
             <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-slate-100">
                     <div>
@@ -992,6 +998,26 @@
     
     <script src="js/monitoring.js"></script>
     <script src="js/ai-sop.js"></script>
+
+    <!-- PATCH: mencegah section menu (khususnya Analyze Center) tetap tampil/"bocor" ke menu lain saat berpindah halaman -->
+    <script>
+        (function () {
+            var originalSwitchView = window.switchView;
+            window.switchView = function (view) {
+                if (typeof originalSwitchView === 'function') {
+                    originalSwitchView.apply(this, arguments);
+                }
+                // Failsafe: pastikan hanya section aktif yang terlihat, semua section lain dipaksa tersembunyi
+                document.querySelectorAll('main[id^="section-"]').forEach(function (section) {
+                    if (section.id === 'section-' + view) {
+                        section.classList.remove('hidden');
+                    } else {
+                        section.classList.add('hidden');
+                    }
+                });
+            };
+        })();
+    </script>
 
 </body>
 </html>
