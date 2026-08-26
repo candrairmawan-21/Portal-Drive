@@ -344,9 +344,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!line.trim()) return;
       const cols = line.split(",").map((i) => i.trim());
       const sku = cols[0] || "";
+      const alamat = cols[1] || "-"; // Mengambil alamat dari kolom kedua
       const qtySys = parseFloat(cols[3]) || 0;
       const deskripsi = cols[8] || "-"; // Mengambil deskripsi dari kolom 9[cite: 9]
-      if (sku) dbMap[sku] = { sku, qtySys, deskripsi };
+      if (sku) dbMap[sku] = { sku, alamat, qtySys, deskripsi };
     });
 
     // 2. Ekstrak Data Sales (Excel)
@@ -381,8 +382,14 @@ document.addEventListener("DOMContentLoaded", () => {
       let row = data[i];
       let col0 = String(row[0] || "").trim(), col1 = String(row[1] || "").trim();
       let col2 = String(row[2] || "").trim(), col3 = String(row[3] || "").trim();
+
+      // Deteksi baris header yang terulang di tengah data (mis. saat ganti halaman/departemen)
+      let isHeaderRepeat = /^PLU\s*CODE$/i.test(col0) || /^DESCRIPTION$/i.test(col1) ||
+                            /^QTY$/i.test(col2) || /^NET[\s_]*SALES$/i.test(col3);
+
       if ((col0 !== "" && col1 !== "" && col2 === "" && col3 === "") || 
-          (String(row[1] || "").trim() === "" && String(row[2] || "").trim() === "")) {
+          (String(row[1] || "").trim() === "" && String(row[2] || "").trim() === "") ||
+          isHeaderRepeat) {
         data.splice(i, 1);
       }
     }
@@ -436,6 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     analysisList.sort((a, b) => b.kekurangan - a.kekurangan);
+    analysisList = analysisList.slice(0, 100); // Hanya ambil Top 100, sisanya diabaikan
     let sheetFastMoving = analysisList.map((item, idx) => ({
       "No": idx + 1, "SKU": item.sku, "DESCRIPTION": item.description,
       [`QTY TERJUAL (${periodeBulan} BLN)`]: item.qtyTerjual, "AVG / HARI": parseFloat(item.avgDaily.toFixed(2)),
@@ -450,6 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
         sheetNegativeBalance.push({
           "SKU": item.sku,
           "DESCRIPTION": item.deskripsi,
+          "ALAMAT": item.alamat,
           "QTY SYSTEM": item.qtySys
         });
       }
@@ -462,6 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
         sheetUnsoldSKU.push({
           "SKU": item.sku,
           "DESCRIPTION": item.deskripsi,
+          "ALAMAT": item.alamat,
           "QTY SYSTEM": item.qtySys
         });
       }
