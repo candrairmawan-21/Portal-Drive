@@ -160,28 +160,14 @@
                     </span>
                 </button>
 
-                <div class="space-y-1">
-                    <button id="nav-analyze-dropdown" class="w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800/70 hover:text-white transition-all group">
-                        <div class="flex items-center gap-3">
-                            <i data-lucide="pie-chart" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
-                            <span class="sidebar-text-element flex items-center gap-2">
-                                Analyze 
-                                <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Beta</span>
-                            </span>
-                        </div>
-                        <i data-lucide="chevron-down" id="analyzeChevron" class="w-4 h-4 transition-transform duration-200"></i>
-                    </button>
-                    <div id="analyzeSubMenu" class="pl-4 space-y-1 hidden">
-                        <button id="nav-itemize" onclick="switchView('itemize')" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all group">
-                            <i data-lucide="list-checks" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
-                            <span class="sidebar-text-element">Itemize</span>
-                        </button>
-                        <button id="nav-fast-moving" onclick="switchView('fast-moving')" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-all group">
-                            <i data-lucide="zap" class="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-500 transition-colors flex-shrink-0"></i>
-                            <span class="sidebar-text-element">Fast moving sku for TF</span>
-                        </button>
-                    </div>
-                </div>
+                <!-- MENU ANALYZE CENTER (GABUNGAN BARU) -->
+                <button onclick="switchView('analyze')" id="menu-analyze" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
+                    <span class="sidebar-text-element flex items-center gap-2">
+                        Analyze Center 
+                        <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Beta</span>
+                    </span>
+                </button>
                 
                 <a href="#" id="menu-cek-pengiriman" onclick="openCekPengiriman(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap group">
                     <i data-lucide="truck" class="w-4 h-4 flex-shrink-0 group-hover:text-amber-500 transition-colors"></i> 
@@ -634,86 +620,54 @@
             </div>
         </main>
 
-        <!-- SEKSI 6: ITEMIZE -->
-        <main id="section-itemize" class="container mx-auto px-6 py-8 flex-1 hidden">
+        <!-- SEKSI 6: ANALYZE CENTER (GABUNGAN ITEMIZE & FAST MOVING) -->
+        <main id="section-analyze" class="container mx-auto px-6 py-8 flex-1 hidden">
             <div class="mb-6 max-w-2xl">
                 <div class="flex items-center gap-2 mb-1">
-                    <h2 class="text-2xl font-black text-slate-800">Itemize - Analisa Anomali Scan</h2>
+                    <h2 class="text-2xl font-black text-slate-800">Analyze Center</h2>
                     <span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">Beta</span>
                 </div>
-                <p class="text-sm font-semibold text-slate-500">Upload file Database .txt dan File Hasil Scan (.txt atau .xlsx/.xls) untuk memproses laporan anomali otomatis.</p>
-                
-                <div class="mt-3 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-start gap-3">
-                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5"></i>
-                    <p class="text-xs text-amber-900 font-medium leading-relaxed">
-                        <strong>Catatan Pengujian (Beta):</strong> Fitur analisa ini masih dalam tahap pengembangan dan penyesuaian. Hasil analisa dapat berbeda atau tidak akurat dan memerlukan validasi lebih lanjut.
-                    </p>
-                </div>
+                <p class="text-sm font-semibold text-slate-500">Gunakan portal ini untuk melakukan analisa Anomali Scan (Itemize) atau kebutuhan transfer (Fast Moving SKU).</p>
             </div>
 
             <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nama Toko</label>
-                    <input type="text" id="nama-toko-input" placeholder="Contoh: SLSQ" class="w-full text-sm text-slate-700 border border-slate-200 rounded-2xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
-                </div>
-
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
-                    <input type="file" id="file-db-txt" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Hasil Scan (.txt atau .xlsx / .xls)</label>
-                    <p class="text-[11px] text-slate-400 mb-2 font-medium">Jika Excel (.xlsx/.xls): Kolom A = SKU, Kolom B = Alamat. Jika .txt: Format bawaan sebelumnya.</p>
-                    <input type="file" id="file-scan-input" accept=".txt, .xlsx, .xls" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                </div>
-
-                <button id="btn-proses-analisa" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Proses & Download Excel (.xlsx)
-                </button>
                 
-                <p id="status-analisa" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
-            </div>
-        </main>
-
-        <!-- SEKSI 7: FAST MOVING SKU FOR TF -->
-        <main id="section-fast-moving" class="container mx-auto px-6 py-8 flex-1 hidden">
-            <div class="mb-6 max-w-2xl">
-                <div class="flex items-center gap-2 mb-1">
-                    <h2 class="text-2xl font-black text-slate-800">Fast moving sku for TF</h2>
-                    <span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">Beta</span>
-                </div>
-                <p class="text-sm font-semibold text-slate-500">Upload file Database .txt dan File Penjualan .xlsx/.xls untuk menghasilkan analisa transfer barang.</p>
-                
-                <div class="mt-3 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-start gap-3">
-                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5"></i>
-                    <p class="text-xs text-amber-900 font-medium leading-relaxed">
-                        <strong>Catatan Pengujian (Beta):</strong> Fitur analisa ini masih dalam tahap pengembangan dan penyesuaian. Hasil analisa dapat berbeda atau tidak akurat dan memerlukan validasi lebih lanjut.
-                    </p>
-                </div>
-            </div>
-
-            <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm max-w-2xl">
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Nama Toko</label>
-                    <input type="text" id="nama-toko-fm" placeholder="Contoh: SLSQ" class="w-full text-sm text-slate-700 border border-slate-200 rounded-xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
+                <!-- BAGIAN 1: DROPDOWN PILIHAN (SELALU MUNCUL DI ATAS) -->
+                <div class="mb-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. Pilih Jenis Analisa</label>
+                    <select id="tipe-analisa" class="w-full text-sm font-bold text-amber-900 border border-slate-300 rounded-xl p-3 bg-amber-50 focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm transition-all">
+                        <option value="" disabled selected>-- Tentukan Analisa yang Diperlukan --</option>
+                        <option value="itemize">Itemize (Analisa Anomali Scan)</option>
+                        <option value="fast-moving">Fast Moving SKU for TF</option>
+                    </select>
                 </div>
 
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. File Database (.txt)</label>
-                    <input type="file" id="file-db-fm" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+                <!-- BAGIAN 2: CONTAINER FORM (SEMBUNYI SEBELUM USER MEMILIH DROPDOWN) -->
+                <div id="form-analisa-container" class="hidden mt-6 pt-6 border-t border-slate-100 transition-all duration-500">
+                    <div class="mb-5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. Nama Toko</label>
+                        <input type="text" id="nama-toko-analyze" placeholder="Contoh: SLSQ" class="w-full text-sm text-slate-700 border border-slate-200 rounded-xl p-3 bg-slate-50 focus:outline-none focus:border-amber-500 font-semibold">
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">3. File Database (.txt)</label>
+                        <input type="file" id="file-db-analyze" accept=".txt" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+                    </div>
+
+                    <div class="mb-6">
+                        <!-- Label dan Hint ini akan berubah secara dinamis melalui JS -->
+                        <label id="label-file-kedua" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">4. File Kedua</label>
+                        <p id="hint-file-kedua" class="text-[11px] text-slate-400 mb-2 font-medium">Petunjuk file...</p>
+                        <input type="file" id="file-kedua-analyze" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
+                    </div>
+
+                    <button id="btn-proses-analyze" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="cog" class="w-4 h-4"></i> <span id="btn-text-analyze">Proses Data</span>
+                    </button>
+                    
+                    <p id="status-analyze" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
                 </div>
 
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. File Penjualan (.xlsx / .xls)</label>
-                    <input type="file" id="file-sales-fm" accept=".xlsx, .xls" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-amber-500 file:transition-all cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                </div>
-
-                <button id="btn-proses-fm" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="zap" class="w-4 h-4"></i> Proses & Download Fast Moving Excel (.xlsx)
-                </button>
-                
-                <p id="status-fm" class="text-center mt-4 text-xs font-bold text-slate-600"></p>
             </div>
         </main>
     </div>
@@ -804,8 +758,10 @@
     <script src="js/dashboard.js"></script>
     <script src="js/sales-dashboard.js"></script>
     <script src="js/f003-builder.js"></script>
-    <script src="js/itemize.js"></script>
-    <script src="js/fast-moving.js"></script>
+    
+    <!-- SCRIPT GABUNGAN ANALYZE CENTER -->
+    <script src="js/analyze.js"></script>
+    
     <script src="js/monitoring.js"></script>
     <script src="js/ai-sop.js"></script>
 
