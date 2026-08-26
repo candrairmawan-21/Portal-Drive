@@ -416,16 +416,17 @@ async function fetchAndRenderUptSalesTable() {
         }
 
         // Render tabel di Dashboard UPT (kolom: No, Store, MTD UPT, Target UPT Lv1, %Ach)
-        // Urutkan berdasarkan MTD UPT descending
-        const sorted = rows.sort((a, b) => (b.mtdUpt || 0) - (a.mtdUpt || 0));
+        // Urutkan berdasarkan persentase achievement (%Ach) descending (Tertinggi ke Terendah)
+        const sorted = rows.sort((a, b) => (b.achPercent || 0) - (a.achPercent || 0));
+        
         tbody.innerHTML = sorted.map((r, idx) => `
             <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} border-b border-slate-100">
                 <td class="px-5 py-4 text-center text-xs font-bold text-slate-400">${idx + 1}</td>
                 <td class="px-5 py-4">
                     <p class="font-bold text-sm text-slate-800">${r.store}</p>
                 </td>
-                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${Number(r.mtdUpt || 0).toLocaleString('id-ID')}</td>
-                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${Number(r.targetUpt || 0).toLocaleString('id-ID')}</td>
+                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${Number(r.mtdUpt || 0).toLocaleString('id-ID')}</td>
+                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${Number(r.targetUpt || 0).toLocaleString('id-ID')}</td>
                 <td class="px-5 py-4 text-center text-sm font-black ${ (r.achPercent||0) >= 100 ? 'text-emerald-500' : (r.achPercent||0) >= 80 ? 'text-amber-500' : 'text-rose-500' }">
                     ${(Number(r.achPercent || 0)).toFixed(2)}%
                 </td>
