@@ -871,8 +871,8 @@
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. Pilih Jenis Analisa</label>
                     <select id="tipe-analisa" class="w-full text-sm font-bold text-amber-900 border border-slate-300 rounded-xl p-3 bg-amber-50 focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm transition-all">
                         <option value="" disabled selected>-- Tentukan Analisa yang Diperlukan --</option>
-                        <option value="itemize">Itemize (Analisa Anomali Scan)</option>
-                        <option value="fast-moving">Fast Moving SKU for TF</option>
+                        <option value="itemize">Itemize</option>
+                        <option value="fast-moving">Analisa Inventory Store</option>
                     </select>
                 </div>
 
@@ -897,11 +897,11 @@
 <!-- Wrapper Periode Penjualan (Sembunyikan default) -->
 <div id="wrapper-periode-penjualan" class="hidden mb-4">
   <label class="block text-sm font-medium text-gray-700">Periode Penjualan (Bulan)</label>
-  <select id="periode-penjualan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+  <select id="periode-penjualan" class="mt-1 block w-full rounded-md border-orange-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
     <option value="3">3 Bulan</option>
     <option value="6">6 Bulan</option>
   </select>
-  <p class="text-xs text-gray-500 mt-1">Pilih periode tarikan data penjualan untuk perhitungan avg. harian yang akurat.</p>
+  <p class="text-xs text-gray-700 mt-1">*Pilih periode tarikan data penjualan untuk perhitungan avg. harian yang akurat.</p>
 </div>
                     <button id="btn-proses-analyze" class="w-full py-3.5 bg-slate-900 hover:bg-amber-500 text-white text-sm font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
                         <i data-lucide="cog" class="w-4 h-4"></i> <span id="btn-text-analyze">Proses Data</span>
