@@ -369,18 +369,21 @@ async function fetchAndRenderUptSalesTable() {
             return;
         }
 
-        // Jika file punya header di baris pertama, kita mulai dari baris 1 (index 1) untuk data.
-        // Kolom yang diminta: B (index 1) = store, H (index 7)=UPT, I (8)=Target, J (9)=%Ach
+        // PERUBAHAN DIREKTORI KOLOM:
+        // C (index 2) = Store, N (index 13) = UPT, O (index 14) = Target, P (index 15) = %Ach
         const rows = [];
         for (let i = 1; i < lines.length; i++) {
             const cells = parseLineCSVCells(lines[i]);
-            // Pastikan ada minimal kolom index 9
-            if (cells.length < 2) continue; // minimal store harus ada
-            const store = cells[1] || '-';
-            // Ambil nilai dari index 7/8/9 jika ada, else 0 / '-'
-            const uptRaw = cells[7] || '';
-            const targetRaw = cells[8] || '';
-            const achRaw = cells[9] || '';
+            
+            // Cek apakah data mencapai kolom ke-3 (index 2) untuk Nama Toko
+            if (cells.length < 3) continue; 
+            
+            const store = cells[2] || '-'; // Mengambil dari Kolom C
+            
+            // Ambil nilai dari index 13, 14, 15 (Kolom N, O, P)
+            const uptRaw = cells[13] || '';
+            const targetRaw = cells[14] || '';
+            const achRaw = cells[15] || '';
 
             const parseNum = s => {
                 if (!s) return 0;
@@ -389,9 +392,10 @@ async function fetchAndRenderUptSalesTable() {
             };
             const upt = parseNum(uptRaw);
             const target = parseNum(targetRaw);
+            
             // achievement mungkin sudah persen atau angka; pastikan angka (0-100)
             let ach = parseNum(achRaw);
-            if (ach > 100 && target > 0) { // kalau ach disimpan dalam absolute (rare), coba hitung
+            if (ach > 100 && target > 0) { 
                 ach = target > 0 ? (upt / target) * 100 : 0;
             }
 
