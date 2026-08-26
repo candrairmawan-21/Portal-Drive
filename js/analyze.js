@@ -334,12 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     let data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    const keywords = ["PT. NIAGA", "SKU REPORT", "FROM DATE", "FROM DEPARTMENT", "FROM SKU", "FROM BARCODE", "FROM STORE", "FROM WORKSTATION", "SORT BY", "PLU CODE", "SUBTOTAL"];
-    for (let i = data.length - 1; i >= 0; i--) {
-      let cellText = String(data[i][0] || "").toUpperCase();
-      if (keywords.some(kw => cellText.includes(kw))) data.splice(i, 1);
-    }
-
+    const keywords = ["PT. ", "SKU REPORT", "FROM DATE", "FROM DEPARTMENT", "FROM SKU", "FROM BARCODE", "FROM STORE", "FROM WORKSTATION", "SORT BY", "PLU CODE", "SUBTOTAL"];
     const colsToRemove = [11, 10, 8, 6, 5, 4, 3, 1];
     data = data.map(row => {
       let newRow = [...row];
