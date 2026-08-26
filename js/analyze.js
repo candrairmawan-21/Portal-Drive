@@ -11,11 +11,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputToko = document.getElementById("nama-toko-analyze");
   const inputDb = document.getElementById("file-db-analyze");
   const inputKedua = document.getElementById("file-kedua-analyze");
+  
+  // Elemen baru untuk periode penjualan (Pastikan ditambahkan di HTML)
+  const selectPeriode = document.getElementById("periode-penjualan");
+  const wrapperPeriode = document.getElementById("wrapper-periode-penjualan");
+  
   const btnProses = document.getElementById("btn-proses-analyze");
   const btnText = document.getElementById("btn-text-analyze");
   const statusText = document.getElementById("status-analyze");
 
-  // Fungsi Toggle View Portal
+  // Fungsi Toggle View Portal[cite: 9]
   function openAnalyzeView() {
     document.querySelectorAll("main[id^='section-']").forEach((sec) => {
       sec.classList.add("hidden");
@@ -32,12 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem("activePortalMenu", "analyze");
   }
 
-  // Cek Status Halaman saat Load
+  // Cek Status Halaman saat Load[cite: 9]
   if (localStorage.getItem("activePortalMenu") === "analyze") {
     openAnalyzeView();
   }
 
-  // Sidebar Menu Click Event
+  // Sidebar Menu Click Event[cite: 9]
   if (navBtnAnalyze && sectionAnalyze) {
     navBtnAnalyze.addEventListener("click", (e) => {
       e.preventDefault();
@@ -53,40 +58,42 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // EVENT LISTENER DROPDOWN (MEMUNCULKAN FORM)
+  // EVENT LISTENER DROPDOWN (MEMUNCULKAN FORM)[cite: 9]
   // ==========================================
-  if(selectTipe) {
+  if (selectTipe) {
     selectTipe.addEventListener("change", (e) => {
       const mode = e.target.value;
       
-      // Tampilkan form container dengan menghapus class hidden
       if (formContainer.classList.contains("hidden")) {
         formContainer.classList.remove("hidden");
         formContainer.classList.add("animate-[fadeIn_0.4s_ease-out]");
       }
 
-      // RESET Form untuk keamanan (mencegah file salah menu terbawa)
+      // RESET Form[cite: 9]
       inputDb.value = "";
       inputKedua.value = "";
       statusText.innerText = "";
 
-      // GANTI TULISAN SECARA DINAMIS
+      // GANTI TULISAN & TAMPILAN DINAMIS[cite: 9]
       if (mode === "itemize") {
+        if (wrapperPeriode) wrapperPeriode.classList.add("hidden"); // Sembunyikan opsi periode
         labelFileKedua.innerText = "4. File Hasil Scan (.txt atau .xlsx / .xls)";
         hintFileKedua.innerText = "Jika Excel (.xlsx/.xls): Kolom A = SKU, Kolom B = Alamat. Jika .txt: Format bawaan sebelumnya.";
         inputKedua.accept = ".txt, .xlsx, .xls";
         btnText.innerText = "Proses & Download Excel Itemize";
-      } else if (mode === "fast-moving") {
+      } else {
+        // Mode Analisa Inventory Store[cite: 9]
+        if (wrapperPeriode) wrapperPeriode.classList.remove("hidden"); // Munculkan opsi periode
         labelFileKedua.innerText = "4. File Penjualan (.xlsx / .xls)";
         hintFileKedua.innerText = "Upload file Excel hasil tarikan report Sales dari sistem IT Anda.";
         inputKedua.accept = ".xlsx, .xls";
-        btnText.innerText = "Proses & Download Fast Moving Excel";
+        btnText.innerText = "Proses & Download Analisa Inventory Store";
       }
     });
   }
 
   // ==========================================
-  // EVENT TOMBOL PROSES DATA
+  // EVENT TOMBOL PROSES DATA[cite: 9]
   // ==========================================
   if (btnProses) {
     btnProses.addEventListener("click", async () => {
@@ -94,6 +101,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const namaToko = inputToko.value.trim();
       const fileDb = inputDb.files[0];
       const fileKedua = inputKedua.files[0];
+      
+      // Ambil nilai periode penjualan, default 3 bulan jika tidak ada[cite: 9]
+      const periodeBulan = selectPeriode ? parseInt(selectPeriode.value) || 3 : 3; 
 
       if (!mode) {
         alert("Pilih jenis analisa terlebih dahulu!");
@@ -108,14 +118,14 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      statusText.innerText = `Sedang memproses ${mode === 'itemize' ? 'Itemize' : 'Fast Moving'}...`;
+      statusText.innerText = `Sedang memproses ${mode === 'itemize' ? 'Itemize' : 'Analisa Inventory Store'}...`;
       statusText.style.color = "blue";
 
       try {
         if (mode === "itemize") {
-          await jalankanProsesItemize(namaToko, fileDb, fileKedua);
-        } else if (mode === "fast-moving") {
-          await jalankanProsesFastMoving(namaToko, fileDb, fileKedua);
+          await jalankanProsesItemize(namaToko, fileDb, fileKedua); //[cite: 9]
+        } else {
+          await jalankanProsesAnalisaInventory(namaToko, fileDb, fileKedua, periodeBulan); //[cite: 9]
         }
 
         statusText.innerText = "Berhasil! File Excel berhasil di-download.";
@@ -129,7 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // UTILITY HELPER
+  // UTILITY HELPER[cite: 9]
   // ==========================================
   function bacaFileTeks(file) {
     return new Promise((resolve, reject) => {
@@ -147,7 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // LOGIKA 1: ITEMIZE (ANOMALI SCAN)
+  // LOGIKA 1: ITEMIZE (ANOMALI SCAN)[cite: 9]
   // ==========================================
   async function jalankanProsesItemize(namaToko, fileDb, fileScan) {
     const textDb = await bacaFileTeks(fileDb);
@@ -305,9 +315,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // LOGIKA 2: FAST MOVING SKU FOR TF
+  // LOGIKA 2: ANALISA INVENTORY STORE (TERPADU)[cite: 9]
   // ==========================================
-  async function jalankanProsesFastMoving(namaToko, fileDb, fileSales) {
+  async function jalankanProsesAnalisaInventory(namaToko, fileDb, fileSales, periodeBulan) {
     const fileName = fileSales.name.toLowerCase();
     if (fileName.endsWith(".txt")) {
         throw new Error("File Penjualan tidak boleh format .txt");
@@ -316,10 +326,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const textDb = await bacaFileTeks(fileDb);
     const salesBuffer = await fileSales.arrayBuffer();
     
-    prosesDanDownloadExcelFastMoving(namaToko, textDb, salesBuffer);
+    prosesDanDownloadExcelAnalisaInventory(namaToko, textDb, salesBuffer, periodeBulan);
   }
 
-  function prosesDanDownloadExcelFastMoving(namaToko, textDb, salesBuffer) {
+  function prosesDanDownloadExcelAnalisaInventory(namaToko, textDb, salesBuffer, periodeBulan) {
+    // 1. Ekstrak Data Database (.txt)
     const dbMap = {};
     const linesDb = textDb.trim().split("\n");
     linesDb.forEach((line) => {
@@ -327,14 +338,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const cols = line.split(",").map((i) => i.trim());
       const sku = cols[0] || "";
       const qtySys = parseFloat(cols[3]) || 0;
-      if (sku) dbMap[sku] = qtySys;
+      const deskripsi = cols[8] || "-"; // Mengambil deskripsi dari kolom 9[cite: 9]
+      if (sku) dbMap[sku] = { sku, qtySys, deskripsi };
     });
 
+    // 2. Ekstrak Data Sales (Excel)
     const workbook = XLSX.read(salesBuffer, { type: "array" });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     let data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    const keywords = ["PT. ", "SKU REPORT", "FROM DATE", "FROM DEPARTMENT", "FROM SKU", "FROM BARCODE", "FROM STORE", "FROM WORKSTATION", "SORT BY", "PLU CODE", "SUBTOTAL"];
     const colsToRemove = [11, 10, 8, 6, 5, 4, 3, 1];
     data = data.map(row => {
       let newRow = [...row];
@@ -373,19 +385,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     let sheet1Rows = [];
+    const soldSkuMap = {}; // Untuk melacak SKU yang terjual
+
     for (let i = 0; i < data.length; i++) {
       let row = [...data[i]];
       if (i === 0) {
         row[6] = "QTY_DATABASE";
       } else {
         let sku = String(row[0] || "").trim();
-        row[6] = sku in dbMap ? dbMap[sku] : 0;
+        let qtyTerjual = parseFloat(row[2]) || 0;
+        row[6] = sku in dbMap ? dbMap[sku].qtySys : 0;
+        
+        // Tandai SKU yang memiliki penjualan
+        if (sku && qtyTerjual > 0) {
+          soldSkuMap[sku] = (soldSkuMap[sku] || 0) + qtyTerjual;
+        }
       }
       sheet1Rows.push(row);
     }
 
+    // 3. Analisa Fast Moving
     let analysisList = [];
-    const DAYS_PERIOD = 90;
+    const DAYS_PERIOD = periodeBulan === 6 ? 180 : 90; // Kalkulasi 90 atau 180 hari
+    
     for (let i = 1; i < data.length; i++) {
       let row = data[i];
       let sku = String(row[0] || "").trim();
@@ -393,7 +415,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       let desc = row[1] || "", qtyTerjual = parseFloat(row[2]) || 0;
       let netSales = parseFloat(row[3]) || 0, deptCodeVal = row[4] || "", deptNameVal = row[5] || "";
-      let qtySys = sku in dbMap ? dbMap[sku] : 0;
+      let qtySys = sku in dbMap ? dbMap[sku].qtySys : 0;
       
       let avgDaily = qtyTerjual / DAYS_PERIOD;
       let needed7Days = avgDaily * 7;
@@ -407,19 +429,46 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     analysisList.sort((a, b) => b.kekurangan - a.kekurangan);
-    let sheet2Formatted = analysisList.map((item, idx) => ({
+    let sheetFastMoving = analysisList.map((item, idx) => ({
       "No": idx + 1, "SKU": item.sku, "DESCRIPTION": item.description,
-      "QTY TERJUAL (3 BLN)": item.qtyTerjual, "AVG / HARI": parseFloat(item.avgDaily.toFixed(2)),
+      [`QTY TERJUAL (${periodeBulan} BLN)`]: item.qtyTerjual, "AVG / HARI": parseFloat(item.avgDaily.toFixed(2)),
       "QTY SYSTEM (DB)": item.qtySystem, "KEBUTUHAN 7 HARI": Math.ceil(item.needed7Days),
       "DEFISIT / KEKURANGAN": Math.ceil(item.kekurangan), "DEPT CODE": item.deptCode, "DEPT NAME": item.deptName
     }));
 
+    // 4. Analisa Negative Balance
+    let sheetNegativeBalance = [];
+    Object.values(dbMap).forEach((item) => {
+      if (item.qtySys < 0) {
+        sheetNegativeBalance.push({
+          "SKU": item.sku,
+          "DESCRIPTION": item.deskripsi,
+          "QTY SYSTEM": item.qtySys
+        });
+      }
+    });
+
+    // 5. Analisa Unsold SKU
+    let sheetUnsoldSKU = [];
+    Object.values(dbMap).forEach((item) => {
+      if (item.qtySys !== 0 && !soldSkuMap[item.sku]) {
+        sheetUnsoldSKU.push({
+          "SKU": item.sku,
+          "DESCRIPTION": item.deskripsi,
+          "QTY SYSTEM": item.qtySys
+        });
+      }
+    });
+
+    // Export Seluruh Sheet ke Workbook Excel
     const newWorkbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(newWorkbook, XLSX.utils.aoa_to_sheet(sheet1Rows), "Data Penjualan Rapi");
-    XLSX.utils.book_append_sheet(newWorkbook, XLSX.utils.json_to_sheet(sheet2Formatted.length > 0 ? sheet2Formatted : [{"Info": "Semua SKU cukup"}]), "Fast Moving TF");
+    XLSX.utils.book_append_sheet(newWorkbook, XLSX.utils.json_to_sheet(sheetFastMoving.length > 0 ? sheetFastMoving : [{"Info": "Semua SKU cukup"}]), "Fast Moving");
+    XLSX.utils.book_append_sheet(newWorkbook, XLSX.utils.json_to_sheet(sheetNegativeBalance.length > 0 ? sheetNegativeBalance : [{"Info": "Tidak ada Qty Negative"}]), "Negative Balance");
+    XLSX.utils.book_append_sheet(newWorkbook, XLSX.utils.json_to_sheet(sheetUnsoldSKU.length > 0 ? sheetUnsoldSKU : [{"Info": "Tidak ada Unsold SKU"}]), "Unsold SKU");
 
     const dateStr = new Date().toISOString().split("T")[0];
     const safeNama = namaToko.replace(/[^a-zA-Z0-9-_ ]/g, "").trim();
-    XLSX.writeFile(newWorkbook, `${safeNama}_fast_moving_${dateStr}.xlsx`);
+    XLSX.writeFile(newWorkbook, `${safeNama}_analisa_inventory_${dateStr}.xlsx`);
   }
 });
