@@ -364,7 +364,7 @@ function renderSalesChartFiltered(data) {
                 y: { type: 'linear', display: true, position: 'left', beginAtZero: true },
                 y1: { type: 'linear', display: false, position: 'right', beginAtZero: true }
             },
-            plugins: { legend: { position: 'top' } }
+            plugins: { legend: { position: 'bottom' } }
         },
         plugins: [{
             id: 'polygonPercentageLabels',
