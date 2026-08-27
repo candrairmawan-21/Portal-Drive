@@ -358,7 +358,7 @@ function renderSalesChartFiltered(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            layout: { padding: { top: 28 } },
+            layout: { padding: { top: 40 } },
             scales: {
                 x: { grid: { display: false } },
                 y: { type: 'linear', display: true, position: 'left', beginAtZero: true },
@@ -434,7 +434,7 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false,
-                layout: { padding: { top: 25 } }
+                layout: { padding: { top: 37 } }
             },
             plugins: [{
                 id: 'trendPolygonLabels',
