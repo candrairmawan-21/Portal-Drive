@@ -126,9 +126,9 @@ async function fetchSalesData() {
         let finalUrl = '';
         
         if (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT') {
-            // Gunakan Spreadsheet ID yang disinkronkan dengan Code.gs
             const gid = SHEET_GIDS['OFFICIAL_IT_REPORT'] || '1129267198';
-            finalUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_OFFICIAL}/export?format=csv&gid=${gid}&t=${Date.now()}`;
+            // Gunakan SALES_BASE_URL agar terhindar dari pemblokiran CORS browser
+            finalUrl = `${SALES_BASE_URL}&gid=${gid}&t=${Date.now()}`;
         } else {
             // Menggunakan link publikasi pub?output=csv untuk data bulanan
             const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Aug26';
