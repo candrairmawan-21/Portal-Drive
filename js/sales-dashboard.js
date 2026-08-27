@@ -57,10 +57,10 @@ window.switchSalesSource = function(sourceType) {
     const btnOff = document.getElementById('btn-src-official');
     const slicerBulan = document.getElementById('slicerBulanSales');
 
-    if (sourceType === 'OFFICIAL_IT') {
+    if (sourceType === 'OFFICIAL_IT' || sourceType === 'OFFICIAL_IT_REPORT') {
         if (btnOff) btnOff.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
         if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
-        if (slicerBulan) slicerBulan.disabled = true;
+        if (slicerBulan) slicerBulan.disabled = false; // Tetap aktif agar bisa pilih bulan
     } else {
         if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
         if (btnOff) btnOff.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
@@ -156,6 +156,14 @@ function parseSalesCSV(text, sourceMode) {
     let headers = parseCSVLine(lines[headerRowIdx]).map(h => h.trim().toLowerCase());
     let result = [];
     
+    // Persiapan Filter Bulan untuk Official IT
+    const selectedMonthStr = document.getElementById('slicerBulanSales')?.value || 'Aug26';
+    const monthsMap = { 'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5, 'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11 };
+    const filterMonth = monthsMap[selectedMonthStr.substring(0, 3)];
+    const filterYear = parseInt("20" + selectedMonthStr.substring(3));
+
+    let officialMap = {};
+    
     for (let i = headerRowIdx + 1; i < lines.length; i++) { 
         if (!lines[i].trim()) continue;
         let row = parseCSVLine(lines[i]);
@@ -178,32 +186,98 @@ function parseSalesCSV(text, sourceMode) {
             return String(row[fallbackIndex] || "-").trim();
         };
 
-        let storeName = getStr(['store name', 'store_name', 'store', 'nama toko'], 1);
-        if (!storeName || storeName === "" || storeName === "-") continue; 
+        if (sourceMode === 'OFFICIAL_IT' || sourceMode === 'OFFICIAL_IT_REPORT') {
+            // Cek Kolom C (Date)
+            let dateStr = getStr(['date', 'tanggal'], 2);
+            let rowDate = null;
+            let dateParts = dateStr.split(/[-/]/);
+            
+            // Format fleksibel DD/MM/YYYY atau YYYY-MM-DD
+            if (dateParts.length === 3) {
+                if (dateParts[0].length === 4) {
+                    rowDate = new Date(dateParts[0], parseInt(dateParts[1]) - 1, dateParts[2]);
+                } else {
+                    rowDate = new Date(dateParts[2], parseInt(dateParts[1]) - 1, dateParts[0]);
+                }
+            } else {
+                rowDate = new Date(dateStr);
+            }
 
-        let mtdSalesVal = getVal(['net sales', 'net_sales', 'mtd sales', 'sales mtd'], 4);
-        let mtdTargetVal = getVal(['target sales', 'target_sales', 'mtd target', 'target'], 5);
-        let achVal = getVal(['achievement', 'ach percent', '% ach', 'ach'], 17);
+            // Skip jika data tidak valid atau beda bulan
+            if (rowDate && !isNaN(rowDate.getTime())) {
+                if (rowDate.getMonth() !== filterMonth || rowDate.getFullYear() !== filterYear) {
+                    continue; 
+                }
+            } else {
+                continue;
+            }
 
-        // Fallback persentase achievement agar tidak 0 jika target tersedia
-        if (achVal === 0 && mtdTargetVal > 0) {
-            achVal = (mtdSalesVal / mtdTargetVal) * 100;
+            let storeCode = getStr(['store code', 'kode toko'], 0);
+            let storeName = getStr(['store name', 'store', 'nama toko'], 1);
+            if (!storeName || storeName === "" || storeName === "-") continue;
+
+            let netSales = getVal(['net sales', 'sales'], 4);
+            let qtySold = getVal(['qty sold', 'qty'], 11);
+            let trxCount = getVal(['trx count', 'trx'], 12);
+
+            if (!officialMap[storeName]) {
+                officialMap[storeName] = {
+                    storeCode: storeCode,
+                    store: storeName,
+                    bm: "-",
+                    abm: "-",
+                    mtdSales: 0,
+                    qtySold: 0,
+                    trxCount: 0,
+                    // Field standar agar chart tidak rusak
+                    mtdTarget: 0, achPercent: 0, bestEstimate: "-", salesLY: 0, sssg: 0, projSssg: 0
+                };
+            }
+
+            // Sum / Agregasi
+            officialMap[storeName].mtdSales += netSales;
+            officialMap[storeName].qtySold += qtySold;
+            officialMap[storeName].trxCount += trxCount;
+
+        } else {
+            // LOGIC LAMA UNTUK STORE SUBMISSION (Mode Default)
+            let storeName = getStr(['store name', 'store_name', 'store', 'nama toko'], 1);
+            if (!storeName || storeName === "" || storeName === "-") continue; 
+
+            let mtdSalesVal = getVal(['net sales', 'net_sales', 'mtd sales', 'sales mtd'], 4);
+            let mtdTargetVal = getVal(['target sales', 'target_sales', 'mtd target', 'target'], 5);
+            let achVal = getVal(['achievement', 'ach percent', '% ach', 'ach'], 17);
+
+            if (achVal === 0 && mtdTargetVal > 0) {
+                achVal = (mtdSalesVal / mtdTargetVal) * 100;
+            }
+
+            result.push({
+                storeCode: getStr(['store code', 'store_code', 'kode toko'], 0),
+                store: storeName,
+                bm: getStr(['nama bm', 'bm', 'branch manager'], 2),
+                abm: getStr(['nama abm', 'abm', 'asst branch manager'], 3),
+                mtdSales: mtdSalesVal,
+                mtdTarget: mtdTargetVal,
+                bestEstimate: getStr(['best estimate', 'best_estimate', 'estimate'], 16),
+                achPercent: achVal,
+                salesLY: getVal(['sales ly', 'ly sales', 'ly'], 18),
+                sssg: getVal(['sssg', 'ach sssg'], 20),
+                projSssg: getVal(['projection sssg', 'proj sssg', 'projection'], 21)
+            });
         }
-
-        result.push({
-            storeCode: getStr(['store code', 'store_code', 'kode toko'], 0),
-            store: storeName,
-            bm: getStr(['nama bm', 'bm', 'branch manager'], 2),
-            abm: getStr(['nama abm', 'abm', 'asst branch manager'], 3),
-            mtdSales: mtdSalesVal,
-            mtdTarget: mtdTargetVal,
-            bestEstimate: getStr(['best estimate', 'best_estimate', 'estimate'], 16),
-            achPercent: achVal,
-            salesLY: getVal(['sales ly', 'ly sales', 'ly'], 18),
-            sssg: getVal(['sssg', 'ach sssg'], 20),
-            projSssg: getVal(['projection sssg', 'proj sssg', 'projection'], 21)
-        });
     }
+
+    // Hitung ATV dan UPT & Push ke Result jika Official IT
+    if (sourceMode === 'OFFICIAL_IT' || sourceMode === 'OFFICIAL_IT_REPORT') {
+        for (let key in officialMap) {
+            let item = officialMap[key];
+            item.atv = item.trxCount > 0 ? item.mtdSales / item.trxCount : 0;
+            item.upt = item.trxCount > 0 ? item.qtySold / item.trxCount : 0;
+            result.push(item);
+        }
+    }
+
     return result;
 }
 
@@ -470,35 +544,86 @@ function renderSalesTableFiltered(data) {
 
     if (!tbody) return;
 
+    // Dinamis update Tabel Header (thead)
+    const thead = tbody.previousElementSibling; 
+    if (thead) {
+        if (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT') {
+            thead.innerHTML = `<tr>
+                <th class="px-4 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">No</th>
+                <th class="px-5 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">Store</th>
+                <th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">Total Sales</th>
+                <th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">QTY Sold</th>
+                <th class="px-5 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">Trx Count</th>
+                <th class="px-5 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">ATV & UPT</th>
+            </tr>`;
+        } else {
+            thead.innerHTML = `<tr>
+                <th class="px-4 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">No</th>
+                <th class="px-5 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">Store</th>
+                <th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">MTD Sales</th>
+                <th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">MTD Target</th>
+                <th class="px-5 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">Est.</th>
+                <th class="px-5 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">Ach %</th>
+            </tr>`;
+        }
+    }
+
     if (data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;
         return;
     }
 
-    let sortedData = [...data].sort((a, b) => (b.achPercent || 0) - (a.achPercent || 0));
+    // Jika Official IT di-sort berdasarkan Sales tertinggi, jika tidak berdasarkan Achievement
+    let sortedData = [...data].sort((a, b) => {
+        if (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT') {
+            return (b.mtdSales || 0) - (a.mtdSales || 0);
+        }
+        return (b.achPercent || 0) - (a.achPercent || 0);
+    });
 
     tbody.innerHTML = sortedData.map((item, index) => {
-        let ach = item.achPercent || 0;
-        let badgeBg = ach >= 100 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
-                     (ach >= 80 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-rose-50 text-rose-600 border-rose-200');
+        let rowBg = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60';
 
-        return `
-        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
-            <td class="px-4 py-4 text-center font-bold text-xs text-slate-400">${index + 1}</td>
-            <td class="px-5 py-4">
-                <p class="font-bold text-sm text-slate-800">${item.store}</p>
-                <p class="text-[10px] font-bold text-slate-400 uppercase">${item.storeCode || '-'}</p>
-            </td>
-            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdSales || 0).toLocaleString('id-ID')}</td>
-            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdTarget || 0).toLocaleString('id-ID')}</td>
-            <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate || '-'}</td>
-            <td class="px-5 py-4 text-center">
-                <span class="px-3 py-1.5 rounded-xl text-[11px] font-black border ${badgeBg}">
-                    ${ach.toFixed(2)}%
-                </span>
-            </td>
-        </tr>
-        `;
+        if (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT') {
+            return `
+            <tr class="${rowBg} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
+                <td class="px-4 py-4 text-center font-bold text-xs text-slate-400">${index + 1}</td>
+                <td class="px-5 py-4">
+                    <p class="font-bold text-sm text-slate-800">${item.store}</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">${item.storeCode || '-'}</p>
+                </td>
+                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdSales || 0).toLocaleString('id-ID')}</td>
+                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${(item.qtySold || 0).toLocaleString('id-ID')}</td>
+                <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${(item.trxCount || 0).toLocaleString('id-ID')}</td>
+                <td class="px-5 py-4 text-center">
+                    <p class="text-xs font-bold text-emerald-600">ATV: Rp ${(item.atv || 0).toLocaleString('id-ID', {maximumFractionDigits:0})}</p>
+                    <p class="text-[11px] font-semibold text-indigo-500">UPT: ${(item.upt || 0).toFixed(2)}</p>
+                </td>
+            </tr>
+            `;
+        } else {
+            let ach = item.achPercent || 0;
+            let badgeBg = ach >= 100 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
+                         (ach >= 80 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-rose-50 text-rose-600 border-rose-200');
+
+            return `
+            <tr class="${rowBg} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
+                <td class="px-4 py-4 text-center font-bold text-xs text-slate-400">${index + 1}</td>
+                <td class="px-5 py-4">
+                    <p class="font-bold text-sm text-slate-800">${item.store}</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">${item.storeCode || '-'}</p>
+                </td>
+                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdSales || 0).toLocaleString('id-ID')}</td>
+                <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${(item.mtdTarget || 0).toLocaleString('id-ID')}</td>
+                <td class="px-5 py-4 text-center text-sm font-extrabold text-amber-600">${item.bestEstimate || '-'}</td>
+                <td class="px-5 py-4 text-center">
+                    <span class="px-3 py-1.5 rounded-xl text-[11px] font-black border ${badgeBg}">
+                        ${ach.toFixed(2)}%
+                    </span>
+                </td>
+            </tr>
+            `;
+        }
     }).join('');
 }
 
