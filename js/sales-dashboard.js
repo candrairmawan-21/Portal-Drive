@@ -687,6 +687,121 @@ function readFileAsDataURL_(file) {
     });
 }
 
+/* ==========================================================================
+   8b. PEMECAH PDF OTOMATIS UNTUK LAPORAN BESAR (mis. rekap bulanan)
+   --------------------------------------------------------------------------
+   Backend membaca teks PDF lewat konversi ke Google Docs, yang punya batas
+   keras ~1 juta karakter per dokumen. PDF laporan harian (±50 halaman)
+   jauh di bawah itu, tapi PDF bulanan bisa 1000+ halaman dan berjuta-juta
+   karakter -> konversi gagal/kepotong diam-diam kalau dikirim utuh.
+   Solusinya: PDF dipecah di sini (browser) jadi beberapa bagian berukuran
+   aman pakai pdf-lib (pustaka PDF yang sudah teruji luas), lalu setiap
+   bagian diunggah berurutan ke endpoint yang sama seperti biasa. Backend
+   punya pengecekan anti-duplikat (Store Code + Tanggal), jadi proses ini
+   aman diulang kalau salah satu bagian gagal di tengah jalan.
+   ========================================================================== */
+const PDF_CHUNK_MAX_PAGES = 150; // ≈770rb karakter/chunk, aman di bawah batas ~1 juta Google Docs
+
+function loadPdfLibScript_() {
+    return new Promise((resolve, reject) => {
+        if (window.PDFLib) return resolve(window.PDFLib);
+        const existing = document.querySelector('script[data-pdf-lib]');
+        if (existing) {
+            existing.addEventListener('load', () => resolve(window.PDFLib));
+            existing.addEventListener('error', () => reject(new Error("Gagal memuat pustaka pemecah PDF (pdf-lib).")));
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+        script.dataset.pdfLib = "true";
+        script.onload = () => resolve(window.PDFLib);
+        script.onerror = () => reject(new Error("Gagal memuat pustaka pemecah PDF (pdf-lib). Periksa koneksi internet."));
+        document.head.appendChild(script);
+    });
+}
+
+/**
+ * Cek jumlah halaman PDF; kalau melebihi PDF_CHUNK_MAX_PAGES, pecah jadi
+ * beberapa PDF terpisah (masing-masing maks PDF_CHUNK_MAX_PAGES halaman).
+ * Kalau file cukup kecil, `chunks` dikembalikan null (tidak perlu dipecah,
+ * upload berjalan seperti biasa 1x request).
+ */
+async function splitPdfIntoChunks_(file) {
+    const { PDFDocument } = await loadPdfLibScript_();
+    const arrayBuffer = await file.arrayBuffer();
+    const srcDoc = await PDFDocument.load(arrayBuffer, { updateMetadata: false });
+    const totalPages = srcDoc.getPageCount();
+
+    if (totalPages <= PDF_CHUNK_MAX_PAGES) {
+        return { totalPages, chunks: null };
+    }
+
+    const chunks = [];
+    const numChunks = Math.ceil(totalPages / PDF_CHUNK_MAX_PAGES);
+    for (let i = 0; i < numChunks; i++) {
+        const startPage = i * PDF_CHUNK_MAX_PAGES;
+        const endPage = Math.min(startPage + PDF_CHUNK_MAX_PAGES, totalPages);
+        const pageIndices = [];
+        for (let p = startPage; p < endPage; p++) pageIndices.push(p);
+
+        const newDoc = await PDFDocument.create();
+        const copiedPages = await newDoc.copyPages(srcDoc, pageIndices);
+        copiedPages.forEach(pg => newDoc.addPage(pg));
+        const bytes = await newDoc.save();
+
+        chunks.push({ index: i + 1, total: numChunks, startPage: startPage + 1, endPage, bytes });
+    }
+    return { totalPages, chunks };
+}
+
+/** Konversi Uint8Array (hasil pdf-lib) jadi Data URL base64, batch per 32KB
+ *  supaya tidak overflow call stack untuk file yang cukup besar. */
+function pdfBytesToDataURL_(bytes) {
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    return `data:application/pdf;base64,${btoa(binary)}`;
+}
+
+/** Kirim satu payload PDF (utuh atau 1 chunk) ke backend dan validasi hasilnya. */
+async function uploadPdfPayload_(fileName, dataUrl, reportDate, extraMeta) {
+    const payload = Object.assign({
+        action: "UPLOAD_PDF_OFFICIAL",
+        fileName,
+        fileData: dataUrl,
+        reportDate,
+        gidDataStore: "1124553459",
+        gidOfficialReport: "1129267198"
+    }, extraMeta || {});
+
+    const response = await fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        throw new Error(`Server merespons dengan status HTTP ${response.status}. Periksa deployment Web App GAS.`);
+    }
+
+    const rawText = await response.text();
+    let result;
+    try {
+        result = JSON.parse(rawText);
+    } catch (parseErr) {
+        throw new Error("Respons server bukan JSON yang valid. Cuplikan: " + rawText.slice(0, 120));
+    }
+
+    if (!result.success) {
+        const stageLabel = result.stage ? ` [tahap: ${result.stage}]` : '';
+        throw new Error((result.message || "Gagal memproses data di Google Sheet.") + stageLabel);
+    }
+
+    return result;
+}
+
 window.submitOfficialPdf = async function() {
     const input = document.getElementById('officialPdfInput');
     const dateInput = document.getElementById('officialReportDate');
@@ -718,81 +833,90 @@ window.submitOfficialPdf = async function() {
         return;
     }
 
-    if (!dateInput || !dateInput.value) {
-        alert("Silakan pilih Tanggal Report terlebih dahulu!");
-        return;
-    }
-
     const file = input.files[0];
-    const reportDate = dateInput.value;
+    // Tanggal per-baris tetap diambil dari isi PDF itu sendiri (setiap baris
+    // punya tanggalnya sendiri, penting untuk PDF bulanan yang mencakup
+    // banyak tanggal sekaligus) — input ini cuma label/metadata untuk log.
+    const reportDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
 
     if (statusBox) statusBox.classList.add('hidden');
     if (progContainer) progContainer.classList.remove('hidden');
     if (btnSubmit) btnSubmit.disabled = true;
     if (btnText) btnText.textContent = "Mengunggah...";
-    setProgress(15, "Membaca dan menyiapkan konversi file PDF...");
+    setProgress(5, "Memeriksa ukuran PDF...");
 
     try {
-        // 1. Convert/baca PDF ke Base64 untuk dikirim ke backend Google Apps Script
-        const base64Content = await readFileAsDataURL_(file);
-
-        setProgress(40, "Mengirim data ke server untuk ekstraksi & lookup DATA_STORE...");
-
-        const payload = {
-            action: "UPLOAD_PDF_OFFICIAL",
-            fileName: file.name,
-            fileData: base64Content,
-            reportDate: reportDate,
-            gidDataStore: "1124553459",          // GID DATA_STORE sesuai permintaan
-            gidOfficialReport: "1129267198"      // GID OFFICIAL_IT_REPORT sesuai permintaan
-        };
-
-        const response = await fetch(WEB_APP_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(payload)
-        });
-
-        setProgress(80, "Melakukan lookup Store Code dan menyimpan ke Master...");
-
-        if (!response.ok) {
-            throw new Error(`Server merespons dengan status HTTP ${response.status}. Periksa deployment Web App GAS.`);
-        }
-
-        const rawText = await response.text();
-        let result;
+        // 1. Cek jumlah halaman & pecah otomatis kalau terlalu besar untuk
+        //    1x konversi (Google Docs yang dipakai backend untuk baca teks
+        //    PDF punya batas ~1 juta karakter — PDF bulanan bisa jauh
+        //    melebihi itu). Kalau pdf-lib gagal dimuat (mis. offline),
+        //    lanjut sebagai upload tunggal seperti biasa — backend tetap
+        //    punya penjaga & akan menolak dengan pesan jelas kalau kebesaran.
+        let splitInfo;
         try {
-            result = JSON.parse(rawText);
-        } catch (parseErr) {
-            throw new Error("Respons server bukan JSON yang valid. Cuplikan: " + rawText.slice(0, 120));
+            splitInfo = await splitPdfIntoChunks_(file);
+        } catch (splitErr) {
+            console.warn("Gagal memeriksa/memecah PDF, lanjut sebagai upload tunggal:", splitErr);
+            splitInfo = { totalPages: null, chunks: null };
         }
 
-        if (!result.success) {
-            const stageLabel = result.stage ? ` [tahap: ${result.stage}]` : '';
-            throw new Error((result.message || "Gagal memproses data di Google Sheet.") + stageLabel);
+        const batchId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const aggregate = { count: 0, skippedCount: 0, duplicateCount: 0 };
+
+        if (!splitInfo.chunks) {
+            // File cukup kecil (atau pdf-lib gagal dimuat) -> upload langsung, 1 request.
+            setProgress(30, "Membaca dan mengirim file PDF...");
+            const base64Content = await readFileAsDataURL_(file);
+            setProgress(60, "Melakukan lookup Store Code dan menyimpan ke Master...");
+            const result = await uploadPdfPayload_(file.name, base64Content, reportDate, { batchId, chunkIndex: 1, totalChunks: 1 });
+            aggregate.count += result.count || 0;
+            aggregate.skippedCount += result.skippedCount || 0;
+            aggregate.duplicateCount += result.duplicateCount || 0;
+        } else {
+            // File besar (mis. laporan bulanan) -> otomatis dipecah jadi
+            // beberapa bagian dan diunggah berurutan. Aman diulang kalau
+            // gagal di tengah: anti-duplikat Store Code + Tanggal di
+            // backend otomatis melewati data yang sudah berhasil masuk.
+            const total = splitInfo.chunks.length;
+            for (const chunk of splitInfo.chunks) {
+                const pct = 10 + Math.round((chunk.index / total) * 80);
+                setProgress(pct, `Mengunggah bagian ${chunk.index} dari ${total} (halaman ${chunk.startPage}-${chunk.endPage})...`);
+
+                const dataUrl = pdfBytesToDataURL_(chunk.bytes);
+                const chunkFileName = `${file.name} (hal ${chunk.startPage}-${chunk.endPage})`;
+                const result = await uploadPdfPayload_(chunkFileName, dataUrl, reportDate, {
+                    batchId, chunkIndex: chunk.index, totalChunks: total
+                });
+
+                aggregate.count += result.count || 0;
+                aggregate.skippedCount += result.skippedCount || 0;
+                aggregate.duplicateCount += result.duplicateCount || 0;
+            }
         }
 
         setProgress(100, "Selesai!");
 
-        const skippedNote = result.skippedCount
-            ? ` (${result.skippedCount} baris dilewati karena Store Code tidak ditemukan di sheet DATA_STORE.)`
-            : '';
-        
-        showStatus(true, (result.message || `Sukses! ${result.count || ''} data toko berhasil di-lookup dan disimpan ke Master.`) + skippedNote);
+        const parts = [`${aggregate.count} baris data berhasil disimpan ke Master`];
+        if (aggregate.duplicateCount > 0) parts.push(`${aggregate.duplicateCount} duplikat dilewati`);
+        if (aggregate.skippedCount > 0) parts.push(`${aggregate.skippedCount} baris dilewati (kode toko tidak valid/tidak terdaftar)`);
+        const prefix = splitInfo.chunks ? `PDF (${splitInfo.totalPages} halaman) otomatis dipecah jadi ${splitInfo.chunks.length} bagian. ` : '';
+
+        showStatus(true, prefix + parts.join(', ') + '.');
         if (btnText) btnText.textContent = "Berhasil Disimpan";
 
-        // Auto-close modal saat sukses dan refresh data dashboard
         setTimeout(() => {
             closeUploadPdfModal();
             if (typeof currentSalesSource !== 'undefined' && (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT')) {
                 fetchSalesData();
             }
-        }, 1800);
+        }, 2200);
 
     } catch (error) {
         console.error("Upload Error:", error);
         if (progContainer) progContainer.classList.add('hidden');
-        showStatus(false, "Gagal: " + (error.message || "Terjadi kesalahan koneksi."));
+        showStatus(false, "Gagal: " + (error.message || "Terjadi kesalahan koneksi.") +
+            " Aman untuk klik \"Coba Lagi\" — data yang sudah berhasil tersimpan tidak akan dobel " +
+            "(sistem otomatis melewati Store Code + Tanggal yang sama).");
         if (btnSubmit) btnSubmit.disabled = false;
         if (btnText) btnText.textContent = "Coba Lagi";
     }
