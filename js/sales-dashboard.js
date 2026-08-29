@@ -12,6 +12,11 @@ let salesChartInstance = null;
 let currentSalesChartMode = 'mtd';
 let currentSalesSource = 'SUBMISSION'; // 'SUBMISSION' atau 'OFFICIAL_IT_REPORT'
 
+// State khusus Official IT Report. Tidak dipakai oleh Submission.
+let officialRawData = [];
+let officialDataHealth = { total: 0, valid: 0, invalidDate: 0, invalidStore: 0 };
+
+
 // GID Sheet Lengkap (Termasuk Alias untuk Official IT Report)
 const SHEET_GIDS = {
     'OFFICIAL_IT_REPORT': '1129267198',
@@ -42,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function displayUpdateDate() {
     const dateEl = document.getElementById('update-date');
     if (dateEl) {
-        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        const today = new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
         dateEl.innerText = "Update Terakhir: " + today;
     }
 }
@@ -52,233 +57,143 @@ function displayUpdateDate() {
  */
 window.switchSalesSource = function(sourceType) {
     currentSalesSource = sourceType;
-    
     const btnSub = document.getElementById('btn-src-submission');
     const btnOff = document.getElementById('btn-src-official');
     const slicerBulan = document.getElementById('slicerBulanSales');
 
-    if (sourceType === 'OFFICIAL_IT' || sourceType === 'OFFICIAL_IT_REPORT') {
+    if (isOfficialSource_()) {
         if (btnOff) btnOff.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
         if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
-        if (slicerBulan) slicerBulan.disabled = false; // Tetap aktif agar bisa pilih bulan
     } else {
         if (btnSub) btnSub.className = "px-4 py-2 rounded-xl text-xs font-black bg-white text-slate-800 shadow-sm transition-all";
         if (btnOff) btnOff.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 transition-all";
-        if (slicerBulan) slicerBulan.disabled = false;
     }
-
+    if (slicerBulan) slicerBulan.disabled = false;
+    syncOfficialSlicerState_();
     fetchSalesData();
-};
+};;
 
 function initSalesSlicers() {
-    const slicerBulan = document.getElementById('slicerBulanSales');
-    const slicerKategori = document.getElementById('slicerKategoriSales');
-    const slicerSpesifik = document.getElementById('slicerSpesifikSales');
-
-    if (!slicerKategori || !slicerSpesifik) return;
-
-    slicerKategori.addEventListener('change', function() {
-        const kategori = this.value;
-        slicerSpesifik.innerHTML = '<option value="all">-- Semua --</option>';
-        
-        if (kategori === 'all') {
-            slicerSpesifik.disabled = true;
-            slicerSpesifik.classList.add('bg-slate-100', 'cursor-not-allowed');
-        } else {
-            slicerSpesifik.disabled = false;
-            slicerSpesifik.classList.remove('bg-slate-100', 'cursor-not-allowed');
-            
-            let uniqueItems = new Set();
-            salesData.forEach(item => {
-                if (kategori === 'store' && item.store && item.store !== "-") {
-                    uniqueItems.add(item.store.trim());
-                } else if (kategori === 'bm' && item.bm && item.bm !== "-") {
-                    uniqueItems.add(item.bm.trim());
-                } else if (kategori === 'abm' && item.abm && item.abm !== "-") {
-                    uniqueItems.add(item.abm.trim());
-                }
-            });
-
-            Array.from(uniqueItems).sort().forEach(name => {
-                slicerSpesifik.innerHTML += `<option value="${name}">${name}</option>`;
-            });
+    const slicerBulan=document.getElementById('slicerBulanSales');
+    const slicerKategori=document.getElementById('slicerKategoriSales');
+    const slicerSpesifik=document.getElementById('slicerSpesifikSales');
+    if(!slicerKategori||!slicerSpesifik)return;
+    slicerKategori.addEventListener('change',()=>{
+        if(isOfficialSource_()) populateOfficialSlicer_();
+        else {
+            slicerSpesifik.innerHTML='<option value="all">-- Semua --</option>';
+            slicerSpesifik.disabled=slicerKategori.value==='all';
+            if(slicerKategori.value!=='all'){
+                const vals=new Set(); salesData.forEach(i=>{const v=slicerKategori.value==='store'?i.store:slicerKategori.value==='bm'?i.bm:i.abm;if(v&&v!=='-')vals.add(v.trim());});
+                [...vals].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;slicerSpesifik.appendChild(o);});
+            }
         }
         applySalesFilters();
     });
+    slicerSpesifik.addEventListener('change',applySalesFilters);
+    if(slicerBulan)slicerBulan.addEventListener('change',()=>{fetchSalesData();if(!isOfficialSource_()&&typeof fetchAndRenderUptSalesTable==='function')fetchAndRenderUptSalesTable();});
+}
 
-    slicerSpesifik.addEventListener('change', applySalesFilters);
-    if (slicerBulan) {
-        slicerBulan.addEventListener('change', () => {
-            fetchSalesData();
-            if (typeof fetchAndRenderUptSalesTable === "function") fetchAndRenderUptSalesTable();
-        });
+function isOfficialSource_() {
+    return currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT';
+}
+
+function syncOfficialSlicerState_() {
+    const kategori = document.getElementById('slicerKategoriSales');
+    const spesifik = document.getElementById('slicerSpesifikSales');
+    if (!kategori) return;
+    Array.from(kategori.options).forEach(option => {
+        const org = option.value === 'bm' || option.value === 'abm';
+        option.disabled = isOfficialSource_() && org;
+        option.hidden = isOfficialSource_() && org;
+    });
+    if (isOfficialSource_() && (kategori.value === 'bm' || kategori.value === 'abm')) kategori.value = 'all';
+    if (spesifik && kategori.value === 'all') {
+        spesifik.innerHTML = '<option value="all">-- Semua --</option>';
+        spesifik.disabled = true;
+        spesifik.classList.add('bg-slate-100','cursor-not-allowed');
     }
 }
+
+function populateOfficialSlicer_() {
+    const kategori=document.getElementById('slicerKategoriSales');
+    const spesifik=document.getElementById('slicerSpesifikSales');
+    if(!kategori||!spesifik)return;
+    if(isOfficialSource_() && kategori.value !== 'store') {
+        spesifik.innerHTML='<option value="all">-- Semua --</option>';
+        spesifik.disabled=true;
+        spesifik.classList.add('bg-slate-100','cursor-not-allowed');
+        return;
+    }
+    if(kategori.value!=='store') return;
+    spesifik.innerHTML='<option value="all">-- Semua --</option>';
+    const set=new Set(salesData.map(i=>i.store).filter(Boolean));
+    [...set].sort((a,b)=>a.localeCompare(b,'id')).forEach(name=>{
+        const o=document.createElement('option'); o.value=name; o.textContent=name; spesifik.appendChild(o);
+    });
+    spesifik.disabled=set.size===0;
+    spesifik.classList.toggle('bg-slate-100',set.size===0);
+    spesifik.classList.toggle('cursor-not-allowed',set.size===0);
+}
+
+function parseOfficialNumber_(value) {
+    if(value===null||value===undefined||String(value).trim()==='')return 0;
+    let raw=String(value).trim().replace(/[^0-9,.-]/g,'');
+    if(raw.includes(',')&&raw.includes('.')) raw=raw.lastIndexOf(',')>raw.lastIndexOf('.')?raw.replace(/\./g,'').replace(',','.'):raw.replace(/,/g,'');
+    else if(raw.includes(',')) raw=/,\d{3}$/.test(raw)?raw.replace(/,/g,''):raw.replace(',','.');
+    else if(raw.includes('.')&&/\.\d{3}$/.test(raw)) raw=raw.replace(/\./g,'');
+    const n=Number(raw); return Number.isFinite(n)?n:0;
+}
+
+function parseOfficialDate_(value) {
+    if(!value)return null; const raw=String(value).trim(); let m;
+    m=raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if(m){const d=new Date(+m[1],+m[2]-1,+m[3]);return d.getFullYear()==+m[1]&&d.getMonth()==+m[2]-1&&d.getDate()==+m[3]?d:null;}
+    m=raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if(m){const d=new Date(+m[3],+m[2]-1,+m[1]);return d.getFullYear()==+m[3]&&d.getMonth()==+m[2]-1&&d.getDate()==+m[1]?d:null;}
+    const d=new Date(raw); return isNaN(d.getTime())?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());
+}
+
+function selectedOfficialMonth_(){
+    const key=document.getElementById('slicerBulanSales')?.value||'Aug26';
+    const months={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+    return {month:months[key.slice(0,3)],year:+('20'+key.slice(3)),key};
+}
+
+function formatCompactOfficial_(value){const n=Number(value||0),a=Math.abs(n);if(a>=1e9)return(n/1e9).toFixed(1).replace('.0','')+'B';if(a>=1e6)return(n/1e6).toFixed(1).replace('.0','')+'M';if(a>=1e3)return(n/1e3).toFixed(1).replace('.0','')+'K';return Math.round(n).toLocaleString('id-ID');}
+
+function escapeOfficial_(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
 
 /* ==========================================================================
    3. DATA FETCHING & SMART PARSER CSV
    ========================================================================== */
 async function fetchSalesData() {
-    const loader = document.getElementById('sales-loading');
-    if (loader) loader.classList.remove('hidden');
-
-    try {
-        let finalUrl = '';
-        
-        if (currentSalesSource === 'OFFICIAL_IT' || currentSalesSource === 'OFFICIAL_IT_REPORT') {
-            const gid = SHEET_GIDS['OFFICIAL_IT_REPORT'] || '1129267198';
-            // Gunakan SALES_BASE_URL agar terhindar dari pemblokiran CORS browser
-            finalUrl = `${SALES_BASE_URL}&gid=${gid}&t=${Date.now()}`;
-        } else {
-            // Menggunakan link publikasi pub?output=csv untuk data bulanan
-            const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Aug26';
-            let gid = SHEET_GIDS[selectedKey] || '1766415704';
-            finalUrl = `${SALES_BASE_URL}&gid=${gid}&t=${Date.now()}`;
-        }
-        
-        const response = await fetch(finalUrl);
-        const csvText = await response.text();
-        
-        salesData = parseSalesCSV(csvText, currentSalesSource);
-        applySalesFilters();
-    } catch (error) { 
-        console.error('Error fetching data:', error); 
-    } finally {
-        if (loader) loader.classList.add('hidden');
-    }
+    const loader=document.getElementById('sales-loading'); if(loader)loader.classList.remove('hidden');
+    try{
+        const selectedKey=document.getElementById('slicerBulanSales')?.value||'Aug26';
+        const gid=isOfficialSource_()?SHEET_GIDS.OFFICIAL_IT_REPORT:(SHEET_GIDS[selectedKey]||'1766415704');
+        const response=await fetch(`${SALES_BASE_URL}&gid=${gid}&t=${Date.now()}`);
+        if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        const csvText=await response.text(); if(!csvText.trim())throw new Error('Data CSV kosong.');
+        salesData=parseSalesCSV(csvText,currentSalesSource);
+        syncOfficialSlicerState_(); if(isOfficialSource_())populateOfficialSlicer_(); applySalesFilters();
+    }catch(error){console.error('Error fetching data:',error);salesData=[];if(isOfficialSource_())renderOfficialDataMessage_('Gagal mengambil Official IT Report. Silakan refresh dan coba lagi.');applySalesFilters();}
+    finally{if(loader)loader.classList.add('hidden');}
 }
 
 function parseSalesCSV(text, sourceMode) {
-    let lines = text.split('\n');
-    if (lines.length < 2) return [];
-    
-    let headerRowIdx = (sourceMode === 'OFFICIAL_IT' || sourceMode === 'OFFICIAL_IT_REPORT') ? 0 : (lines.length > 2 ? 2 : 0);
-    let headers = parseCSVLine(lines[headerRowIdx]).map(h => h.trim().toLowerCase());
-    let result = [];
-    
-    // Persiapan Filter Bulan untuk Official IT
-    const selectedMonthStr = document.getElementById('slicerBulanSales')?.value || 'Aug26';
-    const monthsMap = { 'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5, 'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11 };
-    const filterMonth = monthsMap[selectedMonthStr.substring(0, 3)];
-    const filterYear = parseInt("20" + selectedMonthStr.substring(3));
-
-    let officialMap = {};
-    
-    for (let i = headerRowIdx + 1; i < lines.length; i++) { 
-        if (!lines[i].trim()) continue;
-        let row = parseCSVLine(lines[i]);
-
-        let getVal = (headerNames, fallbackIndex) => {
-            for (let hName of headerNames) {
-                let idx = headers.indexOf(hName.toLowerCase());
-                if (idx !== -1 && row[idx] !== undefined) {
-                    return parseFloat(String(row[idx]).replace(/[^0-9.-]+/g, "")) || 0;
-                }
-            }
-            return parseFloat(String(row[fallbackIndex] || "").replace(/[^0-9.-]+/g, "")) || 0;
-        };
-
-        let getStr = (headerNames, fallbackIndex) => {
-            for (let hName of headerNames) {
-                let idx = headers.indexOf(hName.toLowerCase());
-                if (idx !== -1 && row[idx] !== undefined) return String(row[idx]).trim();
-            }
-            return String(row[fallbackIndex] || "-").trim();
-        };
-
-        if (sourceMode === 'OFFICIAL_IT' || sourceMode === 'OFFICIAL_IT_REPORT') {
-            // Cek Kolom C (Date)
-            let dateStr = getStr(['date', 'tanggal'], 2);
-            let rowDate = null;
-            let dateParts = dateStr.split(/[-/]/);
-            
-            // Format fleksibel DD/MM/YYYY atau YYYY-MM-DD
-            if (dateParts.length === 3) {
-                if (dateParts[0].length === 4) {
-                    rowDate = new Date(dateParts[0], parseInt(dateParts[1]) - 1, dateParts[2]);
-                } else {
-                    rowDate = new Date(dateParts[2], parseInt(dateParts[1]) - 1, dateParts[0]);
-                }
-            } else {
-                rowDate = new Date(dateStr);
-            }
-
-            // Skip jika data tidak valid atau beda bulan
-            if (rowDate && !isNaN(rowDate.getTime())) {
-                if (rowDate.getMonth() !== filterMonth || rowDate.getFullYear() !== filterYear) {
-                    continue; 
-                }
-            } else {
-                continue;
-            }
-
-            let storeCode = getStr(['store code', 'kode toko'], 0);
-            let storeName = getStr(['store name', 'store', 'nama toko'], 1);
-            if (!storeName || storeName === "" || storeName === "-") continue;
-
-            let netSales = getVal(['net sales', 'sales'], 4);
-            let qtySold = getVal(['qty sold', 'qty'], 11);
-            let trxCount = getVal(['trx count', 'trx'], 12);
-
-            if (!officialMap[storeName]) {
-                officialMap[storeName] = {
-                    storeCode: storeCode,
-                    store: storeName,
-                    bm: "-",
-                    abm: "-",
-                    mtdSales: 0,
-                    qtySold: 0,
-                    trxCount: 0,
-                    // Field standar agar chart tidak rusak
-                    mtdTarget: 0, achPercent: 0, bestEstimate: "-", salesLY: 0, sssg: 0, projSssg: 0
-                };
-            }
-
-            // Sum / Agregasi
-            officialMap[storeName].mtdSales += netSales;
-            officialMap[storeName].qtySold += qtySold;
-            officialMap[storeName].trxCount += trxCount;
-
-        } else {
-            // LOGIC LAMA UNTUK STORE SUBMISSION (Mode Default)
-            let storeName = getStr(['store name', 'store_name', 'store', 'nama toko'], 1);
-            if (!storeName || storeName === "" || storeName === "-") continue; 
-
-            let mtdSalesVal = getVal(['net sales', 'net_sales', 'mtd sales', 'sales mtd'], 4);
-            let mtdTargetVal = getVal(['target sales', 'target_sales', 'mtd target', 'target'], 5);
-            let achVal = getVal(['achievement', 'ach percent', '% ach', 'ach'], 17);
-
-            if (achVal === 0 && mtdTargetVal > 0) {
-                achVal = (mtdSalesVal / mtdTargetVal) * 100;
-            }
-
-            result.push({
-                storeCode: getStr(['store code', 'store_code', 'kode toko'], 0),
-                store: storeName,
-                bm: getStr(['nama bm', 'bm', 'branch manager'], 2),
-                abm: getStr(['nama abm', 'abm', 'asst branch manager'], 3),
-                mtdSales: mtdSalesVal,
-                mtdTarget: mtdTargetVal,
-                bestEstimate: getStr(['best estimate', 'best_estimate', 'estimate'], 16),
-                achPercent: achVal,
-                salesLY: getVal(['sales ly', 'ly sales', 'ly'], 18),
-                sssg: getVal(['sssg', 'ach sssg'], 20),
-                projSssg: getVal(['projection sssg', 'proj sssg', 'projection'], 21)
-            });
-        }
+    const lines=String(text||'').replace(/\r/g,'').split('\n'); if(lines.length<2)return [];
+    const official=isOfficialSource_(); const headerRowIdx=official?0:(lines.length>2?2:0);
+    const headers=parseCSVLine(lines[headerRowIdx]).map(h=>String(h).replace(/^\uFEFF/,'').trim().toLowerCase().replace(/\s+/g,' '));
+    if(official){
+        const idx=(aliases,fallback)=>{for(const a of aliases){const x=headers.indexOf(a);if(x!==-1)return x;}return fallback;};
+        const ix={storeCode:idx(['store code','store_code','kode toko'],0),storeName:idx(['store name','store_name','store','nama toko'],1),date:idx(['date','tanggal','transaction date','business date'],2),netSales:idx(['net sales','net_sales','sales'],4),qtySold:idx(['qty sold','qty_sold','qty','quantity sold','quantity'],11),trxCount:idx(['trx count','trx_count','trx','transaction count','transaction'],12)};
+        const sel=selectedOfficialMonth_(),map=new Map(); officialRawData=[]; officialDataHealth={total:0,valid:0,invalidDate:0,invalidStore:0};
+        for(let i=1;i<lines.length;i++){if(!lines[i].trim())continue;officialDataHealth.total++;const row=parseCSVLine(lines[i]);const date=parseOfficialDate_(row[ix.date]);if(!date){officialDataHealth.invalidDate++;continue;}const code=String(row[ix.storeCode]||'').trim().toUpperCase().replace(/\s+/g,'');const store=String(row[ix.storeName]||'').trim().replace(/\s+/g,' ');if(!code||!store||store==='-'){officialDataHealth.invalidStore++;continue;}const raw={storeCode:code,store,date,netSales:parseOfficialNumber_(row[ix.netSales]),qtySold:parseOfficialNumber_(row[ix.qtySold]),trxCount:parseOfficialNumber_(row[ix.trxCount])};officialRawData.push(raw);if(date.getMonth()!==sel.month||date.getFullYear()!==sel.year)continue;officialDataHealth.valid++;if(!map.has(code))map.set(code,{storeCode:code,store,bm:'-',abm:'-',mtdSales:0,qtySold:0,trxCount:0});const item=map.get(code);item.store=store;item.mtdSales+=raw.netSales;item.qtySold+=raw.qtySold;item.trxCount+=raw.trxCount;}
+        return [...map.values()].map(i=>({...i,atv:i.trxCount?i.mtdSales/i.trxCount:0,upt:i.trxCount?i.qtySold/i.trxCount:0,mtdTarget:0,achPercent:0,bestEstimate:'-',salesLY:0,sssg:0,projSssg:0}));
     }
-
-    // Hitung ATV dan UPT & Push ke Result jika Official IT
-    if (sourceMode === 'OFFICIAL_IT' || sourceMode === 'OFFICIAL_IT_REPORT') {
-        for (let key in officialMap) {
-            let item = officialMap[key];
-            item.atv = item.trxCount > 0 ? item.mtdSales / item.trxCount : 0;
-            item.upt = item.trxCount > 0 ? item.qtySold / item.trxCount : 0;
-            result.push(item);
-        }
-    }
-
-    return result;
+    const result=[]; const getNum=(row,names,fb)=>{for(const n of names){const x=headers.indexOf(n);if(x!==-1)return parseFloat(String(row[x]||'').replace(/[^0-9.-]+/g,''))||0;}return parseFloat(String(row[fb]||'').replace(/[^0-9.-]+/g,''))||0;};const getStr=(row,names,fb)=>{for(const n of names){const x=headers.indexOf(n);if(x!==-1)return String(row[x]).trim();}return String(row[fb]||'-').trim();};
+    for(let i=headerRowIdx+1;i<lines.length;i++){if(!lines[i].trim())continue;const row=parseCSVLine(lines[i]);const store=getStr(row,['store name','store_name','store','nama toko'],1);if(!store||store==='-')continue;const sales=getNum(row,['net sales','net_sales','mtd sales','sales mtd'],4),target=getNum(row,['target sales','target_sales','mtd target','target'],5);let ach=getNum(row,['achievement','ach percent','% ach','ach'],17);if(!ach&&target>0)ach=sales/target*100;result.push({storeCode:getStr(row,['store code','store_code','kode toko'],0),store,bm:getStr(row,['nama bm','bm','branch manager'],2),abm:getStr(row,['nama abm','abm','asst branch manager'],3),mtdSales:sales,mtdTarget:target,bestEstimate:getStr(row,['best estimate','best_estimate','estimate'],16),achPercent:ach,salesLY:getNum(row,['sales ly','ly sales','ly'],18),sssg:getNum(row,['sssg','ach sssg'],20),projSssg:getNum(row,['projection sssg','proj sssg','projection'],21)});}return result;
 }
 
 function parseCSVLine(textLine) {
@@ -298,28 +213,9 @@ function parseCSVLine(textLine) {
    4. SYSTEM FILTERING SALES
    ========================================================================== */
 function applySalesFilters() {
-    const kategori = document.getElementById('slicerKategoriSales')?.value || 'all';
-    const spesifik = document.getElementById('slicerSpesifikSales')?.value || 'all';
-
-    let filteredSales = [...salesData]; 
-
-    if (kategori !== 'all' && spesifik !== 'all') {
-        filteredSales = salesData.filter(item => {
-            if (kategori === 'bm') return item.bm.toLowerCase() === spesifik.toLowerCase();
-            if (kategori === 'abm') return item.abm.toLowerCase() === spesifik.toLowerCase();
-            if (kategori === 'store') return item.store.toLowerCase() === spesifik.toLowerCase();
-            return true;
-        });
-    }
-
-    renderSalesSummaryFiltered(filteredSales);
-    renderSalesTableFiltered(filteredSales);
-
-    if (currentSalesChartMode === 'mtd') {
-        renderSalesChartFiltered(filteredSales);
-    } else {
-        fetchAndRenderTrendChart(kategori, spesifik);
-    }
+    const kategori=document.getElementById('slicerKategoriSales')?.value||'all',spesifik=document.getElementById('slicerSpesifikSales')?.value||'all';let filtered=[...salesData];
+    if(kategori!=='all'&&spesifik!=='all')filtered=salesData.filter(i=>String(kategori==='store'?i.store:kategori==='bm'?i.bm:i.abm||'').toLowerCase()===String(spesifik).toLowerCase());
+    if(isOfficialSource_()){renderOfficialSummary_(filtered);renderOfficialTable_(filtered);if(currentSalesChartMode==='mtd')renderOfficialChart_(filtered);else renderOfficialTrendChart_(filtered);}else{renderSalesSummaryFiltered(filtered);renderSalesTableFiltered(filtered);if(currentSalesChartMode==='mtd')renderSalesChartFiltered(filtered);else fetchAndRenderTrendChart(kategori,spesifik);}
 }
 
 window.setSalesChartMode = function(mode) {
@@ -336,6 +232,17 @@ window.setSalesChartMode = function(mode) {
     }
     applySalesFilters();
 };
+
+function renderOfficialSummary_(data){const sales=data.reduce((s,i)=>s+(i.mtdSales||0),0),qty=data.reduce((s,i)=>s+(i.qtySold||0),0),trx=data.reduce((s,i)=>s+(i.trxCount||0),0),atv=trx?sales/trx:0,upt=trx?qty/trx:0;const set=(id,val,label)=>{const e=document.getElementById(id);if(e)e.innerText=val;const card=e?.closest('.rounded-2xl,.rounded-xl,.bg-white')||e?.parentElement;if(card){for(const n of card.querySelectorAll('p,span,div,h1,h2,h3,h4,h5,h6')){if(n!==e&&/^(Total Sales|MTD Target|Avg Achievement|Sales LY|SSSG|Proj\. SSSG|Total Target|Average Achievement)$/i.test((n.textContent||'').trim())){n.textContent=label;break;}}}};set('summary-total-sales','Rp '+Math.round(sales).toLocaleString('id-ID'),'Total Net Sales');set('summary-total-target',Math.round(qty).toLocaleString('id-ID'),'Qty Sold');set('summary-avg-ach',Math.round(trx).toLocaleString('id-ID'),'Transaction');set('summary-total-ly','Rp '+Math.round(atv).toLocaleString('id-ID'),'Average ATV');set('summary-sssg',upt.toFixed(2),'Average UPT');set('summary-proj-sssg',data.length.toLocaleString('id-ID'),'Active Store');}
+
+function renderOfficialChart_(data){const ctx=document.getElementById('salesTargetChart');if(!ctx)return;if(salesChartInstance)salesChartInstance.destroy();const d=[...data].sort((a,b)=>(b.mtdSales||0)-(a.mtdSales||0));salesChartInstance=new Chart(ctx,{type:'bar',data:{labels:d.map(i=>i.store),datasets:[{type:'bar',label:'Net Sales',data:d.map(i=>i.mtdSales||0),backgroundColor:'rgba(249,115,22,.88)',borderColor:'#f97316',borderRadius:7,yAxisID:'y'},{type:'line',label:'ATV',data:d.map(i=>i.atv||0),borderColor:'#6366f1',backgroundColor:'#6366f1',borderWidth:2.5,pointRadius:4,tension:.35,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{grid:{display:false},ticks:{maxRotation:55,minRotation:35,autoSkip:false}},y:{beginAtZero:true,ticks:{callback:v=>'Rp '+formatCompactOfficial_(v)}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>'Rp '+formatCompactOfficial_(v)}}},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: Rp ${Math.round(c.raw||0).toLocaleString('id-ID')}`}}}}});}
+
+function renderOfficialTrendChart_(data){const ctx=document.getElementById('salesTargetChart');if(!ctx)return;if(salesChartInstance)salesChartInstance.destroy();const sel=selectedOfficialMonth_(),allowed=new Set(data.map(i=>i.storeCode)),days=new Map();officialRawData.forEach(r=>{if(r.date.getMonth()!==sel.month||r.date.getFullYear()!==sel.year)return;if(allowed.size&&!allowed.has(r.storeCode))return;const d=r.date.getDate();if(!days.has(d))days.set(d,{sales:0,trx:0});days.get(d).sales+=r.netSales;days.get(d).trx+=r.trxCount;});const max=new Date(sel.year,sel.month+1,0).getDate(),labels=[],sales=[],atv=[];for(let d=1;d<=max;d++){const x=days.get(d)||{sales:0,trx:0};labels.push(String(d));sales.push(x.sales);atv.push(x.trx?x.sales/x.trx:0);}salesChartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Daily Net Sales',data:sales,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',borderWidth:3,pointRadius:3,fill:true,tension:.3,yAxisID:'y'},{label:'Daily ATV',data:atv,borderColor:'#6366f1',backgroundColor:'#6366f1',borderWidth:2.5,pointRadius:3,tension:.3,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>'Rp '+formatCompactOfficial_(v)}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>'Rp '+formatCompactOfficial_(v)}}},plugins:{legend:{position:'bottom'}}}});}
+
+function renderOfficialTable_(data){const tbody=document.getElementById('sales-table-body'),count=document.getElementById('table-record-count');if(count)count.textContent=`Menampilkan ${data.length} Store`;if(!tbody)return;const thead=tbody.previousElementSibling;if(thead)thead.innerHTML='<tr><th class="px-4 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">No</th><th class="px-5 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">Store</th><th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">Net Sales</th><th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">Qty Sold</th><th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">Transaction</th><th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">ATV</th><th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">UPT</th></tr>';if(!data.length){tbody.innerHTML='<tr><td colspan="7" class="text-center py-8 text-sm font-bold text-slate-400">Tidak ada data Official IT untuk bulan/filter yang dipilih.</td></tr>';renderOfficialDataHealth_();return;}const d=[...data].sort((a,b)=>(b.mtdSales||0)-(a.mtdSales||0));tbody.innerHTML=d.map((i,n)=>`<tr class="${n%2?'bg-slate-50/60':'bg-white'} border-b border-slate-100 hover:bg-orange-50/40 transition-colors"><td class="px-4 py-4 text-center font-bold text-xs text-slate-400">${n+1}</td><td class="px-5 py-4"><p class="font-bold text-sm text-slate-800">${escapeOfficial_(i.store)}</p><p class="text-[10px] font-bold text-slate-400 uppercase">${escapeOfficial_(i.storeCode||'-')}</p></td><td class="px-5 py-4 text-right text-sm font-bold text-slate-700">Rp ${Math.round(i.mtdSales||0).toLocaleString('id-ID')}</td><td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${Math.round(i.qtySold||0).toLocaleString('id-ID')}</td><td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${Math.round(i.trxCount||0).toLocaleString('id-ID')}</td><td class="px-5 py-4 text-right"><span class="inline-flex px-3 py-1 rounded-lg text-xs font-black bg-indigo-50 text-indigo-600">Rp ${Math.round(i.atv||0).toLocaleString('id-ID')}</span></td><td class="px-5 py-4 text-right"><span class="inline-flex px-3 py-1 rounded-lg text-xs font-black bg-emerald-50 text-emerald-600">${Number(i.upt||0).toFixed(2)}</span></td></tr>`).join('');renderOfficialDataHealth_();}
+
+function renderOfficialDataHealth_(){let n=document.getElementById('official-it-data-health'),c=document.getElementById('table-record-count');if(!n&&c&&c.parentElement){n=document.createElement('div');n.id='official-it-data-health';n.className='mt-2 text-[10px] font-semibold';c.parentElement.appendChild(n);}if(!n)return;const h=officialDataHealth;n.className='mt-2 text-[10px] font-semibold '+((h.invalidDate||h.invalidStore)?'text-amber-500':'text-slate-400');n.textContent=(h.invalidDate||h.invalidStore)?`Audit data: ${h.valid} baris bulan terpilih • ${h.invalidDate} tanggal invalid • ${h.invalidStore} store invalid`:`Data Official IT tervalidasi: ${h.valid} baris bulan terpilih dari ${h.total} baris source.`;}
+function renderOfficialDataMessage_(message){const tbody=document.getElementById('sales-table-body');if(tbody)tbody.innerHTML=`<tr><td colspan="7" class="text-center py-8 text-sm font-bold text-rose-500">${escapeOfficial_(message)}</td></tr>`;}
 
 /* ==========================================================================
    5. SUMMARY METRICS & CARDS
