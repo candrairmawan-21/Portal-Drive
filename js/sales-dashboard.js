@@ -862,6 +862,21 @@ window.submitOfficialPdf = async function() {
 
         const batchId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const aggregate = { count: 0, skippedCount: 0, duplicateCount: 0 };
+        // Toko yang "hilang" di 1 chunk sangat mungkin justru ketemu di chunk
+        // lain (laporan bulanan biasa mencakup ribuan toko lintas cabang,
+        // tersebar di rentang halaman berbeda) — union foundStoreCodes dari
+        // SEMUA chunk dulu, baru status hilang dihitung di akhir, supaya
+        // tidak menyesatkan seperti kalau dilihat per-chunk saja.
+        const foundCodesUnion = new Set();
+        let registeredStoreCodes = null;
+
+        const trackResult = (result) => {
+            aggregate.count += result.count || 0;
+            aggregate.skippedCount += result.skippedCount || 0;
+            aggregate.duplicateCount += result.duplicateCount || 0;
+            (result.foundStoreCodes || []).forEach(c => foundCodesUnion.add(c));
+            if (!registeredStoreCodes && result.registeredStoreCodes) registeredStoreCodes = result.registeredStoreCodes;
+        };
 
         if (!splitInfo.chunks) {
             // File cukup kecil (atau pdf-lib gagal dimuat) -> upload langsung, 1 request.
@@ -869,9 +884,7 @@ window.submitOfficialPdf = async function() {
             const base64Content = await readFileAsDataURL_(file);
             setProgress(60, "Melakukan lookup Store Code dan menyimpan ke Master...");
             const result = await uploadPdfPayload_(file.name, base64Content, reportDate, { batchId, chunkIndex: 1, totalChunks: 1 });
-            aggregate.count += result.count || 0;
-            aggregate.skippedCount += result.skippedCount || 0;
-            aggregate.duplicateCount += result.duplicateCount || 0;
+            trackResult(result);
         } else {
             // File besar (mis. laporan bulanan) -> otomatis dipecah jadi
             // beberapa bagian dan diunggah berurutan. Aman diulang kalau
@@ -887,10 +900,7 @@ window.submitOfficialPdf = async function() {
                 const result = await uploadPdfPayload_(chunkFileName, dataUrl, reportDate, {
                     batchId, chunkIndex: chunk.index, totalChunks: total
                 });
-
-                aggregate.count += result.count || 0;
-                aggregate.skippedCount += result.skippedCount || 0;
-                aggregate.duplicateCount += result.duplicateCount || 0;
+                trackResult(result);
             }
         }
 
@@ -899,6 +909,16 @@ window.submitOfficialPdf = async function() {
         const parts = [`${aggregate.count} baris data berhasil disimpan ke Master`];
         if (aggregate.duplicateCount > 0) parts.push(`${aggregate.duplicateCount} duplikat dilewati`);
         if (aggregate.skippedCount > 0) parts.push(`${aggregate.skippedCount} baris dilewati (kode toko tidak valid/tidak terdaftar)`);
+
+        // Status hilang yang SEBENARNYA: toko terdaftar yang TIDAK ketemu
+        // di SATUPUN chunk dari batch ini (bukan cuma 1 chunk tertentu).
+        if (registeredStoreCodes) {
+            const trulyMissing = registeredStoreCodes.filter(c => !foundCodesUnion.has(c));
+            if (trulyMissing.length > 0) {
+                parts.push(`⚠️ ${trulyMissing.length} toko TIDAK ketemu di seluruh file: ${trulyMissing.join(', ')}`);
+            }
+        }
+
         const prefix = splitInfo.chunks ? `PDF (${splitInfo.totalPages} halaman) otomatis dipecah jadi ${splitInfo.chunks.length} bagian. ` : '';
 
         showStatus(true, prefix + parts.join(', ') + '.');
