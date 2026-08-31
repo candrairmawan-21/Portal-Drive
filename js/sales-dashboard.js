@@ -200,15 +200,29 @@ function resolveStoreCode_(storeName, rawCode, bmValue, abmValue) {
     const rawNorm = normalizeStoreKey_(rawCode);
     const bmNorm = normalizeStoreKey_(bmValue);
     const abmNorm = normalizeStoreKey_(abmValue);
-    const isMismatched = rawNorm && ((bmNorm && rawNorm === bmNorm) || (abmNorm && rawNorm === abmNorm));
-    const isValid = looksLikeStoreCode_(rawCode) && !isMismatched;
+    // Hanya dianggap "tertukar" kalau BENAR-BENAR identik dengan Nama BM/ABM
+    // (bukti konkret kolom tertukar) -- bukan sekadar heuristik format (spasi,
+    // panjang, dll), karena format kode toko asli bisa bermacam-macam dan
+    // heuristik yang terlalu ketat justru membuat kode toko yang SAH ikut
+    // tertolak (menyebabkan Store Code tidak tampil sama sekali).
+    const isConfirmedMismatch = !!rawNorm && (
+        (bmNorm && bmNorm !== '-' && rawNorm === bmNorm) ||
+        (abmNorm && abmNorm !== '-' && rawNorm === abmNorm)
+    );
 
-    if (isValid) {
-        rememberStoreCode_(storeName, rawCode);
+    if (rawNorm && !isConfirmedMismatch) {
+        // Hanya disimpan ke canonical map kalau memang terlihat seperti kode
+        // (tanpa spasi) -- supaya map lintas-sumber tidak ikut tercemar data
+        // yang salah, tapi nilai baris ini sendiri TETAP dipakai apa adanya.
+        if (looksLikeStoreCode_(rawCode)) rememberStoreCode_(storeName, rawCode);
         return rawNorm;
     }
     const remembered = canonicalStoreCodeMap_.get(String(storeName ?? '').trim().toUpperCase());
-    return remembered || '-';
+    // PENTING: kembalikan string KOSONG (bukan '-') kalau tidak ditemukan --
+    // '-' adalah truthy sehingga akan merusak logic "item.storeCode || item.store"
+    // di getSlicerReferenceData_, applySalesFilters, getCanonicalStoreOrder_, dst.
+    // Tampilan '-' di tabel tetap muncul karena dirender terpisah (storeCode||'-').
+    return remembered || '';
 }
 
 function getSlicerReferenceData_() {
@@ -597,14 +611,14 @@ function parseOfficialITCSV_(text) {
         const bm=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.bm,fallback.bm)||'').trim()||'-';
         const abm=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.abm,fallback.abm)||'').trim()||'-';
         // Poin 1: validasi silang -- Official IT Report tetap sumber paling
-        // otoritatif untuk Store Code, TAPI kalau kolom yang terbaca ternyata
-        // tidak terlihat seperti kode (mis. malah sama dengan Nama BM/ABM
-        // karena kolom tertukar), jangan dipakai mentah-mentah -- coba ambil
-        // dari canonicalStoreCodeMap_ dulu, baru fallback ke nilai mentah.
+        // otoritatif untuk Store Code. Hanya ditolak kalau BENAR-BENAR identik
+        // dengan Nama BM/ABM (bukti konkret kolom tertukar) -- bukan sekadar
+        // heuristik format, supaya kode toko yang sah tidak ikut tertolak.
         const rawCodeNorm=normalizeStoreKey_(rawCode);
-        const codeMismatched = rawCodeNorm && (rawCodeNorm===normalizeStoreKey_(bm) || rawCodeNorm===normalizeStoreKey_(abm));
+        const bmNorm_=normalizeStoreKey_(bm), abmNorm_=normalizeStoreKey_(abm);
+        const codeConfirmedMismatch = !!rawCodeNorm && ((bmNorm_&&bmNorm_!=='-'&&rawCodeNorm===bmNorm_) || (abmNorm_&&abmNorm_!=='-'&&rawCodeNorm===abmNorm_));
         let code;
-        if (looksLikeStoreCode_(rawCode) && !codeMismatched) {
+        if (rawCodeNorm && !codeConfirmedMismatch) {
             code = rawCodeNorm;
         } else {
             code = canonicalStoreCodeMap_.get(store.toUpperCase()) || rawCodeNorm;
