@@ -27,6 +27,14 @@ let officialRankingPanel = null;
 let officialSlicerReference = [];
 let currentTrendRequestId = 0;
 
+// Peta kanonik "Nama Toko" -> "Store Code" yang TERBUKTI valid (bukan nama
+// BM/ABM yang tertukar). Diisi dari sumber manapun (Official IT Report atau
+// Store Submission) selama nilainya lolos validasi looksLikeStoreCode_().
+// Dipakai sebagai fallback lintas-sumber supaya tabel Store Submission bisa
+// menampilkan Store Code yang sama seperti pada Official IT Report meski
+// header kolom pada sheet submission tidak terbaca dengan benar.
+let canonicalStoreCodeMap_ = new Map();
+
 
 // GID Sheet Lengkap (Termasuk Alias untuk Official IT Report)
 const SHEET_GIDS = {
@@ -55,12 +63,36 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchSalesData();
 });
 
-function displayUpdateDate() {
+/**
+ * Poin 5: "Update Terakhir" untuk Official IT Report harus menampilkan
+ * tanggal data TERBARU yang sukses di-import (bukan tanggal hari ini dibuka).
+ * Kalau dipanggil tanpa argumen (mis. Store Submission, atau saat data belum
+ * ada), fallback ke tanggal hari ini seperti sebelumnya.
+ */
+function displayUpdateDate(latestImportedDate) {
     const dateEl = document.getElementById('update-date');
-    if (dateEl) {
-        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        dateEl.innerText = "Update Terakhir: " + today;
-    }
+    if (!dateEl) return;
+    const useDate = (latestImportedDate instanceof Date && !isNaN(latestImportedDate.getTime()))
+        ? latestImportedDate
+        : new Date();
+    const formatted = useDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    dateEl.innerText = "Update Terakhir: " + formatted;
+}
+
+/**
+ * Cari tanggal terbaru di antara seluruh baris Official IT Report yang
+ * berhasil diparse (officialRawData) -- ini merepresentasikan tanggal data
+ * terakhir yang sukses di-import ke Master, terlepas dari bulan yang sedang
+ * dipilih pada slicer.
+ */
+function getLatestOfficialImportDate_() {
+    let latest = null;
+    officialRawData.forEach(r => {
+        if (r.date instanceof Date && !isNaN(r.date.getTime())) {
+            if (!latest || r.date > latest) latest = r.date;
+        }
+    });
+    return latest;
 }
 
 /**
@@ -132,6 +164,51 @@ function resetSpecificSlicer_() {
 
 function normalizeStoreKey_(value) {
     return String(value ?? '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
+/**
+ * Store Code yang valid pada dasarnya adalah 1 token tanpa spasi (mis. "ABC01",
+ * "MOI", "STR-014"). Nama BM/ABM hampir selalu berupa "nama depan nama
+ * belakang" yang mengandung spasi. Ini dipakai sebagai sinyal utama untuk
+ * mendeteksi kolom yang salah petakan (mis. fallback index kolom meleset
+ * sehingga yang terbaca sebagai Store Code justru Nama BM).
+ */
+function looksLikeStoreCode_(value) {
+    const v = String(value ?? '').trim();
+    if (!v || v === '-') return false;
+    if (/\s/.test(v)) return false; // ada spasi -> kemungkinan besar nama orang
+    return v.length <= 15;
+}
+
+/** Simpan pemetaan Nama Toko -> Store Code yang valid untuk dipakai lintas-sumber. */
+function rememberStoreCode_(storeName, storeCode) {
+    const name = String(storeName ?? '').trim().toUpperCase();
+    if (!name || !looksLikeStoreCode_(storeCode)) return;
+    const code = normalizeStoreKey_(storeCode);
+    if (!canonicalStoreCodeMap_.has(name)) canonicalStoreCodeMap_.set(name, code);
+}
+
+/**
+ * Tentukan Store Code final untuk 1 baris data. Kalau nilai mentah dari kolom
+ * yang terdeteksi ternyata tidak terlihat seperti kode toko, ATAU malah sama
+ * persis dengan nilai BM/ABM pada baris yang sama (tanda kolom tertukar),
+ * maka dianggap tidak valid dan dicoba dicari dari canonicalStoreCodeMap_
+ * (diisi dari Official IT Report / baris lain yang valid). Kalau tetap tidak
+ * ditemukan, kembalikan '-' daripada menampilkan data yang salah (mis. Nama BM).
+ */
+function resolveStoreCode_(storeName, rawCode, bmValue, abmValue) {
+    const rawNorm = normalizeStoreKey_(rawCode);
+    const bmNorm = normalizeStoreKey_(bmValue);
+    const abmNorm = normalizeStoreKey_(abmValue);
+    const isMismatched = rawNorm && ((bmNorm && rawNorm === bmNorm) || (abmNorm && rawNorm === abmNorm));
+    const isValid = looksLikeStoreCode_(rawCode) && !isMismatched;
+
+    if (isValid) {
+        rememberStoreCode_(storeName, rawCode);
+        return rawNorm;
+    }
+    const remembered = canonicalStoreCodeMap_.get(String(storeName ?? '').trim().toUpperCase());
+    return remembered || '-';
 }
 
 function getSlicerReferenceData_() {
@@ -223,9 +300,13 @@ async function fetchSalesData() {
             officialSlicerReference = salesData.map(x => ({storeCode:x.storeCode, store:x.store, bm:x.bm, abm:x.abm}));
             await fetchSubmissionComparisonData_(selectedKey);
             applyOfficialComparisonFallbacks_();
+            // Poin 5: tampilkan tanggal data terbaru yang sukses di-import,
+            // bukan tanggal hari ini.
+            displayUpdateDate(getLatestOfficialImportDate_());
         } else {
             salesData = parseSalesCSV(csvText, 'SUBMISSION');
             submissionComparisonData = [...salesData];
+            displayUpdateDate();
         }
 
         populateSpecificSlicer_();
@@ -288,7 +369,7 @@ function parseSalesCSV(text, sourceMode) {
 
     const headers = records[headerRowIdx];
     const idx = {
-        storeCode: findHeaderIndexSubmission_(headers, ['store code','store_code','kode toko']),
+        storeCode: findHeaderIndexSubmission_(headers, ['store code','store_code','kode toko','id toko','toko id','store id','store_id','kode_toko']),
         store: findHeaderIndexSubmission_(headers, ['store name','store_name','store','nama toko']),
         bm: findHeaderIndexSubmission_(headers, ['nama bm','bm','branch manager','branch_manager']),
         abm: findHeaderIndexSubmission_(headers, ['nama abm','abm','asst branch manager','assistant branch manager']),
@@ -311,14 +392,21 @@ function parseSalesCSV(text, sourceMode) {
     for (let i=headerRowIdx+1;i<records.length;i++) {
         const row=records[i]; if(!row.some(v=>String(v||'').trim()!=='')) continue;
         const storeName=getStr('store',row); if(!storeName || storeName==='-') continue;
-        const storeCode=normalizeStoreKey_(getStr('storeCode',row));
+        const bmVal=getStr('bm',row)||'-', abmVal=getStr('abm',row)||'-';
+        const storeCode=resolveStoreCode_(storeName, getStr('storeCode',row), bmVal, abmVal);
         const sales=getNum('mtdSales',row), target=getNum('mtdTarget',row);
         let ach=getNum('achievement',row); if(ach===0 && target>0) ach=sales/target*100;
         const qty=getNum('qtySold',row), trx=getNum('trxCount',row);
+        const salesLY=getNum('salesLY',row);
+        // Poin 3: kalau Sales LY = 0 (tidak ada data pembanding tahun lalu),
+        // Ach SSSG & Proj SSSG dipaksa 0 -- persentase pertumbuhan tidak
+        // bermakna (dan berpotensi div-by-zero/angka ekstrem) tanpa basis LY.
+        const sssg = salesLY>0 ? getNum('sssg',row) : 0;
+        const projSssg = salesLY>0 ? getNum('projSssg',row) : 0;
         result.push({
-            storeCode, store:storeName, bm:getStr('bm',row)||'-', abm:getStr('abm',row)||'-',
+            storeCode, store:storeName, bm:bmVal, abm:abmVal,
             mtdSales:sales, mtdTarget:target, bestEstimate:getStr('bestEstimate',row)||'-',
-            achPercent:ach, salesLY:getNum('salesLY',row), sssg:getNum('sssg',row), projSssg:getNum('projSssg',row),
+            achPercent:ach, salesLY, sssg, projSssg,
             qtySold:qty, trxCount:trx, atv:trx?sales/trx:0, upt:trx?qty/trx:0
         });
     }
@@ -409,7 +497,7 @@ window.setSalesChartMode = function(mode) {
    OFFICIAL IT REPORT - DATA MODEL, COMPARISON, RANKING & VISUALIZATION
    ============================================================================ */
 const OFFICIAL_HEADERS = {
-    storeCode: ['store code','store_code','kode toko'],
+    storeCode: ['store code','store_code','kode toko','id toko','toko id','store id','store_id','kode_toko'],
     storeName: ['store name','store_name','store','nama toko'],
     date: ['date','tanggal','business date','transaction date'],
     netSales: ['net sales','net_sales','sales','mtd sales','mtd net sales'],
@@ -496,17 +584,31 @@ function parseOfficialITCSV_(text) {
         const row=rows[r]; if(!row.some(v=>String(v||'').trim()!==''))continue; officialDataHealth.totalSourceRows++;
         const date=parseOfficialDate_(getOfficialField_(row,headers,OFFICIAL_HEADERS.date,fallback.date));
         if(!date){officialDataHealth.invalidDateRows++;continue;}
-        const code=normalizeStoreKey_(getOfficialField_(row,headers,OFFICIAL_HEADERS.storeCode,fallback.storeCode));
+        const rawCode=getOfficialField_(row,headers,OFFICIAL_HEADERS.storeCode,fallback.storeCode);
         const store=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.storeName,fallback.storeName)||'').trim().replace(/\s+/g,' ');
+        const bm=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.bm,fallback.bm)||'').trim()||'-';
+        const abm=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.abm,fallback.abm)||'').trim()||'-';
+        // Poin 1: validasi silang -- Official IT Report tetap sumber paling
+        // otoritatif untuk Store Code, TAPI kalau kolom yang terbaca ternyata
+        // tidak terlihat seperti kode (mis. malah sama dengan Nama BM/ABM
+        // karena kolom tertukar), jangan dipakai mentah-mentah -- coba ambil
+        // dari canonicalStoreCodeMap_ dulu, baru fallback ke nilai mentah.
+        const rawCodeNorm=normalizeStoreKey_(rawCode);
+        const codeMismatched = rawCodeNorm && (rawCodeNorm===normalizeStoreKey_(bm) || rawCodeNorm===normalizeStoreKey_(abm));
+        let code;
+        if (looksLikeStoreCode_(rawCode) && !codeMismatched) {
+            code = rawCodeNorm;
+        } else {
+            code = canonicalStoreCodeMap_.get(store.toUpperCase()) || rawCodeNorm;
+        }
         if(!code&&!store){officialDataHealth.invalidStoreRows++;continue;}
         const sales=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.netSales,fallback.netSales));
         const rawTarget=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.target,fallback.target));
         const reportedAch=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.achievement,fallback.achievement));
         const qty=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.qtySold,fallback.qtySold));
         const trx=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.trxCount,fallback.trxCount));
-        const bm=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.bm,fallback.bm)||'').trim()||'-';
-        const abm=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.abm,fallback.abm)||'').trim()||'-';
         officialDataHealth.validSourceRows++;
+        rememberStoreCode_(store, code);
         const raw={storeCode:code||store.toUpperCase(),store:store||code,date,netSales:sales,rawTarget,reportedAch,qtySold:qty,trxCount:trx,bm,abm};
         officialRawData.push(raw);
         if(date.getMonth()!==sel.month||date.getFullYear()!==sel.year)continue;
@@ -538,12 +640,19 @@ function applyOfficialComparisonFallbacks_() {
         item.mtdTarget=sub ? (Number(sub.mtdTarget)||0) : 0;
         item.achPercent=item.mtdTarget>0 ? (Number(item.mtdSales)||0)/item.mtdTarget*100 : 0;
         item.salesLY=sub ? (Number(sub.salesLY)||0) : 0;
-        item.projSssg=sub ? (Number(sub.projSssg)||0) : 0;
+        // Poin 2: sebelumnya item.sssg (Ach SSSG per toko) TIDAK PERNAH
+        // dihitung untuk Official IT Report -- field-nya memang tidak pernah
+        // di-set sehingga selalu terbaca 0 (undefined -> Number(0)) di tabel.
+        // Ach SSSG = (Sales MTD - Sales LY) / Sales LY.
+        // Poin 3: kalau Sales LY = 0, Ach SSSG & Proj SSSG dipaksa 0 (tidak
+        // ada basis pembanding yang valid untuk dihitung pertumbuhannya).
+        item.sssg = item.salesLY>0 ? ((Number(item.mtdSales)||0) - item.salesLY)/item.salesLY*100 : 0;
+        item.projSssg = item.salesLY>0 ? (sub ? (Number(sub.projSssg)||0) : 0) : 0;
     });
 }
 function getOfficialComparison_(data) {
     let totalSales=0,totalTarget=0,totalLY=0,totalProj=0,projCount=0;
-    data.forEach(item=>{totalSales+=item.mtdSales||0;totalTarget+=item.mtdTarget||0;const sub=findSubmissionForOfficial_(item);if(sub){totalLY+=sub.salesLY||0;if(Number.isFinite(sub.projSssg)){totalProj+=sub.projSssg;projCount++;}}});
+    data.forEach(item=>{totalSales+=item.mtdSales||0;totalTarget+=item.mtdTarget||0;const sub=findSubmissionForOfficial_(item);if(sub){const ly=Number(sub.salesLY)||0;totalLY+=ly;if(ly>0&&Number.isFinite(sub.projSssg)){totalProj+=sub.projSssg;projCount++;}}});
     const achievement=totalTarget>0?totalSales/totalTarget*100:0;
     const achSssg=totalLY>0?(totalSales-totalLY)/totalLY*100:0;
     const projSssg=projCount?totalProj/projCount:0;
@@ -630,7 +739,7 @@ function renderOfficialTrendChart_(data){
     salesChartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Cumulative MTD Sales',data:sales,borderColor:'#0891b2',backgroundColor:'rgba(6,182,212,.10)',borderWidth:3,pointRadius:3,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>'Rp '+formatCompactOfficial_(v)}}},plugins:{legend:{position:'bottom'}}}});
 }
 function renderOfficialDashboard_(data){renderOfficialSummary_(data);renderOfficialTable_(data);if(currentSalesChartMode==='mtd')renderOfficialChart_(data);else renderOfficialTrendChart_(data);}
-function renderSalesLoadError_(message){if(salesChartInstance){salesChartInstance.destroy();salesChartInstance=null;}const tbody=document.getElementById('sales-table-body');if(tbody)tbody.innerHTML=`<tr><td colspan="8" class="text-center py-8 text-sm font-bold text-rose-500">${escapeHtml_(message)}</td></tr>`;const count=document.getElementById('table-record-count');if(count)count.textContent='Data gagal dimuat';['summary-total-sales','summary-total-target','summary-avg-ach','summary-total-ly','summary-sssg','summary-proj-sssg'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='-';});}
+function renderSalesLoadError_(message){if(salesChartInstance){salesChartInstance.destroy();salesChartInstance=null;}const tbody=document.getElementById('sales-table-body');if(tbody)tbody.innerHTML=`<tr><td colspan="10" class="text-center py-8 text-sm font-bold text-rose-500">${escapeHtml_(message)}</td></tr>`;const count=document.getElementById('table-record-count');if(count)count.textContent='Data gagal dimuat';['summary-total-sales','summary-total-target','summary-avg-ach','summary-total-ly','summary-sssg','summary-proj-sssg'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='-';});}
 
 /* ==========================================================================
    5. SUMMARY METRICS & CARDS
@@ -811,6 +920,7 @@ function renderSalesTableFiltered(data) {
     const tbody=document.getElementById('sales-table-body'), count=document.getElementById('table-record-count');
     if(count)count.textContent=`Menampilkan ${data.length} Toko`; if(!tbody)return;
     const thead=tbody.previousElementSibling;
+    const TABLE_COLSPAN = 10;
     if(thead)thead.innerHTML=`<tr>
         <th class="px-4 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">No</th>
         <th class="px-5 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">Store</th>
@@ -820,11 +930,21 @@ function renderSalesTableFiltered(data) {
         <th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">Sales LY</th>
         <th class="px-5 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">Ach SSSG</th>
         <th class="px-5 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">Proj SSSG</th>
+        <th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">ATV</th>
+        <th class="px-5 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">UPT</th>
     </tr>`;
-    if(!data.length){tbody.innerHTML=`<tr><td colspan="8" class="text-center py-8 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;return;}
+    if(!data.length){tbody.innerHTML=`<tr><td colspan="${TABLE_COLSPAN}" class="text-center py-8 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;return;}
     const sorted=getCanonicalStoreOrder_(data);
     tbody.innerHTML=sorted.map((item,index)=>{
         const ach=Number(item.achPercent||0), sssg=Number(item.sssg||0), proj=Number(item.projSssg||0);
+        // Poin 4: ATV (Average Transaction Value) = total Net Sales / total
+        // Transaksi. UPT (Unit Per Transaction) = total Qty Sold / total
+        // Transaksi. Dihitung ulang di sini (bukan hanya mengandalkan field
+        // yang sudah ada) supaya tetap benar meski item berasal dari hasil
+        // agregasi filter (BM/ABM) yang menjumlahkan banyak toko sekaligus.
+        const trx = Number(item.trxCount || 0);
+        const atv = trx > 0 ? (Number(item.mtdSales || 0) / trx) : (Number(item.atv) || 0);
+        const upt = trx > 0 ? (Number(item.qtySold || 0) / trx) : (Number(item.upt) || 0);
         const badge=ach>=100?'bg-emerald-50 text-emerald-600 border-emerald-200':ach>=80?'bg-amber-50 text-amber-600 border-amber-200':'bg-rose-50 text-rose-600 border-rose-200';
         const sssgCls=sssg>=0?'text-emerald-600':'text-rose-500', projCls=proj>=0?'text-cyan-600':'text-rose-500';
         return `<tr class="${index%2?'bg-slate-50/60':'bg-white'} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
@@ -836,6 +956,8 @@ function renderSalesTableFiltered(data) {
             <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${Math.round(item.salesLY||0).toLocaleString('id-ID')}</td>
             <td class="px-5 py-4 text-center text-sm font-black ${sssgCls}">${sssg.toFixed(2)}%</td>
             <td class="px-5 py-4 text-center text-sm font-black ${projCls}">${proj.toFixed(2)}%</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">Rp ${Math.round(atv).toLocaleString('id-ID')}</td>
+            <td class="px-5 py-4 text-right text-sm font-semibold text-slate-600">${upt.toFixed(2)}</td>
         </tr>`;
     }).join('');
 }
