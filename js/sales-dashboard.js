@@ -381,9 +381,14 @@ function parseSalesCSV(text, sourceMode) {
         sssg: findHeaderIndexSubmission_(headers, ['sssg','ach sssg']),
         projSssg: findHeaderIndexSubmission_(headers, ['projection sssg','proj sssg','projection']),
         qtySold: findHeaderIndexSubmission_(headers, ['qty sold','qty_sold','qty','quantity','quantity sold']),
-        trxCount: findHeaderIndexSubmission_(headers, ['trx count','trx_count','trx','transaction count','transactions'])
+        trxCount: findHeaderIndexSubmission_(headers, ['trx count','trx_count','trx','transaction count','transactions']),
+        // ATV & UPT untuk Store Submission diambil LANGSUNG dari kolom sumber
+        // (bukan dihitung ulang) -- sesuai permintaan: kolom M = ATV, kolom N = UPT.
+        atv: findHeaderIndexSubmission_(headers, ['atv','average transaction value','avg transaction value']),
+        upt: findHeaderIndexSubmission_(headers, ['upt','unit per transaction','units per transaction'])
     };
-    const fallback = {storeCode:0, store:1, bm:2, abm:3, mtdSales:4, mtdTarget:5, qtySold:11, trxCount:12, bestEstimate:16, achievement:17, salesLY:18, sssg:20, projSssg:21};
+    // Kolom M = index 12, Kolom N = index 13 (A=0, B=1, ... berbasis 0).
+    const fallback = {storeCode:0, store:1, bm:2, abm:3, mtdSales:4, mtdTarget:5, qtySold:11, trxCount:12, bestEstimate:16, achievement:17, salesLY:18, sssg:20, projSssg:21, atv:12, upt:13};
     const getRaw = (key, row) => { const i=idx[key] >= 0 ? idx[key] : fallback[key]; return i !== undefined ? (row[i] ?? '') : ''; };
     const getStr = (key,row) => String(getRaw(key,row)).trim();
     const getNum = (key,row) => parseOfficialNumber_(getRaw(key,row));
@@ -407,7 +412,10 @@ function parseSalesCSV(text, sourceMode) {
             storeCode, store:storeName, bm:bmVal, abm:abmVal,
             mtdSales:sales, mtdTarget:target, bestEstimate:getStr('bestEstimate',row)||'-',
             achPercent:ach, salesLY, sssg, projSssg,
-            qtySold:qty, trxCount:trx, atv:trx?sales/trx:0, upt:trx?qty/trx:0
+            qtySold:qty, trxCount:trx,
+            // Diambil langsung dari kolom M (ATV) & N (UPT) pada sheet Store
+            // Submission -- BUKAN dihitung ulang dari sales/trx atau qty/trx.
+            atv:getNum('atv',row), upt:getNum('upt',row)
         });
     }
     return result;
@@ -937,14 +945,16 @@ function renderSalesTableFiltered(data) {
     const sorted=getCanonicalStoreOrder_(data);
     tbody.innerHTML=sorted.map((item,index)=>{
         const ach=Number(item.achPercent||0), sssg=Number(item.sssg||0), proj=Number(item.projSssg||0);
-        // Poin 4: ATV (Average Transaction Value) = total Net Sales / total
-        // Transaksi. UPT (Unit Per Transaction) = total Qty Sold / total
-        // Transaksi. Dihitung ulang di sini (bukan hanya mengandalkan field
-        // yang sudah ada) supaya tetap benar meski item berasal dari hasil
-        // agregasi filter (BM/ABM) yang menjumlahkan banyak toko sekaligus.
+        // Poin 4 (revisi): untuk Store Submission, ATV & UPT diambil APA
+        // ADANYA dari kolom M & N sheet sumber (item.atv / item.upt) --
+        // TIDAK dihitung ulang. Untuk Official IT Report, tabel sumbernya
+        // tidak punya kolom ATV/UPT per baris (data harian), jadi tetap
+        // dihitung dari agregasi: ATV = total Net Sales / total Transaksi,
+        // UPT = total Qty Sold / total Transaksi.
+        const isOfficialRow = isOfficialSource_();
         const trx = Number(item.trxCount || 0);
-        const atv = trx > 0 ? (Number(item.mtdSales || 0) / trx) : (Number(item.atv) || 0);
-        const upt = trx > 0 ? (Number(item.qtySold || 0) / trx) : (Number(item.upt) || 0);
+        const atv = isOfficialRow ? (trx > 0 ? (Number(item.mtdSales || 0) / trx) : 0) : (Number(item.atv) || 0);
+        const upt = isOfficialRow ? (trx > 0 ? (Number(item.qtySold || 0) / trx) : 0) : (Number(item.upt) || 0);
         const badge=ach>=100?'bg-emerald-50 text-emerald-600 border-emerald-200':ach>=80?'bg-amber-50 text-amber-600 border-amber-200':'bg-rose-50 text-rose-600 border-rose-200';
         const sssgCls=sssg>=0?'text-emerald-600':'text-rose-500', projCls=proj>=0?'text-cyan-600':'text-rose-500';
         return `<tr class="${index%2?'bg-slate-50/60':'bg-white'} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
