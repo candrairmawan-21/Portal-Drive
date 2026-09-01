@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSalesSlicers();
     initSalesTableSort_();
     injectSalesDashboardTableStyles_();
+    initStickySalesHeader_();
     fetchSalesData();
 });
 
@@ -96,6 +97,8 @@ window.switchSalesSource = function(sourceType) {
     }
 
     resetSpecificSlicer_();
+    const stickyClone = document.getElementById('sales-table-sticky-clone');
+    if (stickyClone) stickyClone.style.display = 'none';
     if (salesChartInstance) { try { salesChartInstance.destroy(); } catch(e) {} salesChartInstance=null; }
     fetchSalesData();
 };
@@ -154,11 +157,13 @@ function getSlicerReferenceData_() {
 
     const map = new Map();
     sources.forEach(source => source.forEach(item => {
-        const code = normalizeStoreKey_(item.storeCode || item.store);
+        const rawCode = String(item.storeCode || '').trim();
+        const code = normalizeStoreKey_(rawCode || item.store);
         const name = String(item.store || item.storeCode || '').trim();
         if (!code && !name) return;
         const key = code || name.toUpperCase();
-        const existing = map.get(key) || { storeCode: code, store: name, bm: '-', abm: '-' };
+        const existing = map.get(key) || { storeCode: rawCode || code, store: name, bm: '-', abm: '-' };
+        if (rawCode && (!existing.storeCode || normalizeStoreKey_(existing.storeCode) === normalizeStoreKey_(existing.store))) existing.storeCode = rawCode;
         if (name && (!existing.store || existing.store === existing.storeCode)) existing.store = name;
         if (item.bm && item.bm !== '-') existing.bm = String(item.bm).trim();
         if (item.abm && item.abm !== '-') existing.abm = String(item.abm).trim();
@@ -184,10 +189,12 @@ function populateSpecificSlicer_() {
 
     const values = new Map();
     getSlicerReferenceData_().forEach(item => {
-        let value = '', label = '';
+        let value = '', label = '', displayCode = '';
         if (type === 'store') {
-            value = normalizeStoreKey_(item.storeCode || item.store);
-            label = String(item.store || item.storeCode || '').trim();
+            displayCode = String(item.storeCode || '').trim();
+            value = normalizeStoreKey_(displayCode || item.store);
+            label = String(item.store || '').trim();
+            if (!displayCode) displayCode = value;
         } else if (type === 'bm') {
             value = String(item.bm || '').trim(); label = value;
         } else if (type === 'abm') {
@@ -195,13 +202,13 @@ function populateSpecificSlicer_() {
         }
         if (!value || value === '-' || !label || label === '-') return;
         const key = value.toLowerCase();
-        if (!values.has(key)) values.set(key, { value, label });
+        if (!values.has(key)) values.set(key, { value, label, displayCode });
     });
 
-    [...values.values()].sort((a,b) => a.label.localeCompare(b.label, 'id')).forEach(item => {
+    [...values.values()].sort((a,b) => (type === 'store' ? a.label : a.label).localeCompare((type === 'store' ? b.label : b.label), 'id')).forEach(item => {
         const option = document.createElement('option');
         option.value = item.value;
-        option.textContent = type === 'store' ? `${item.value} — ${item.label}` : item.label;
+        option.textContent = type === 'store' ? `${item.displayCode} - ${item.label}` : item.label;
         spesifik.appendChild(option);
     });
 
@@ -666,19 +673,22 @@ function formatCompactOfficial_(value) {
 }
 function managerRankingHtml_(title, data, accent) {
     const safe = data.filter(x => x && x.name && x.name !== '-');
+    const isBM = /\bBM\b/i.test(title) && !/ABM/i.test(title);
+    const cardClass = isBM ? 'manager-ranking-card manager-ranking-bm' : 'manager-ranking-card manager-ranking-abm';
     if (!safe.length) {
-        return `<div class="manager-ranking-card rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"><div class="flex items-center justify-between"><div class="font-black text-slate-800 text-sm">${title}</div><span class="text-[9px] font-black ${accent} uppercase tracking-wider">0</span></div><div class="text-[10px] text-slate-400 py-4">Belum ada mapping ${title}.</div></div>`;
+        return `<div class="${cardClass} rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"><div class="flex items-center justify-between"><div class="font-black text-slate-800 text-sm">${title}</div><span class="text-[9px] font-black ${accent} uppercase tracking-wider">0</span></div><div class="text-[10px] text-slate-400 py-4">Belum ada mapping ${title}.</div></div>`;
     }
     const rows = safe.map((x, i) => {
         const medal = i === 0 ? '🏆' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `${i + 1}`));
-        const achClass = x.achievement >= 140 ? 'text-emerald-700' : x.achievement >= 100 ? 'text-emerald-600' : 'text-orange-600';
+        const achClass = x.achievement >= 130 ? 'text-emerald-700' : x.achievement >= 100 ? 'text-emerald-600' : 'text-orange-600';
         return `<div class="manager-ranking-row">
             <span class="manager-rank-badge ${i < 3 ? 'top' : ''}">${medal}</span>
             <div class="min-w-0 flex-1"><div class="manager-rank-name">${escapeHtml_(x.name)}</div><div class="manager-rank-meta">${x.stores} store · Rp ${formatCompactOfficial_(x.sales)} / Rp ${formatCompactOfficial_(x.target)}</div></div>
             <div class="manager-rank-ach ${achClass}">${x.achievement.toFixed(1)}%</div>
         </div>`;
     }).join('');
-    return `<div class="manager-ranking-card rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"><div class="flex items-center justify-between mb-1"><div class="font-black text-slate-800 text-sm">${title}</div><span class="text-[9px] font-black ${accent} uppercase tracking-wider">${safe.length} PEOPLE</span></div><div class="manager-ranking-list">${rows}</div></div>`;
+    const listClass = isBM ? 'manager-ranking-list' : 'manager-ranking-list manager-ranking-list-abm';
+    return `<div class="${cardClass} rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"><div class="flex items-center justify-between mb-1"><div class="font-black text-slate-800 text-sm">${title}</div><span class="text-[9px] font-black ${accent} uppercase tracking-wider">${safe.length} PEOPLE</span></div><div class="${listClass}">${rows}</div></div>`;
 }
 function renderOfficialRankingCards_(data) {
     const panel = ensureOfficialRankingPanel_();
@@ -918,14 +928,15 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
 /* ==========================================================================
    7. TABEL SALES STORE
    ========================================================================== */
-function getAchievementLevel_(achPercent, target) {
+function getAchievementLevel_(achPercent, target, salesOverride) {
     const ach = Number(achPercent || 0);
     const tgt = Number(target || 0);
-    const sales = tgt * ach / 100;
-    if (ach >= 140 && sales >= Math.max(tgt * 1.4, 700000000)) return { key: 'level4', label: 'Level 4', icon: '🏆', cls: 'bg-violet-50 text-violet-700 border-violet-200' };
-    if (ach >= 130) return { key: 'level3', label: 'Level 3', icon: '🥉', cls: 'bg-blue-50 text-blue-700 border-blue-200' };
-    if (ach >= 120) return { key: 'level2', label: 'Level 2', icon: '🥈', cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' };
-    if (ach >= 110) return { key: 'level1', label: 'Level 1', icon: '⭐', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+    const sales = salesOverride !== undefined ? Number(salesOverride || 0) : (tgt * ach / 100);
+    // Level 4 is achieved by either reaching 130% achievement OR reaching Rp700M sales.
+    if (ach >= 130 || sales >= 700000000) return { key: 'level4', label: 'Level 4', icon: '🏆', cls: 'bg-violet-50 text-violet-700 border-violet-200' };
+    if (ach >= 120) return { key: 'level3', label: 'Level 3', icon: '🥉', cls: 'bg-blue-50 text-blue-700 border-blue-200' };
+    if (ach >= 110) return { key: 'level2', label: 'Level 2', icon: '🥈', cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' };
+    if (ach >= 100) return { key: 'level1', label: 'Level 1', icon: '⭐', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
     return { key: 'not-achieve', label: 'Not achieve', icon: '○', cls: 'bg-slate-50 text-slate-500 border-slate-200' };
 }
 function getLevelRank_(levelKey) { return ({'not-achieve':0, level1:1, level2:2, level3:3, level4:4}[levelKey] ?? 0); }
@@ -960,6 +971,7 @@ function tableSortIcon_(key) {
     return state.dir === 'asc' ? '↑' : '↓';
 }
 function initSalesTableSort_() {
+    initStickySalesHeader_();
     if (salesTableSortBound) return;
     salesTableSortBound = true;
     document.addEventListener('click', e => {
@@ -981,18 +993,77 @@ function injectSalesDashboardTableStyles_() {
         #sales-table-head th[data-sort-key]{position:sticky;top:0;z-index:20;background:#f8fafc;cursor:pointer;user-select:none;white-space:nowrap;box-shadow:inset 0 -1px 0 #e2e8f0}
         #sales-table-head th[data-sort-key]:hover{background:#f1f5f9}
         .table-sort-icon{display:inline-block;margin-left:5px;font-size:10px;color:#94a3b8}
+        .sales-table-sticky-clone{position:fixed;top:0;z-index:9999;display:none;pointer-events:auto;background:#f8fafc;box-shadow:0 2px 8px rgba(15,23,42,.10);overflow:hidden}
+        .sales-table-sticky-clone table{width:100%;table-layout:fixed;border-collapse:collapse}
+        .sales-table-sticky-clone th{background:#f8fafc}
         .manager-ranking-card{height:246px;overflow:hidden}
         .manager-ranking-list{display:flex;flex-direction:column}
-        .manager-ranking-row{height:17px;min-height:17px;display:flex;align-items:center;gap:5px;border-bottom:1px solid #f1f5f9;line-height:1;overflow:hidden}
-        .manager-rank-badge{width:17px;height:17px;min-width:17px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;background:#f8fafc;color:#64748b}
+        .manager-ranking-list-abm{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;align-content:start}
+        .manager-ranking-row{height:48px;min-height:48px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f1f5f9;line-height:1.05;overflow:hidden}
+        .manager-ranking-abm .manager-ranking-row{height:34px;min-height:34px;gap:5px}
+        .manager-rank-badge{width:24px;height:24px;min-width:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;background:#f8fafc;color:#64748b}
+        .manager-ranking-abm .manager-rank-badge{width:19px;height:19px;min-width:19px;font-size:8px;border-radius:5px}
         .manager-rank-badge.top{background:#fffbeb;color:#d97706}
-        .manager-rank-name{font-size:8.5px;font-weight:900;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .manager-rank-meta{font-size:6.5px;font-weight:700;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .manager-rank-ach{font-size:9px;font-weight:900;white-space:nowrap}
+        .manager-rank-name{font-size:12px;font-weight:900;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .manager-rank-meta{font-size:8px;font-weight:700;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .manager-rank-ach{font-size:12px;font-weight:900;white-space:nowrap}
+        .manager-ranking-abm .manager-rank-name{font-size:10px}
+        .manager-ranking-abm .manager-rank-meta{font-size:7.5px}
+        .manager-ranking-abm .manager-rank-ach{font-size:9.5px}
         .achievement-level-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border-radius:8px;border-width:1px;font-size:10px;font-weight:900;white-space:nowrap}
     `;
     document.head.appendChild(style);
 }
+function ensureStickySalesHeader_() {
+    const thead = document.getElementById('sales-table-head');
+    const table = thead?.closest('table');
+    if (!thead || !table) return;
+    let clone = document.getElementById('sales-table-sticky-clone');
+    if (!clone) {
+        clone = document.createElement('div');
+        clone.id = 'sales-table-sticky-clone';
+        clone.className = 'sales-table-sticky-clone';
+        document.body.appendChild(clone);
+        clone.addEventListener('click', e => {
+            const th = e.target.closest('[data-sort-key]');
+            if (!th) return;
+            const key = th.dataset.sortKey;
+            const sourceKey = isOfficialSource_() ? 'OFFICIAL_IT' : 'SUBMISSION';
+            const state = salesTableSortState[sourceKey] || (salesTableSortState[sourceKey] = { key: 'store', dir: 'asc' });
+            if (state.key === key) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+            else { state.key = key; state.dir = key === 'store' ? 'asc' : 'desc'; }
+            applySalesFilters();
+        });
+    }
+
+    const tableRect = table.getBoundingClientRect();
+    const headRect = thead.getBoundingClientRect();
+    const headHeight = Math.max(34, Math.ceil(headRect.height));
+    const tableVisibleBelow = tableRect.bottom > headHeight;
+    const shouldShow = headRect.top < 0 && tableVisibleBelow;
+
+    if (!shouldShow) {
+        clone.style.display = 'none';
+        return;
+    }
+
+    const sourceCells = [...thead.querySelectorAll('th')];
+    const widths = sourceCells.map(c => Math.max(1, c.getBoundingClientRect().width));
+    clone.style.left = `${Math.max(0, tableRect.left)}px`;
+    clone.style.width = `${Math.max(1, tableRect.width)}px`;
+    clone.style.height = `${headHeight}px`;
+    clone.innerHTML = `<table><colgroup>${widths.map(w => `<col style=\"width:${w}px\">`).join('')}</colgroup><thead>${thead.innerHTML}</thead></table>`;
+    clone.style.display = 'block';
+}
+function initStickySalesHeader_() {
+    if (window.__salesStickyHeaderBound) return;
+    window.__salesStickyHeaderBound = true;
+    const refresh = () => window.requestAnimationFrame(ensureStickySalesHeader_);
+    window.addEventListener('scroll', refresh, { passive: true });
+    window.addEventListener('resize', refresh);
+    document.addEventListener('salesTableRendered', refresh);
+}
+
 function renderSalesTableFiltered(data) {
     const tbody = document.getElementById('sales-table-body');
     const count = document.getElementById('table-record-count');
@@ -1016,6 +1087,7 @@ function renderSalesTableFiltered(data) {
     }
     if (!data.length) {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-sm font-bold text-slate-400">Tidak ada data store untuk filter ini</td></tr>`;
+        document.dispatchEvent(new Event('salesTableRendered'));
         return;
     }
 
@@ -1036,6 +1108,7 @@ function renderSalesTableFiltered(data) {
             <td class="px-4 py-3 text-center text-sm font-black ${projCls}">${proj.toFixed(2)}%</td>
         </tr>`;
     }).join('');
+    document.dispatchEvent(new Event('salesTableRendered'));
 }
 /* ==========================================================================
    8. MODAL HANDLER & UPLOAD PDF OFFICIAL IT REPORT
