@@ -18,6 +18,8 @@ let officialDataHealth = {
     totalSourceRows: 0,
     validSourceRows: 0,
     selectedMonthRows: 0,
+    comparisonMatchedRows: 0,
+    comparisonMissingRows: 0,
     invalidDateRows: 0,
     invalidStoreRows: 0,
     missingHeaders: []
@@ -144,81 +146,49 @@ function resetSpecificSlicer_() {
 }
 
 function normalizeStoreKey_(value) {
-    return String(value ?? '').trim().toUpperCase().replace(/\s+/g, '');
+    const raw = String(value ?? '').trim().toUpperCase().replace(/\s+/g, '');
+    if (!raw) return '';
+    return /^\d+$/.test(raw) ? raw.replace(/^0+(?=\d)/, '') : raw;
 }
+function displayStoreCode_(value) { return String(value ?? '').trim(); }
 
 function getSlicerReferenceData_() {
-    // Store Code is the identity for both sources. Prefer the Official IT
-    // hierarchy when available because BM/ABM there is maintained in O/P.
-    const sources = [];
-    if (officialSlicerReference.length) sources.push(officialSlicerReference);
-    if (salesData.length) sources.push(salesData);
-    if (submissionComparisonData.length) sources.push(submissionComparisonData);
-
     const map = new Map();
-    sources.forEach(source => source.forEach(item => {
-        const rawCode = String(item.storeCode || '').trim();
-        const code = normalizeStoreKey_(rawCode || item.store);
-        const name = String(item.store || item.storeCode || '').trim();
-        if (!code && !name) return;
-        const key = code || name.toUpperCase();
-        const existing = map.get(key) || { storeCode: rawCode || code, store: name, bm: '-', abm: '-' };
-        if (rawCode && (!existing.storeCode || normalizeStoreKey_(existing.storeCode) === normalizeStoreKey_(existing.store))) existing.storeCode = rawCode;
-        if (name && (!existing.store || existing.store === existing.storeCode)) existing.store = name;
-        if (item.bm && item.bm !== '-') existing.bm = String(item.bm).trim();
-        if (item.abm && item.abm !== '-') existing.abm = String(item.abm).trim();
-        map.set(key, existing);
-    }));
+    const add = item => {
+        const rawCode=displayStoreCode_(item.storeCode||'');
+        const codeKey=normalizeStoreKey_(rawCode||item.store);
+        const name=String(item.store||'').trim();
+        if(!codeKey&&!name)return;
+        const key=codeKey||name.toUpperCase();
+        const x=map.get(key)||{storeCode:rawCode||'',store:name,bm:'-',abm:'-'};
+        if(rawCode&&!x.storeCode)x.storeCode=rawCode;
+        if(name&&(!x.store||x.store==='-'))x.store=name;
+        if(item.bm&&String(item.bm).trim()!=='-')x.bm=String(item.bm).trim();
+        if(item.abm&&String(item.abm).trim()!=='-')x.abm=String(item.abm).trim();
+        map.set(key,x);
+    };
+    salesData.forEach(add); officialSlicerReference.forEach(add); submissionComparisonData.forEach(add);
     return [...map.values()];
 }
 function populateSpecificSlicer_() {
-    const kategori = document.getElementById('slicerKategoriSales');
-    const spesifik = document.getElementById('slicerSpesifikSales');
-    if (!kategori || !spesifik) return;
-
-    const type = kategori.value || 'all';
-    const previous = spesifik.value || 'all';
-    spesifik.innerHTML = '<option value="all">-- Semua --</option>';
-
-    if (type === 'all') {
-        spesifik.value = 'all';
-        spesifik.disabled = true;
-        spesifik.classList.add('bg-slate-100', 'cursor-not-allowed');
-        return;
-    }
-
-    const values = new Map();
-    getSlicerReferenceData_().forEach(item => {
-        let value = '', label = '', displayCode = '';
-        if (type === 'store') {
-            displayCode = String(item.storeCode || '').trim();
-            value = normalizeStoreKey_(displayCode || item.store);
-            label = String(item.store || '').trim();
-            if (!displayCode) displayCode = value;
-        } else if (type === 'bm') {
-            value = String(item.bm || '').trim(); label = value;
-        } else if (type === 'abm') {
-            value = String(item.abm || '').trim(); label = value;
-        }
-        if (!value || value === '-' || !label || label === '-') return;
-        const key = value.toLowerCase();
-        if (!values.has(key)) values.set(key, { value, label, displayCode });
+    const kategori=document.getElementById('slicerKategoriSales'), spesifik=document.getElementById('slicerSpesifikSales');
+    if(!kategori||!spesifik)return;
+    const type=kategori.value||'all', previous=spesifik.value||'all';
+    spesifik.innerHTML='<option value="all">-- Semua --</option>';
+    if(type==='all'){spesifik.value='all';spesifik.disabled=true;spesifik.classList.add('bg-slate-100','cursor-not-allowed');return;}
+    const values=new Map();
+    getSlicerReferenceData_().forEach(item=>{
+        let value='',label='',displayCode='';
+        if(type==='store'){displayCode=displayStoreCode_(item.storeCode||'');value=normalizeStoreKey_(item.storeCode||item.store);label=String(item.store||'').trim();if(!displayCode)displayCode=value;}
+        else if(type==='bm'){value=String(item.bm||'').trim();label=value;}
+        else if(type==='abm'){value=String(item.abm||'').trim();label=value;}
+        if(!value||value==='-'||!label||label==='-')return;
+        const key=value.toLowerCase(); if(!values.has(key))values.set(key,{value,label,displayCode});
     });
-
-    [...values.values()].sort((a,b) => (type === 'store' ? a.label : a.label).localeCompare((type === 'store' ? b.label : b.label), 'id')).forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.value;
-        option.textContent = type === 'store' ? `${item.displayCode} - ${item.label}` : item.label;
-        spesifik.appendChild(option);
-    });
-
-    spesifik.disabled = values.size === 0;
-    spesifik.classList.toggle('bg-slate-100', values.size === 0);
-    spesifik.classList.toggle('cursor-not-allowed', values.size === 0);
-    if ([...spesifik.options].some(o => o.value.toLowerCase() === previous.toLowerCase())) spesifik.value = previous;
-    else spesifik.value = 'all';
+    [...values.values()].sort((a,b)=>a.label.localeCompare(b.label,'id',{numeric:true,sensitivity:'base'})).forEach(item=>{const o=document.createElement('option');o.value=item.value;o.textContent=type==='store'?`${item.displayCode} - ${item.label}`:item.label;spesifik.appendChild(o);});
+    spesifik.disabled=values.size===0; spesifik.classList.toggle('bg-slate-100',values.size===0); spesifik.classList.toggle('cursor-not-allowed',values.size===0);
+    spesifik.value=[...spesifik.options].some(o=>o.value.toLowerCase()===previous.toLowerCase())?previous:'all';
 }
-
 
 
 /* ==========================================================================
@@ -233,17 +203,20 @@ async function ensureOfficialSlicerReference_() {
         const text = await res.text();
         const rows = parseCSVRecords_(text);
         if (rows.length < 2) return;
-        const headers = rows[0];
-        const fallback = { storeCode: 0, storeName: 1, bm: 14, abm: 15 };
+        let headerRowIdx=rows.findIndex(r=>{const h=r.map(normalizeHeader_);return h.some(x=>OFFICIAL_HEADERS.storeCode.map(normalizeHeader_).includes(x))&&h.some(x=>OFFICIAL_HEADERS.storeName.map(normalizeHeader_).includes(x));});
+        if(headerRowIdx<0)headerRowIdx=0;
+        const headers=rows[headerRowIdx];
+        const fallback={storeCode:0,storeName:1,bm:14,abm:15};
         const ref = [];
-        for (let r = 1; r < rows.length; r++) {
+        for (let r = headerRowIdx + 1; r < rows.length; r++) {
             const row = rows[r];
             if (!row.some(v => String(v || '').trim() !== '')) continue;
-            const code = normalizeStoreKey_(getOfficialField_(row, headers, OFFICIAL_HEADERS.storeCode, fallback.storeCode));
+            const rawCode=String(getOfficialField_(row, headers, OFFICIAL_HEADERS.storeCode, fallback.storeCode)||'').trim();
+            const code=normalizeStoreKey_(rawCode);
             const store = String(getOfficialField_(row, headers, OFFICIAL_HEADERS.storeName, fallback.storeName) || '').trim();
             if (!code && !store) continue;
             ref.push({
-                storeCode: code || store.toUpperCase(),
+                storeCode: rawCode || code || store.toUpperCase(),
                 store: store || code,
                 bm: String(getOfficialField_(row, headers, OFFICIAL_HEADERS.bm, fallback.bm) || '').trim() || '-',
                 abm: String(getOfficialField_(row, headers, OFFICIAL_HEADERS.abm, fallback.abm) || '').trim() || '-'
@@ -289,7 +262,7 @@ async function fetchSalesData() {
         salesData = [];
         officialRawData = [];
         if (isOfficialSource_()) {
-            officialDataHealth = { totalSourceRows: 0, validSourceRows: 0, selectedMonthRows: 0, invalidDateRows: 0, invalidStoreRows: 0, missingHeaders: [] };
+            officialDataHealth = { totalSourceRows: 0, validSourceRows: 0, selectedMonthRows: 0, comparisonMatchedRows: 0, comparisonMissingRows: 0, invalidDateRows: 0, invalidStoreRows: 0, missingHeaders: [] };
         }
         renderSalesLoadError_(error.message || 'Gagal mengambil data.');
         applySalesFilters();
@@ -327,9 +300,16 @@ async function fetchSubmissionComparisonData_(selectedKey) {
 
 
 function findHeaderIndexSubmission_(headers, aliases) {
-    const normalized = headers.map(h => normalizeHeader_(h));
-    for (const alias of aliases) {
-        const idx = normalized.indexOf(normalizeHeader_(alias));
+    const normalized = headers.map(normalizeHeader_);
+    const aliasNorm = aliases.map(normalizeHeader_);
+    for (const alias of aliasNorm) {
+        const idx = normalized.indexOf(alias);
+        if (idx !== -1) return idx;
+    }
+    // Some exports append units/periods to headers (e.g. "MTD Sales LY").
+    for (const alias of aliasNorm) {
+        if (!alias || alias.length < 3) continue;
+        const idx = normalized.findIndex(h => h.includes(alias) || alias.includes(h));
         if (idx !== -1) return idx;
     }
     return -1;
@@ -375,12 +355,13 @@ function parseSalesCSV(text, sourceMode) {
     for (let i=headerRowIdx+1;i<records.length;i++) {
         const row=records[i]; if(!row.some(v=>String(v||'').trim()!=='')) continue;
         const storeName=getStr('store',row); if(!storeName || storeName==='-') continue;
-        const storeCode=normalizeStoreKey_(getStr('storeCode',row));
+        const rawStoreCode=getStr('storeCode',row);
+        const storeCode=normalizeStoreKey_(rawStoreCode);
         const sales=getNum('mtdSales',row), target=getNum('mtdTarget',row);
         let ach=getNum('achievement',row); if(ach===0 && target>0) ach=sales/target*100;
         const qty=getNum('qtySold',row), trx=getNum('trxCount',row);
         result.push({
-            storeCode, store:storeName, bm:getStr('bm',row)||'-', abm:getStr('abm',row)||'-',
+            storeCode: rawStoreCode, store:storeName, bm:getStr('bm',row)||'-', abm:getStr('abm',row)||'-',
             mtdSales:sales, mtdTarget:target, bestEstimate:getStr('bestEstimate',row)||'-',
             achPercent:ach, salesLY:getNum('salesLY',row), sssg:getNum('sssg',row), projSssg:getNum('projSssg',row),
             qtySold:qty, trxCount:trx, atv:trx?sales/trx:0, upt:trx?qty/trx:0
@@ -419,39 +400,25 @@ function parseCSVLine(textLine) {
    4. SYSTEM FILTERING SALES
    ========================================================================== */
 function applySalesFilters() {
-    const kategori = document.getElementById('slicerKategoriSales')?.value || 'all';
-    const spesifik = document.getElementById('slicerSpesifikSales')?.value || 'all';
-    let filteredSales = [...salesData];
-
-    if (kategori !== 'all' && spesifik !== 'all') {
-        const selected = String(spesifik).trim();
-        const selectedLower = selected.toLowerCase();
-        const selectedNorm = normalizeStoreKey_(selected).toLowerCase();
-        filteredSales = salesData.filter(item => {
-            if (kategori === 'store') {
-                const code = normalizeStoreKey_(item.storeCode || '').toLowerCase();
-                const name = String(item.store || '').trim().toLowerCase();
-                return code === selectedNorm || name === selectedLower;
-            }
-            if (kategori === 'bm') return String(item.bm || '').trim().toLowerCase() === selectedLower;
-            if (kategori === 'abm') return String(item.abm || '').trim().toLowerCase() === selectedLower;
+    const kategori=document.getElementById('slicerKategoriSales')?.value||'all';
+    const spesifik=document.getElementById('slicerSpesifikSales')?.value||'all';
+    let filteredSales=[...salesData];
+    if(kategori!=='all'&&spesifik!=='all'){
+        const selected=String(spesifik).trim(), lower=selected.toLowerCase(), norm=normalizeStoreKey_(selected).toLowerCase();
+        filteredSales=salesData.filter(item=>{
+            if(kategori==='store')return normalizeStoreKey_(item.storeCode||'').toLowerCase()===norm||String(item.store||'').trim().toLowerCase()===lower;
+            if(kategori==='bm')return String(item.bm||'').trim().toLowerCase()===lower;
+            if(kategori==='abm')return String(item.abm||'').trim().toLowerCase()===lower;
             return true;
         });
     }
-
-    if (isOfficialSource_()) {
-        setOfficialRankingVisibility_(true);
-        renderOfficialDashboard_(filteredSales);
-    } else {
-        setOfficialRankingVisibility_(true);
-        renderSubmissionRankingCards_(filteredSales);
-        renderSalesSummaryFiltered(filteredSales);
-        renderSalesTableFiltered(filteredSales);
-        if (currentSalesChartMode === 'mtd') renderSalesChartFiltered(filteredSales);
-        else fetchAndRenderTrendChart(kategori, spesifik);
+    if(isOfficialSource_()){
+        setOfficialRankingVisibility_(true); renderOfficialDashboard_(filteredSales);
+    }else{
+        setOfficialRankingVisibility_(true); renderSubmissionRankingCards_(filteredSales); renderSalesSummaryFiltered(filteredSales); renderSalesTableFiltered(filteredSales);
+        if(currentSalesChartMode==='mtd')renderSalesChartFiltered(filteredSales); else fetchAndRenderTrendChart(kategori,spesifik);
     }
 }
-
 
 window.setSalesChartMode = function(mode) {
     currentSalesChartMode = mode;
@@ -560,7 +527,8 @@ function parseOfficialITCSV_(text) {
         const row=rows[r]; if(!row.some(v=>String(v||'').trim()!==''))continue; officialDataHealth.totalSourceRows++;
         const date=parseOfficialDate_(getOfficialField_(row,headers,OFFICIAL_HEADERS.date,fallback.date));
         if(!date){officialDataHealth.invalidDateRows++;continue;}
-        const code=normalizeStoreKey_(getOfficialField_(row,headers,OFFICIAL_HEADERS.storeCode,fallback.storeCode));
+        const rawCode=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.storeCode,fallback.storeCode)||'').trim();
+        const code=normalizeStoreKey_(rawCode);
         const store=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.storeName,fallback.storeName)||'').trim().replace(/\s+/g,' ');
         if(!code&&!store){officialDataHealth.invalidStoreRows++;continue;}
         const sales=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.netSales,fallback.netSales));
@@ -571,12 +539,12 @@ function parseOfficialITCSV_(text) {
         const bm=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.bm,fallback.bm)||'').trim()||'-';
         const abm=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.abm,fallback.abm)||'').trim()||'-';
         officialDataHealth.validSourceRows++;
-        const raw={storeCode:code||store.toUpperCase(),store:store||code,date,netSales:sales,rawTarget,reportedAch,qtySold:qty,trxCount:trx,bm,abm};
+        const raw={storeCode:rawCode||code||store.toUpperCase(),store:store||rawCode||code,date,netSales:sales,rawTarget,reportedAch,qtySold:qty,trxCount:trx,bm,abm};
         officialRawData.push(raw);
         if(date.getMonth()!==sel.month||date.getFullYear()!==sel.year)continue;
         officialDataHealth.selectedMonthRows++;
         const key=code||store.toUpperCase();
-        if(!map.has(key))map.set(key,{storeCode:code||store.toUpperCase(),store:store||code,bm:'-',abm:'-',mtdSales:0,mtdTarget:0,qtySold:0,trxCount:0,latestDate:null,latestReportedAch:0});
+        if(!map.has(key))map.set(key,{storeCode:rawCode||code||store.toUpperCase(),store:store||rawCode||code,bm:'-',abm:'-',mtdSales:0,mtdTarget:0,qtySold:0,trxCount:0,latestDate:null,latestReportedAch:0});
         const item=map.get(key); if(store)item.store=store; if(bm!=='-')item.bm=bm;if(abm!=='-')item.abm=abm;
         item.mtdSales+=sales; item.qtySold+=qty; item.trxCount+=trx;
         // Official IT target/achievement fields are retained only as raw audit data.
@@ -593,31 +561,31 @@ function parseOfficialITCSV_(text) {
         return item;
     });
 }
-function findSubmissionForOfficial_(item) {
-    const code=normalizeStoreKey_(item.storeCode), name=String(item.store||'').trim().toLowerCase();
-    return submissionComparisonData.find(s=>{
-        const sc=normalizeStoreKey_(s.storeCode), sn=String(s.store||'').trim().toLowerCase();
-        return (code&&sc&&code===sc)||(name&&sn&&name===sn);
-    })||null;
+function normalizeStoreNameKey_(value){
+    return String(value??'').toLowerCase().replace(/[^a-z0-9]+/g,'').replace(/^mrdiy/,'');
 }
-function applyOfficialComparisonFallbacks_() {
-    // Official IT = authoritative MTD Sales + BM/ABM hierarchy.
-    // Store Submission = authoritative MTD Target, Sales LY and Projection SSSG.
+function findSubmissionForOfficial_(item){
+    const code=normalizeStoreKey_(item.storeCode), name=String(item.store||'').trim().toLowerCase(), nameKey=normalizeStoreNameKey_(item.store);
+    let found=submissionComparisonData.find(s=>code&&normalizeStoreKey_(s.storeCode)===code);
+    if(!found&&name)found=submissionComparisonData.find(s=>String(s.store||'').trim().toLowerCase()===name);
+    if(!found&&nameKey)found=submissionComparisonData.find(s=>normalizeStoreNameKey_(s.store)===nameKey);
+    return found||null;
+}
+function applyOfficialComparisonFallbacks_(){
     salesData.forEach(item=>{
         const sub=findSubmissionForOfficial_(item);
-        item.mtdTarget=sub ? (Number(sub.mtdTarget)||0) : 0;
-        item.achPercent=item.mtdTarget>0 ? (Number(item.mtdSales)||0)/item.mtdTarget*100 : 0;
-        item.salesLY=sub ? (Number(sub.salesLY)||0) : 0;
-        item.projSssg=sub ? (Number(sub.projSssg)||0) : 0;
+        if(sub) officialDataHealth.comparisonMatchedRows++; else officialDataHealth.comparisonMissingRows++;
+        item.mtdTarget=sub?Number(sub.mtdTarget||0):0;
+        item.achPercent=item.mtdTarget>0?Number(item.mtdSales||0)/item.mtdTarget*100:0;
+        item.salesLY=sub?Number(sub.salesLY||0):0;
+        if(item.salesLY>0){item.sssg=(Number(item.mtdSales||0)-item.salesLY)/item.salesLY*100;item.projSssg=sub?Number(sub.projSssg||0):0;}
+        else{item.sssg=0;item.projSssg=0;}
     });
 }
-function getOfficialComparison_(data) {
+function getOfficialComparison_(data){
     let totalSales=0,totalTarget=0,totalLY=0,totalProj=0,projCount=0;
-    data.forEach(item=>{totalSales+=item.mtdSales||0;totalTarget+=item.mtdTarget||0;const sub=findSubmissionForOfficial_(item);if(sub){totalLY+=sub.salesLY||0;if(Number.isFinite(sub.projSssg)){totalProj+=sub.projSssg;projCount++;}}});
-    const achievement=totalTarget>0?totalSales/totalTarget*100:0;
-    const achSssg=totalLY>0?(totalSales-totalLY)/totalLY*100:0;
-    const projSssg=projCount?totalProj/projCount:0;
-    return {totalSales,totalTarget,totalLY,achievement,achSssg,projSssg};
+    data.forEach(item=>{totalSales+=Number(item.mtdSales||0);totalTarget+=Number(item.mtdTarget||0);const ly=Number(item.salesLY||0);totalLY+=ly;if(ly>0&&Number.isFinite(Number(item.projSssg))){totalProj+=Number(item.projSssg);projCount++;}});
+    return {totalSales,totalTarget,totalLY,achievement:totalTarget>0?totalSales/totalTarget*100:0,achSssg:totalLY>0?(totalSales-totalLY)/totalLY*100:0,projSssg:projCount?totalProj/projCount:0};
 }
 function setSummaryValue_(id,value,className){const el=document.getElementById(id);if(!el)return;el.innerText=value;if(className)el.className=className;}
 function renderOfficialSummary_(data){
@@ -708,7 +676,7 @@ function renderOfficialDataHealth_(){
     if(!node&&count?.parentElement){node=document.createElement('div');node.id='official-it-data-health';node.className='mt-2 text-[10px] font-semibold';count.parentElement.appendChild(node);}if(!node)return;
     const h=officialDataHealth;
     node.className='mt-2 text-[10px] font-semibold '+((h.invalidDateRows||h.invalidStoreRows||h.missingHeaders.length)?'text-amber-500':'text-slate-400');
-    node.textContent=h.missingHeaders.length?`Format Official IT tidak sesuai. Kolom wajib hilang: ${h.missingHeaders.join(', ')}.`:`Audit: ${h.selectedMonthRows} row bulan terpilih • ${h.validSourceRows}/${h.totalSourceRows} row source valid${h.invalidDateRows||h.invalidStoreRows?` • ${h.invalidDateRows} tanggal invalid • ${h.invalidStoreRows} store invalid`:''}.`;
+    node.textContent=h.missingHeaders.length?`Format Official IT tidak sesuai. Kolom wajib hilang: ${h.missingHeaders.join(', ')}.`:`Audit: ${h.selectedMonthRows} row bulan terpilih • ${h.validSourceRows}/${h.totalSourceRows} row source valid • ${h.comparisonMatchedRows||0} matched submission • ${h.comparisonMissingRows||0} tanpa pasangan${h.invalidDateRows||h.invalidStoreRows?` • ${h.invalidDateRows} tanggal invalid • ${h.invalidStoreRows} store invalid`:''}.`;
 }
 function renderOfficialTable_(data){
     // Official IT table intentionally uses the same information layout as Store Submission.
@@ -756,44 +724,12 @@ function renderSalesLoadError_(message){if(salesChartInstance){salesChartInstanc
 /* ==========================================================================
    5. SUMMARY METRICS & CARDS
    ========================================================================== */
-function renderSalesSummaryFiltered(data) {
-    let totalSales = 0, totalTarget = 0, totalLY = 0;
-    let totalSSSG = 0, totalProjSSSG = 0;
-    let count = 0;
-
-    data.forEach(item => {
-        totalSales += item.mtdSales || 0;
-        totalTarget += item.mtdTarget || 0;
-        totalLY += item.salesLY || 0;
-        totalSSSG += item.sssg || 0;
-        totalProjSSSG += item.projSssg || 0;
-        count++;
-    });
-    
-    const avgAch = totalTarget > 0 ? ((totalSales / totalTarget) * 100).toFixed(1) : 0;
-    const avgSSSG = count > 0 ? (totalSSSG / count) : 0;
-    const avgProjSSSG = count > 0 ? (totalProjSSSG / count) : 0;
-    
-    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
-    
-    setTxt('summary-total-sales', "Rp " + totalSales.toLocaleString('id-ID'));
-    setTxt('summary-total-target', "Rp " + totalTarget.toLocaleString('id-ID'));
-    setTxt('summary-avg-ach', avgAch + "%");
-    setTxt('summary-total-ly', "Rp " + totalLY.toLocaleString('id-ID'));
-    
-    const elSSSG = document.getElementById('summary-sssg');
-    const elProjSSSG = document.getElementById('summary-proj-sssg');
-    
-    if (elSSSG) {
-        elSSSG.innerText = avgSSSG.toFixed(2) + "%";
-        elSSSG.className = avgSSSG >= 0 ? "text-xl font-black text-emerald-500" : "text-xl font-black text-rose-500";
-    }
-    if (elProjSSSG) {
-        elProjSSSG.innerText = avgProjSSSG.toFixed(2) + "%";
-        elProjSSSG.className = avgProjSSSG >= 0 ? "text-xl font-black text-amber-500" : "text-xl font-black text-rose-500";
-    }
+function renderSalesSummaryFiltered(data){
+    let totalSales=0,totalTarget=0,totalLY=0,totalProj=0,projCount=0;
+    data.forEach(i=>{totalSales+=Number(i.mtdSales||0);totalTarget+=Number(i.mtdTarget||0);totalLY+=Number(i.salesLY||0);if(Number(i.salesLY||0)>0&&Number.isFinite(Number(i.projSssg))){totalProj+=Number(i.projSssg);projCount++;}});
+    const ach=totalTarget>0?totalSales/totalTarget*100:0,sssg=totalLY>0?(totalSales-totalLY)/totalLY*100:0,proj=projCount?totalProj/projCount:0;
+    const set=(id,v)=>{const e=document.getElementById(id);if(e)e.innerText=v;};set('summary-total-sales',`Rp ${Math.round(totalSales).toLocaleString('id-ID')}`);set('summary-total-target',`Rp ${Math.round(totalTarget).toLocaleString('id-ID')}`);set('summary-avg-ach',`${ach.toFixed(1)}%`);set('summary-total-ly',`Rp ${Math.round(totalLY).toLocaleString('id-ID')}`);set('summary-sssg',`${sssg.toFixed(2)}%`);set('summary-proj-sssg',`${proj.toFixed(2)}%`);
 }
-
 /* ==========================================================================
    6. GRAFIK (WARNA ROSE RED & ORANGE MENYALA + LABEL PERSENTASE POLYGON)
    ========================================================================== */
@@ -928,17 +864,14 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
 /* ==========================================================================
    7. TABEL SALES STORE
    ========================================================================== */
-function getAchievementLevel_(achPercent, target, salesOverride) {
-    const ach = Number(achPercent || 0);
-    const tgt = Number(target || 0);
-    const sales = salesOverride !== undefined ? Number(salesOverride || 0) : (tgt * ach / 100);
-    // Level 4 requires BOTH reaching 130% achievement AND reaching Rp700M sales.
-    const level4MinimumSales = 700000000;
-    if (ach >= 130 && sales >= level4MinimumSales) return { key: 'level4', label: 'Level 4', icon: '🏆', cls: 'bg-violet-50 text-violet-700 border-violet-200' };
-    if (ach >= 120) return { key: 'level3', label: 'Level 3', icon: '🥉', cls: 'bg-blue-50 text-blue-700 border-blue-200' };
-    if (ach >= 110) return { key: 'level2', label: 'Level 2', icon: '🥈', cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' };
-    if (ach >= 100) return { key: 'level1', label: 'Level 1', icon: '⭐', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
-    return { key: 'not-achieve', label: 'Not achieve', icon: '○', cls: 'bg-slate-50 text-slate-500 border-slate-200' };
+function getAchievementLevel_(achPercent,target,salesOverride){
+    const ach=Number(achPercent||0), tgt=Number(target||0), sales=salesOverride!==undefined?Number(salesOverride||0):tgt*ach/100;
+    const level4MinimumSales=Math.max(tgt*1.30,700000000);
+    if(ach>=130&&sales>=level4MinimumSales)return {key:'level4',label:'Level 4',icon:'🏆',cls:'bg-violet-50 text-violet-700 border-violet-200'};
+    if(ach>=120)return {key:'level3',label:'Level 3',icon:'🥉',cls:'bg-blue-50 text-blue-700 border-blue-200'};
+    if(ach>=110)return {key:'level2',label:'Level 2',icon:'🥈',cls:'bg-cyan-50 text-cyan-700 border-cyan-200'};
+    if(ach>=100)return {key:'level1',label:'Level 1',icon:'⭐',cls:'bg-amber-50 text-amber-700 border-amber-200'};
+    return {key:'not-achieve',label:'Not achieve',icon:'○',cls:'bg-slate-50 text-slate-500 border-slate-200'};
 }
 function getLevelRank_(levelKey) { return ({'not-achieve':0, level1:1, level2:2, level3:3, level4:4}[levelKey] ?? 0); }
 function getTableSortValue_(item, key) {
@@ -950,7 +883,7 @@ function getTableSortValue_(item, key) {
     if (key === 'salesLY') return Number(item.salesLY || 0);
     if (key === 'sssg') return Number(item.sssg || 0);
     if (key === 'projSssg') return Number(item.projSssg || 0);
-    if (key === 'level') return getLevelRank_(getAchievementLevel_(item.achPercent, item.mtdTarget, item.mtdSales).key);
+    if (key === 'level') return getLevelRank_(getAchievementLevel_(item.achPercent,item.mtdTarget,item.mtdSales).key);
     return '';
 }
 function sortSalesTableData_(data) {
@@ -986,85 +919,33 @@ function initSalesTableSort_() {
         applySalesFilters();
     });
 }
-function injectSalesDashboardTableStyles_() {
-    if (document.getElementById('sales-dashboard-table-style')) return;
-    const style = document.createElement('style');
-    style.id = 'sales-dashboard-table-style';
-    style.textContent = `
-        #sales-table-head th[data-sort-key]{position:sticky;top:0;z-index:20;background:#f8fafc;cursor:pointer;user-select:none;white-space:nowrap;box-shadow:inset 0 -1px 0 #e2e8f0}
-        #sales-table-head th[data-sort-key]:hover{background:#f1f5f9}
-        .table-sort-icon{display:inline-block;margin-left:5px;font-size:10px;color:#94a3b8}
-        .sales-table-sticky-clone{position:fixed;top:0;z-index:9999;display:none;pointer-events:auto;background:#f8fafc;box-shadow:0 2px 8px rgba(15,23,42,.10);overflow:hidden}
-        .sales-table-sticky-clone table{width:100%;table-layout:fixed;border-collapse:collapse}
-        .sales-table-sticky-clone th{background:#f8fafc}
-        .manager-ranking-card{height:246px;overflow:hidden}
-        .manager-ranking-list{display:flex;flex-direction:column}
-        .manager-ranking-list-abm{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;align-content:start}
-        .manager-ranking-row{height:48px;min-height:48px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f1f5f9;line-height:1.05;overflow:hidden}
-        .manager-ranking-abm .manager-ranking-row{height:34px;min-height:34px;gap:5px}
-        .manager-rank-badge{width:24px;height:24px;min-width:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;background:#f8fafc;color:#64748b}
-        .manager-ranking-abm .manager-rank-badge{width:19px;height:19px;min-width:19px;font-size:8px;border-radius:5px}
-        .manager-rank-badge.top{background:#fffbeb;color:#d97706}
-        .manager-rank-name{font-size:12px;font-weight:900;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .manager-rank-meta{font-size:8px;font-weight:700;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .manager-rank-ach{font-size:12px;font-weight:900;white-space:nowrap}
-        .manager-ranking-abm .manager-rank-name{font-size:10px}
-        .manager-ranking-abm .manager-rank-meta{font-size:7.5px}
-        .manager-ranking-abm .manager-rank-ach{font-size:9.5px}
-        .achievement-level-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border-radius:8px;border-width:1px;font-size:10px;font-weight:900;white-space:nowrap}
-    `;
-    document.head.appendChild(style);
+function injectSalesDashboardTableStyles_(){
+    if(document.getElementById('sales-dashboard-table-style'))return;
+    const style=document.createElement('style');style.id='sales-dashboard-table-style';style.textContent=`
+#sales-table-head th[data-sort-key]{position:sticky;top:0;z-index:30;background:#f8fafc;cursor:pointer;user-select:none;white-space:nowrap;box-shadow:inset 0 -1px 0 #e2e8f0}.table-sort-icon{display:inline-block;margin-left:5px;font-size:10px;color:#94a3b8}.sales-table-sticky-clone{position:fixed;top:0;z-index:9999;display:none;pointer-events:auto;background:#f8fafc;box-shadow:0 2px 8px rgba(15,23,42,.12);overflow:hidden}.sales-table-sticky-clone table{width:100%;table-layout:fixed;border-collapse:collapse;margin:0}.sales-table-sticky-clone th{background:#f8fafc;box-sizing:border-box}.manager-ranking-card{height:246px;overflow:hidden}.manager-ranking-list{display:flex;flex-direction:column}.manager-ranking-list-abm{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;align-content:start}.manager-ranking-row{height:48px;min-height:48px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f1f5f9;line-height:1.05;overflow:hidden}.manager-ranking-abm .manager-ranking-row{height:34px;min-height:34px;gap:5px}.manager-rank-badge{width:24px;height:24px;min-width:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;background:#f8fafc;color:#64748b}.manager-ranking-abm .manager-rank-badge{width:19px;height:19px;min-width:19px;font-size:8px;border-radius:5px}.manager-rank-badge.top{background:#fffbeb;color:#d97706}.manager-rank-name{font-size:12px;font-weight:900;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.manager-rank-meta{font-size:8px;font-weight:700;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.manager-rank-ach{font-size:12px;font-weight:900;white-space:nowrap}.manager-ranking-abm .manager-rank-name{font-size:10px}.manager-ranking-abm .manager-rank-meta{font-size:7.5px}.manager-ranking-abm .manager-rank-ach{font-size:9.5px}.achievement-level-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border-radius:8px;border-width:1px;font-size:10px;font-weight:900;white-space:nowrap}`;document.head.appendChild(style);
 }
-function ensureStickySalesHeader_() {
-    const thead = document.getElementById('sales-table-head');
-    const table = thead?.closest('table');
-    if (!thead || !table) return;
-    let clone = document.getElementById('sales-table-sticky-clone');
-    if (!clone) {
-        clone = document.createElement('div');
-        clone.id = 'sales-table-sticky-clone';
-        clone.className = 'sales-table-sticky-clone';
-        document.body.appendChild(clone);
-        clone.addEventListener('click', e => {
-            const th = e.target.closest('[data-sort-key]');
-            if (!th) return;
-            const key = th.dataset.sortKey;
-            const sourceKey = isOfficialSource_() ? 'OFFICIAL_IT' : 'SUBMISSION';
-            const state = salesTableSortState[sourceKey] || (salesTableSortState[sourceKey] = { key: 'store', dir: 'asc' });
-            if (state.key === key) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
-            else { state.key = key; state.dir = key === 'store' ? 'asc' : 'desc'; }
-            applySalesFilters();
-        });
-    }
-
-    const tableRect = table.getBoundingClientRect();
-    const headRect = thead.getBoundingClientRect();
-    const headHeight = Math.max(34, Math.ceil(headRect.height));
-    const tableVisibleBelow = tableRect.bottom > headHeight;
-    const shouldShow = headRect.top < 0 && tableVisibleBelow;
-
-    if (!shouldShow) {
-        clone.style.display = 'none';
-        return;
-    }
-
-    const sourceCells = [...thead.querySelectorAll('th')];
-    const widths = sourceCells.map(c => Math.max(1, c.getBoundingClientRect().width));
-    clone.style.left = `${Math.max(0, tableRect.left)}px`;
-    clone.style.width = `${Math.max(1, tableRect.width)}px`;
-    clone.style.height = `${headHeight}px`;
-    clone.innerHTML = `<table><colgroup>${widths.map(w => `<col style=\"width:${w}px\">`).join('')}</colgroup><thead>${thead.innerHTML}</thead></table>`;
-    clone.style.display = 'block';
+function getScrollParents_(element){const p=[];let n=element?.parentElement;while(n&&n!==document.body){const cs=getComputedStyle(n);if(/auto|scroll|overlay/.test(`${cs.overflow} ${cs.overflowY} ${cs.overflowX}`))p.push(n);n=n.parentElement;}p.push(window);return p;}
+function ensureStickySalesHeader_(){
+    const thead=document.getElementById('sales-table-head'),table=thead?.closest('table');if(!thead||!table)return;
+    let clone=document.getElementById('sales-table-sticky-clone');
+    if(!clone){clone=document.createElement('div');clone.id='sales-table-sticky-clone';clone.className='sales-table-sticky-clone';document.body.appendChild(clone);clone.addEventListener('click',e=>{const th=e.target.closest('[data-sort-key]');if(!th)return;const sourceKey=isOfficialSource_()?'OFFICIAL_IT':'SUBMISSION',key=th.dataset.sortKey,state=salesTableSortState[sourceKey]||(salesTableSortState[sourceKey]={key:'store',dir:'asc'});if(state.key===key)state.dir=state.dir==='asc'?'desc':'asc';else{state.key=key;state.dir=key==='store'?'asc':'desc';}applySalesFilters();});}
+    const headRect=thead.getBoundingClientRect(),tableRect=table.getBoundingClientRect(),cells=[...thead.querySelectorAll('th')];if(!cells.length){clone.style.display='none';return;}
+    const parent=getScrollParents_(table)[0],pr=parent&&parent!==window?parent.getBoundingClientRect():{top:0,bottom:innerHeight};
+    const top=parent&&parent!==window?Math.max(0,pr.top):0,bottom=parent&&parent!==window?Math.min(innerHeight,pr.bottom):innerHeight;
+    const height=Math.max(34,Math.ceil(headRect.height));
+    const show=headRect.top<top&&tableRect.bottom>top+height&&headRect.bottom<bottom;
+    if(!show){clone.style.display='none';return;}
+    const widths=cells.map(c=>Math.max(1,c.getBoundingClientRect().width));const left=Math.max(0,tableRect.left),right=Math.min(innerWidth,tableRect.right);
+    clone.style.left=`${left}px`;clone.style.width=`${Math.max(1,right-left)}px`;clone.style.top=`${top}px`;clone.style.height=`${height}px`;clone.innerHTML=`<table><colgroup>${widths.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead>${thead.innerHTML}</thead></table>`;clone.style.display='block';
 }
-function initStickySalesHeader_() {
-    if (window.__salesStickyHeaderBound) return;
-    window.__salesStickyHeaderBound = true;
-    const refresh = () => window.requestAnimationFrame(ensureStickySalesHeader_);
-    window.addEventListener('scroll', refresh, { passive: true, capture: true });
-    window.addEventListener('resize', refresh);
-    document.addEventListener('salesTableRendered', refresh);
+function initStickySalesHeader_(){
+    if(window.__salesStickyHeaderBound)return;window.__salesStickyHeaderBound=true;
+    const refresh=()=>requestAnimationFrame(ensureStickySalesHeader_);
+    window.addEventListener('scroll',refresh,{passive:true,capture:true});window.addEventListener('resize',refresh);
+    document.addEventListener('salesTableRendered',()=>setTimeout(refresh,0));
+    const bind=()=>{const table=document.getElementById('sales-table-head')?.closest('table');if(!table)return;getScrollParents_(table).forEach(p=>{if(p===window||p.__salesStickyBound)return;p.__salesStickyBound=true;p.addEventListener('scroll',refresh,{passive:true});});refresh();};
+    setTimeout(bind,100);document.addEventListener('salesTableRendered',()=>setTimeout(bind,0));
 }
-
 function renderSalesTableFiltered(data) {
     const tbody = document.getElementById('sales-table-body');
     const count = document.getElementById('table-record-count');
@@ -1095,7 +976,7 @@ function renderSalesTableFiltered(data) {
     const sorted = sortSalesTableData_(data);
     tbody.innerHTML = sorted.map((item, index) => {
         const ach = Number(item.achPercent || 0), sssg = Number(item.sssg || 0), proj = Number(item.projSssg || 0);
-        const level = getAchievementLevel_(ach, item.mtdTarget, item.mtdSales);
+        const level = getAchievementLevel_(ach,item.mtdTarget,item.mtdSales);
         const sssgCls = sssg >= 0 ? 'text-emerald-600' : 'text-rose-500';
         const projCls = proj >= 0 ? 'text-cyan-600' : 'text-rose-500';
         return `<tr class="${index % 2 ? 'bg-slate-50/60' : 'bg-white'} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
