@@ -932,8 +932,9 @@ function getAchievementLevel_(achPercent, target, salesOverride) {
     const ach = Number(achPercent || 0);
     const tgt = Number(target || 0);
     const sales = salesOverride !== undefined ? Number(salesOverride || 0) : (tgt * ach / 100);
-    // Level 4 is achieved by either reaching 130% achievement OR reaching Rp700M sales.
-    if (ach >= 130 || sales >= 700000000) return { key: 'level4', label: 'Level 4', icon: '🏆', cls: 'bg-violet-50 text-violet-700 border-violet-200' };
+    // Level 4 requires BOTH reaching 130% achievement AND reaching Rp700M sales.
+    const level4MinimumSales = 700000000;
+    if (ach >= 130 && sales >= level4MinimumSales) return { key: 'level4', label: 'Level 4', icon: '🏆', cls: 'bg-violet-50 text-violet-700 border-violet-200' };
     if (ach >= 120) return { key: 'level3', label: 'Level 3', icon: '🥉', cls: 'bg-blue-50 text-blue-700 border-blue-200' };
     if (ach >= 110) return { key: 'level2', label: 'Level 2', icon: '🥈', cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' };
     if (ach >= 100) return { key: 'level1', label: 'Level 1', icon: '⭐', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
@@ -949,7 +950,7 @@ function getTableSortValue_(item, key) {
     if (key === 'salesLY') return Number(item.salesLY || 0);
     if (key === 'sssg') return Number(item.sssg || 0);
     if (key === 'projSssg') return Number(item.projSssg || 0);
-    if (key === 'level') return getLevelRank_(getAchievementLevel_(item.achPercent, item.mtdTarget).key);
+    if (key === 'level') return getLevelRank_(getAchievementLevel_(item.achPercent, item.mtdTarget, item.mtdSales).key);
     return '';
 }
 function sortSalesTableData_(data) {
@@ -1059,7 +1060,7 @@ function initStickySalesHeader_() {
     if (window.__salesStickyHeaderBound) return;
     window.__salesStickyHeaderBound = true;
     const refresh = () => window.requestAnimationFrame(ensureStickySalesHeader_);
-    window.addEventListener('scroll', refresh, { passive: true });
+    window.addEventListener('scroll', refresh, { passive: true, capture: true });
     window.addEventListener('resize', refresh);
     document.addEventListener('salesTableRendered', refresh);
 }
@@ -1094,7 +1095,7 @@ function renderSalesTableFiltered(data) {
     const sorted = sortSalesTableData_(data);
     tbody.innerHTML = sorted.map((item, index) => {
         const ach = Number(item.achPercent || 0), sssg = Number(item.sssg || 0), proj = Number(item.projSssg || 0);
-        const level = getAchievementLevel_(ach, item.mtdTarget);
+        const level = getAchievementLevel_(ach, item.mtdTarget, item.mtdSales);
         const sssgCls = sssg >= 0 ? 'text-emerald-600' : 'text-rose-500';
         const projCls = proj >= 0 ? 'text-cyan-600' : 'text-rose-500';
         return `<tr class="${index % 2 ? 'bg-slate-50/60' : 'bg-white'} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
