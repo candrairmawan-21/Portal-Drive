@@ -58,6 +58,7 @@ const SHEET_GIDS = {
    2. INITIALIZATION & SOURCE SWITCHER
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
+    setDefaultBulanSlicer_();
     displayUpdateDate();
     initSalesSlicers();
     initSalesTableSort_();
@@ -66,12 +67,36 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchSalesData();
 });
 
+/** Kunci bulan (mis. "Sep26") untuk bulan kalender yang sedang berjalan. */
+function getCurrentMonthKey_() {
+    return monthKeyFromDate_(new Date());
+}
+
+/**
+ * Slicer 1 (Bulan) harus default ke bulan yang sedang berjalan saat halaman
+ * dibuka, bukan bulan yang di-hardcode di HTML (mis. Agustus). Kalau opsi
+ * untuk bulan berjalan tidak tersedia di dropdown (mis. GID belum dibuat),
+ * biarkan default HTML apa adanya.
+ */
+function setDefaultBulanSlicer_() {
+    const el = document.getElementById('slicerBulanSales');
+    if (!el || !el.options) return;
+    const currentKey = getCurrentMonthKey_();
+    const hasOption = [...el.options].some(o => o.value === currentKey);
+    if (hasOption) el.value = currentKey;
+}
+
 function displayUpdateDate() {
     const dateEl = document.getElementById('update-date');
-    if (dateEl) {
-        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        dateEl.innerText = "Update Terakhir: " + today;
+    if (!dateEl) return;
+    const d = new Date();
+    if (!isOfficialSource_()) {
+        // Store Submission: "Update Terakhir" selalu H-1 dari hari ini
+        // (data submission ditutup/dikonsolidasi untuk hari sebelumnya).
+        d.setDate(d.getDate() - 1);
     }
+    const formatted = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    dateEl.innerText = "Update Terakhir: " + formatted;
 }
 
 /**
@@ -97,6 +122,7 @@ window.switchSalesSource = function(sourceType) {
     }
 
     resetSpecificSlicer_();
+    displayUpdateDate();
     const stickyClone = document.getElementById('sales-table-sticky-clone');
     if (stickyClone) stickyClone.style.display = 'none';
     if (salesChartInstance) { try { salesChartInstance.destroy(); } catch(e) {} salesChartInstance=null; }
@@ -148,26 +174,19 @@ function normalizeStoreKey_(value) {
 }
 
 function getSlicerReferenceData_() {
-    // PENTING: hanya pakai SATU sumber acuan pada satu waktu -- Official IT
-    // hierarchy diutamakan (dipakai bersama oleh KEDUA menu) karena punya
-    // Store Code + Store Name + BM/ABM yang konsisten. Sebelumnya fungsi ini
-    // MENGGABUNGKAN officialSlicerReference + salesData + submissionComparisonData
-    // sekaligus, dan karena masing-masing sumber punya cara resolusi Store Code
-    // yang berbeda (dan submission bisa keliru membaca Nama BM sebagai Store
-    // Code), gabungan itu menghasilkan opsi ganda/salah di slicer (mis. "NAMA
-    // BM - NAMA TOKO"), yang kalau dipilih tidak match toko manapun di data
-    // asli -> KPI, tabel, dan trend chart ikut menampilkan 0 (Poin 1 & 2).
+    // Slicer spesifik toko cukup mengandalkan NAMA TOKO -- Store Code
+    // dihilangkan dari identitas slicer karena parsingnya rawan meleset
+    // (mis. Nama BM ikut terbaca sebagai Store Code kalau header sheet
+    // berubah/tidak terbaca), yang sebelumnya membuat slicer Store
+    // Submission tidak berfungsi.
     const source = officialSlicerReference.length ? officialSlicerReference : salesData;
     const map = new Map();
     source.forEach(item => {
-        const rawCode = String(item.storeCode || '').trim();
         const name = String(item.store || '').trim();
-        if (!rawCode && !name) return;
-        const key = normalizeStoreKey_(rawCode || name);
-        if (!key) return;
-        const existing = map.get(key) || { storeCode: rawCode, store: name, bm: '-', abm: '-' };
-        if (rawCode) existing.storeCode = rawCode;
-        if (name) existing.store = name;
+        if (!name) return;
+        const key = normalizeStoreKey_(name);
+        const existing = map.get(key) || { store: name, bm: '-', abm: '-' };
+        existing.store = name;
         if (item.bm && item.bm !== '-') existing.bm = String(item.bm).trim();
         if (item.abm && item.abm !== '-') existing.abm = String(item.abm).trim();
         map.set(key, existing);
@@ -192,12 +211,11 @@ function populateSpecificSlicer_() {
 
     const values = new Map();
     getSlicerReferenceData_().forEach(item => {
-        let value = '', label = '', displayCode = '';
+        let value = '', label = '';
         if (type === 'store') {
-            displayCode = String(item.storeCode || '').trim();
-            value = normalizeStoreKey_(displayCode || item.store);
+            // Cukup Nama Toko -- Store Code dihilangkan dari tampilan slicer.
+            value = normalizeStoreKey_(item.store);
             label = String(item.store || '').trim();
-            if (!displayCode) displayCode = value;
         } else if (type === 'bm') {
             value = String(item.bm || '').trim(); label = value;
         } else if (type === 'abm') {
@@ -205,13 +223,13 @@ function populateSpecificSlicer_() {
         }
         if (!value || value === '-' || !label || label === '-') return;
         const key = value.toLowerCase();
-        if (!values.has(key)) values.set(key, { value, label, displayCode });
+        if (!values.has(key)) values.set(key, { value, label });
     });
 
     [...values.values()].sort((a,b) => a.label.localeCompare(b.label, 'id')).forEach(item => {
         const option = document.createElement('option');
         option.value = item.value;
-        option.textContent = type === 'store' ? `${item.displayCode} - ${item.label}` : item.label;
+        option.textContent = item.label;
         spesifik.appendChild(option);
     });
 
@@ -263,7 +281,7 @@ async function fetchSalesData() {
     if (loader) loader.classList.remove('hidden');
 
     try {
-        const selectedKey = document.getElementById('slicerBulanSales')?.value || 'Aug26';
+        const selectedKey = document.getElementById('slicerBulanSales')?.value || getCurrentMonthKey_();
         const gid = isOfficialSource_()
             ? (SHEET_GIDS['OFFICIAL_IT_REPORT'] || '1129267198')
             : (SHEET_GIDS[selectedKey] || '1766415704');
@@ -448,9 +466,8 @@ function applySalesFilters() {
         const selectedNorm = normalizeStoreKey_(selected).toLowerCase();
         filteredSales = salesData.filter(item => {
             if (kategori === 'store') {
-                const code = normalizeStoreKey_(item.storeCode || '').toLowerCase();
                 const nameNorm = normalizeStoreKey_(item.store || '').toLowerCase();
-                return code === selectedNorm || nameNorm === selectedNorm;
+                return nameNorm === selectedNorm;
             }
             if (kategori === 'bm') return String(item.bm || '').trim().toLowerCase() === selectedLower;
             if (kategori === 'abm') return String(item.abm || '').trim().toLowerCase() === selectedLower;
@@ -539,7 +556,7 @@ function parseOfficialDate_(value) {
     const d=new Date(raw); return Number.isNaN(d.getTime())?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());
 }
 function selectedMonthInfo_() {
-    const key=document.getElementById('slicerBulanSales')?.value||'Aug26';
+    const key=document.getElementById('slicerBulanSales')?.value||getCurrentMonthKey_();
     const months={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
     return {key,month:months[key.substring(0,3)],year:2000+parseInt(key.substring(3),10)};
 }
@@ -647,9 +664,14 @@ function getOfficialComparison_(data) {
     // angka pertumbuhan toko-toko lama.
     // Poin 5: %PROJ SSSG = pertumbuhan (total proyeksi akhir bulan / Best
     // Estimate vs total Sales LY), dihitung dari TOTAL agregat (bukan
-    // rata-rata persentase per toko), dan juga hanya untuk toko yang punya
-    // histori Sales LY.
-    let salesWithHistory=0, bestEstWithHistory=0, lyWithHistory=0;
+    // rata-rata persentase per toko), hanya utk toko yang punya histori
+    // Sales LY DAN punya nilai Best Estimate yang valid (>0). Kalau Best
+    // Estimate kosong/tidak terbaca (0) untuk sebuah toko, toko itu
+    // dikecualikan dari agregat Proj SSSG -- BUKAN dianggap proyeksinya
+    // benar-benar Rp0 (yang sebelumnya membuat hasilnya -100%, jelas salah
+    // untuk toko yang masih beroperasi normal).
+    let salesWithHistory=0, lyWithHistory=0;
+    let bestEstWithHistory=0, lyWithValidBestEst=0;
     data.forEach(item=>{
         totalSales+=item.mtdSales||0;
         totalTarget+=item.mtdTarget||0;
@@ -659,12 +681,16 @@ function getOfficialComparison_(data) {
         if (ly>0) {
             lyWithHistory += ly;
             salesWithHistory += item.mtdSales||0;
-            bestEstWithHistory += sub ? (Number(sub.bestEstimate)||0) : 0;
+            const bestEst = sub ? (Number(sub.bestEstimate)||0) : 0;
+            if (bestEst>0) {
+                bestEstWithHistory += bestEst;
+                lyWithValidBestEst += ly;
+            }
         }
     });
     const achievement=totalTarget>0?totalSales/totalTarget*100:0;
     const achSssg=lyWithHistory>0?(salesWithHistory-lyWithHistory)/lyWithHistory*100:0;
-    const projSssg=lyWithHistory>0?(bestEstWithHistory-lyWithHistory)/lyWithHistory*100:0;
+    const projSssg=lyWithValidBestEst>0?(bestEstWithHistory-lyWithValidBestEst)/lyWithValidBestEst*100:0;
     return {totalSales,totalTarget,totalLY,achievement,achSssg,projSssg};
 }
 function setSummaryValue_(id,value,className){const el=document.getElementById(id);if(!el)return;el.innerText=value;if(className)el.className=className;}
@@ -957,10 +983,9 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
                 parsed.forEach(i=>{
                     if(selected){
                         if(kategori==='store'){
-                            const codeNorm=normalizeStoreKey_(i.storeCode||'').toLowerCase();
                             const nameNorm=normalizeStoreKey_(i.store||'').toLowerCase();
                             const selNorm=normalizeStoreKey_(selected).toLowerCase();
-                            if(codeNorm!==selNorm && nameNorm!==selNorm)return;
+                            if(nameNorm!==selNorm)return;
                         }
                         if(kategori==='bm' && String(i.bm||'').trim().toLowerCase()!==selected)return;
                         if(kategori==='abm' && String(i.abm||'').trim().toLowerCase()!==selected)return;
