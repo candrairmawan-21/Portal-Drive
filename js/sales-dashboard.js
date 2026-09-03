@@ -1423,7 +1423,7 @@ window.submitOfficialPdf = async function() {
         }
 
         const batchId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const aggregate = { count: 0, skippedCount: 0, duplicateCount: 0 };
+        const aggregate = { count: 0, skippedCount: 0, duplicateCount: 0, updatedCount: 0 };
         // Toko yang "hilang" di 1 chunk sangat mungkin justru ketemu di chunk
         // lain (laporan bulanan biasa mencakup ribuan toko lintas cabang,
         // tersebar di rentang halaman berbeda) — union foundStoreCodes dari
@@ -1436,6 +1436,7 @@ window.submitOfficialPdf = async function() {
             aggregate.count += result.count || 0;
             aggregate.skippedCount += result.skippedCount || 0;
             aggregate.duplicateCount += result.duplicateCount || 0;
+            aggregate.updatedCount += result.updatedCount || 0;
             (result.foundStoreCodes || []).forEach(c => foundCodesUnion.add(c));
             if (!registeredStoreCodes && result.registeredStoreCodes) registeredStoreCodes = result.registeredStoreCodes;
         };
@@ -1469,7 +1470,8 @@ window.submitOfficialPdf = async function() {
         setProgress(100, "Selesai!");
 
         const parts = [`${aggregate.count} baris data berhasil disimpan ke Master`];
-        if (aggregate.duplicateCount > 0) parts.push(`${aggregate.duplicateCount} duplikat dilewati`);
+        if (aggregate.updatedCount > 0) parts.push(`${aggregate.updatedCount} baris diperbarui (data berubah dari sebelumnya)`);
+        if (aggregate.duplicateCount > 0) parts.push(`${aggregate.duplicateCount} duplikat dilewati (data identik)`);
         if (aggregate.skippedCount > 0) parts.push(`${aggregate.skippedCount} baris dilewati (kode toko tidak valid/tidak terdaftar)`);
 
         // Status hilang yang SEBENARNYA: toko terdaftar yang TIDAK ketemu
