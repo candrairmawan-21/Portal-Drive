@@ -752,4 +752,113 @@ function updateInboxBadge() {
             badge.classList.add('hidden');
         }
     }
+
+    // Kalau modal inbox sedang terbuka, ikut refresh isinya supaya konsisten
+    // dengan badge (mis. saat polling 5 detik jalan sementara modal terbuka).
+    const modal = document.getElementById('inboxModal');
+    if (modal && !modal.classList.contains('hidden')) renderInboxList();
+}
+
+/* ==========================================================================
+   MODAL INBOX: TOGGLE, FILTER, DAN RENDER DAFTAR REMINDER
+   --------------------------------------------------------------------------
+   Sebelumnya, tombol lonceng (onclick="toggleInboxModal()") dan dropdown
+   filter di dalam modal (onchange="changeInboxFilter(this.value)") memanggil
+   dua fungsi ini, TAPI keduanya tidak pernah didefinisikan di file JS manapun
+   -- jadi lonceng terlihat (badge-nya jalan lewat updateInboxBadge di atas),
+   tapi mengklik lonceng tidak melakukan apa-apa sama sekali. Fungsi di bawah
+   ini melengkapi bagian yang hilang, dengan menggunakan ULANG logika filter
+   tugas yang sama persis dengan tabel Monitoring (getAssignedUsersForTask,
+   getTaskTemporalStatusForUser, isTaskCompletedByUser) supaya daftar di
+   inbox selalu konsisten dengan menu Monitoring dan dengan angka di badge.
+   ========================================================================== */
+
+/** Buka/tutup modal Kotak Masuk Reminder Tugas (dipanggil dari tombol lonceng). */
+window.toggleInboxModal = function () {
+    const modal = document.getElementById('inboxModal');
+    if (!modal) return;
+    const willOpen = modal.classList.contains('hidden');
+    modal.classList.toggle('hidden');
+    if (willOpen) {
+        const filterSelect = document.getElementById('inboxFilterSelect');
+        if (filterSelect) filterSelect.value = currentTaskFilter;
+        renderInboxList();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+};
+
+/**
+ * Ganti filter "Hari Ini" vs "Semua Hari" pada dropdown di dalam modal inbox.
+ * Memakai ULANG `currentTaskFilter` yang sama dengan tabel Monitoring (bukan
+ * variabel terpisah) supaya kedua tampilan selalu sinkron satu sama lain.
+ */
+window.changeInboxFilter = function (value) {
+    currentTaskFilter = (value === 'all') ? 'all' : 'today';
+    renderMonitoringTable();
+    renderInboxList();
+};
+
+/** Isi #inboxListContainer dengan daftar reminder tugas milik user yang login. */
+function renderInboxList() {
+    const container = document.getElementById('inboxListContainer');
+    if (!container) return;
+
+    const loggedInUser = (sessionStorage.getItem('portalUser') || '').toLowerCase().trim();
+    const userRole = (sessionStorage.getItem('portalRole') || '').toLowerCase().trim();
+
+    if (userRole === 'admin' || loggedInUser === 'admin') {
+        container.innerHTML = `<p class="text-center text-xs font-semibold text-slate-400 py-8">Admin tidak memiliki tugas personal. Buka menu Monitoring untuk melihat ringkasan seluruh tim.</p>`;
+        return;
+    }
+
+    const currentUserObj = SYSTEM_TEAM.find(u => u.username === loggedInUser) || { username: loggedInUser, name: loggedInUser, role: userRole };
+
+    let tasks = allMonitoringTasks.filter(task => {
+        if (!task.Jenis_Tugas) return false;
+        const assigned = getAssignedUsersForTask(task);
+        return assigned.some(u => u.username === loggedInUser);
+    });
+
+    if (currentTaskFilter === 'today') {
+        tasks = tasks.filter(task => isTaskForToday(task));
+    }
+
+    if (tasks.length === 0) {
+        container.innerHTML = `<p class="text-center text-xs font-semibold text-slate-400 py-8">Tidak ada reminder tugas untuk Anda saat ini.</p>`;
+        return;
+    }
+
+    // Urutkan: yang belum selesai & actionable (Hari Ini/Terlambat) di atas.
+    const withStatus = tasks.map(task => ({
+        task,
+        isCompleted: isTaskCompletedByUser(task, currentUserObj),
+        status: getTaskTemporalStatusForUser(task, currentUserObj)
+    }));
+    withStatus.sort((a, b) => {
+        if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
+        return 0;
+    });
+
+    container.innerHTML = withStatus.map(({ task, isCompleted, status }) => {
+        const uniqueKey = getTaskUniqueKey(task);
+        const statusBadge = isCompleted
+            ? `<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-lg border border-emerald-200 whitespace-nowrap">Selesai</span>`
+            : `<span class="px-2 py-0.5 ${status.colorClass} text-[10px] font-bold rounded-lg whitespace-nowrap">${status.label}</span>`;
+        const actionButton = isCompleted
+            ? ''
+            : `<button onclick="openResponseModal(this, '${uniqueKey}', '${String(task.Judul_Tugas || '').replace(/'/g, "\\'")}')" class="mt-2 px-3 py-1.5 bg-slate-900 hover:bg-amber-500 text-white text-[10px] font-bold rounded-lg transition-all active:scale-95">Selesaikan</button>`;
+
+        return `
+            <div class="p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                <div class="flex items-start justify-between gap-2">
+                    <p class="text-xs font-extrabold text-slate-800">${task.Judul_Tugas || '-'}</p>
+                    ${statusBadge}
+                </div>
+                <p class="text-[11px] text-slate-500 font-semibold mt-1">${task.Jenis_Tugas || '-'} &middot; ${task.Detail_Jadwal || '-'}</p>
+                ${actionButton}
+            </div>
+        `;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
