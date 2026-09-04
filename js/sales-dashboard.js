@@ -67,6 +67,21 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchSalesData();
 });
 
+// Jaga-jaga tab dibiarkan terbuka melewati pergantian bulan (mis. dibuka
+// tanggal 31 Agustus, dibiarkan terbuka, dibuka lagi tanggal 1 September):
+// begitu tab kembali terlihat/aktif, cek ulang apakah bulan berjalan sudah
+// berbeda dari slicer saat ini -- kalau ya, pindahkan otomatis & refresh data.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const el = document.getElementById('slicerBulanSales');
+    if (!el) return;
+    const currentKey = getCurrentMonthKey_();
+    if (el.value !== currentKey && [...el.options].some(o => o.value === currentKey)) {
+        el.value = currentKey;
+        fetchSalesData();
+    }
+});
+
 /** Kunci bulan (mis. "Sep26") untuk bulan kalender yang sedang berjalan. */
 function getCurrentMonthKey_() {
     return monthKeyFromDate_(new Date());
