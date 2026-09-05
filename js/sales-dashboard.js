@@ -27,6 +27,17 @@ let officialRankingPanel = null;
 let officialSlicerReference = [];
 let currentTrendRequestId = 0;
 
+// State untuk toggle "Banding Submission vs Official" pada tabel (Poin 3).
+// officialComparisonData diisi dengan cara berbeda tergantung menu aktif:
+//  - Saat di Official IT Report: cukup referensi `salesData` yang sedang
+//    aktif (sudah official, tidak perlu fetch tambahan).
+//  - Saat di Store Submission: fetch+parse terpisah dari GID Official IT
+//    Report untuk bulan yang sama (lihat ensureOfficialComparisonData_),
+//    di-cache per bulan supaya tidak fetch berulang tanpa perlu.
+let compareModeActive = false;
+let officialComparisonData = [];
+let officialComparisonMonthKey = null;
+
 // Sort state per dashboard source. The table UI is shared, but each menu
 // remembers its own sort selection so switching source does not corrupt it.
 const salesTableSortState = {
@@ -319,6 +330,7 @@ async function fetchSalesData() {
         }
 
         populateSpecificSlicer_();
+        if (compareModeActive) await ensureOfficialComparisonData_(selectedKey);
         applySalesFilters();
     } catch (error) {
         console.error('Error fetching data:', error);
@@ -593,7 +605,12 @@ function parseCSVRecords_(text) {
     if(current.trim())records.push(parseCSVLine(current));
     return records;
 }
-function parseOfficialITCSV_(text) {
+function parseOfficialITCSV_(text, opts) {
+    // trackGlobalState=false dipakai saat fungsi ini dipanggil HANYA untuk
+    // mengambil data pembanding (mode banding di Store Submission) -- supaya
+    // tidak menimpa officialRawData/officialDataHealth milik tampilan
+    // Official IT Report yang sedang aktif (kalau ada).
+    const trackGlobalState = !opts || opts.trackGlobalState !== false;
     const rows=parseCSVRecords_(text); if(rows.length<2)return [];
     const headers=rows[0]; const sel=selectedMonthInfo_();
     const fallback={storeCode:0,storeName:1,date:2,netSales:4,target:5,achievement:17,qtySold:11,trxCount:12,bm:14,abm:15};
@@ -603,14 +620,17 @@ function parseOfficialITCSV_(text) {
         qtySold:headerIndex_(headers,OFFICIAL_HEADERS.qtySold),trxCount:headerIndex_(headers,OFFICIAL_HEADERS.trxCount),bm:headerIndex_(headers,OFFICIAL_HEADERS.bm),abm:headerIndex_(headers,OFFICIAL_HEADERS.abm)
     };
     const missing=[]; ['storeCode','storeName','date','netSales','qtySold','trxCount','bm','abm'].forEach(k=>{if(idx[k]===-1&&fallback[k]===undefined)missing.push(k);});
-    officialDataHealth={totalSourceRows:0,validSourceRows:0,selectedMonthRows:0,invalidDateRows:0,invalidStoreRows:0,missingHeaders:missing};
-    if(missing.length){officialRawData=[];return [];} 
+    const health={totalSourceRows:0,validSourceRows:0,selectedMonthRows:0,invalidDateRows:0,invalidStoreRows:0,missingHeaders:missing};
+    if (trackGlobalState) officialDataHealth = health; // referensi objek yang sama -> mutasi health.x++ di bawah otomatis ikut ter-refleksi
+    if(missing.length){ if (trackGlobalState) officialRawData=[]; return []; }
 
-    const map=new Map(); officialRawData=[];
+    const map=new Map();
+    const rawDataLocal=[];
+    if (trackGlobalState) officialRawData = rawDataLocal; // referensi objek yang sama -> push di bawah otomatis ikut ter-refleksi
     for(let r=1;r<rows.length;r++){
-        const row=rows[r]; if(!row.some(v=>String(v||'').trim()!==''))continue; officialDataHealth.totalSourceRows++;
+        const row=rows[r]; if(!row.some(v=>String(v||'').trim()!==''))continue; health.totalSourceRows++;
         const date=parseOfficialDate_(getOfficialField_(row,headers,OFFICIAL_HEADERS.date,fallback.date));
-        if(!date){officialDataHealth.invalidDateRows++;continue;}
+        if(!date){health.invalidDateRows++;continue;}
         let code=normalizeStoreKey_(getOfficialField_(row,headers,OFFICIAL_HEADERS.storeCode,fallback.storeCode));
         const store=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.storeName,fallback.storeName)||'').trim().replace(/\s+/g,' ');
         const bm=String(getOfficialField_(row,headers,OFFICIAL_HEADERS.bm,fallback.bm)||'').trim()||'-';
@@ -618,17 +638,17 @@ function parseOfficialITCSV_(text) {
         // Poin 1 (pertahanan lini kedua): sama seperti Store Submission --
         // kalau Store Code yang terbaca identik dengan Nama BM/ABM, kosongkan.
         if (code && (code===normalizeStoreKey_(bm) || code===normalizeStoreKey_(abm))) code='';
-        if(!code&&!store){officialDataHealth.invalidStoreRows++;continue;}
+        if(!code&&!store){health.invalidStoreRows++;continue;}
         const sales=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.netSales,fallback.netSales));
         const rawTarget=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.target,fallback.target));
         const reportedAch=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.achievement,fallback.achievement));
         const qty=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.qtySold,fallback.qtySold));
         const trx=parseOfficialNumber_(getOfficialField_(row,headers,OFFICIAL_HEADERS.trxCount,fallback.trxCount));
-        officialDataHealth.validSourceRows++;
+        health.validSourceRows++;
         const raw={storeCode:code||store.toUpperCase(),store:store||code,date,netSales:sales,rawTarget,reportedAch,qtySold:qty,trxCount:trx,bm,abm};
-        officialRawData.push(raw);
+        rawDataLocal.push(raw);
         if(date.getMonth()!==sel.month||date.getFullYear()!==sel.year)continue;
-        officialDataHealth.selectedMonthRows++;
+        health.selectedMonthRows++;
         const key=code||store.toUpperCase();
         if(!map.has(key))map.set(key,{storeCode:code||store.toUpperCase(),store:store||code,bm:'-',abm:'-',mtdSales:0,mtdTarget:0,qtySold:0,trxCount:0,latestDate:null,latestReportedAch:0});
         const item=map.get(key); if(store)item.store=store; if(bm!=='-')item.bm=bm;if(abm!=='-')item.abm=abm;
@@ -654,6 +674,90 @@ function findSubmissionForOfficial_(item) {
         return (code&&sc&&code===sc)||(name&&sn&&name===sn);
     })||null;
 }
+
+/**
+ * Simetris dengan findSubmissionForOfficial_, tapi mencari ke arah
+ * sebaliknya: dari sebuah baris Store Submission, cari padanannya di data
+ * Official IT Report (officialComparisonData). Dipakai oleh mode banding
+ * (Poin 3) saat menu aktif adalah Store Submission.
+ */
+function findOfficialCounterpart_(item) {
+    const code=normalizeStoreKey_(item.storeCode), name=String(item.store||'').trim().toLowerCase();
+    return officialComparisonData.find(o=>{
+        const oc=normalizeStoreKey_(o.storeCode), on=String(o.store||'').trim().toLowerCase();
+        return (code&&oc&&code===oc)||(name&&on&&name===on);
+    })||null;
+}
+
+/**
+ * Pastikan officialComparisonData berisi data Official IT Report untuk
+ * bulan `selectedKey` yang SAMA dengan yang sedang tampil, terlepas dari
+ * menu mana yang sedang aktif. Di-cache per bulan supaya tidak fetch ulang
+ * tanpa perlu (mis. toggle mode banding dimatikan-nyalakan berkali-kali).
+ */
+async function ensureOfficialComparisonData_(selectedKey) {
+    if (isOfficialSource_()) {
+        // Data yang sedang aktif SUDAH official -- tidak perlu fetch lagi.
+        officialComparisonData = salesData;
+        officialComparisonMonthKey = selectedKey;
+        return;
+    }
+    if (officialComparisonMonthKey === selectedKey && officialComparisonData.length) return;
+    try {
+        const gid = SHEET_GIDS['OFFICIAL_IT_REPORT'] || '1129267198';
+        const res = await fetch(`${SALES_BASE_URL}&gid=${gid}&t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        officialComparisonData = parseOfficialITCSV_(text, { trackGlobalState: false });
+        officialComparisonMonthKey = selectedKey;
+    } catch (e) {
+        console.warn('Gagal memuat data pembanding Official IT Report:', e);
+        officialComparisonData = [];
+    }
+}
+
+/**
+ * Ambil pasangan nilai MTD Sales (Submission & Official) untuk satu baris
+ * tabel, terlepas dari menu mana yang sedang aktif. Nilai null berarti
+ * padanannya tidak ditemukan di sumber lain (mis. toko baru yang belum
+ * pernah submit, atau belum pernah muncul di Official IT Report bulan ini).
+ */
+function getMtdSalesComparisonPair_(item) {
+    if (isOfficialSource_()) {
+        const sub = findSubmissionForOfficial_(item);
+        return { submission: sub ? (Number(sub.mtdSales) || 0) : null, official: Number(item.mtdSales) || 0 };
+    }
+    const off = findOfficialCounterpart_(item);
+    return { submission: Number(item.mtdSales) || 0, official: off ? (Number(off.mtdSales) || 0) : null };
+}
+
+/** Tombol toggle "Banding Submission vs Official" di atas tabel (Poin 3). */
+window.toggleCompareMode = async function () {
+    compareModeActive = !compareModeActive;
+
+    const track = document.getElementById('compareModeSwitchTrack');
+    const thumb = document.getElementById('compareModeSwitchThumb');
+    const btn = document.getElementById('btnCompareMode');
+    if (track) track.classList.toggle('bg-cyan-500', compareModeActive);
+    if (track) track.classList.toggle('bg-slate-300', !compareModeActive);
+    if (thumb) thumb.classList.toggle('translate-x-4', compareModeActive);
+    if (thumb) thumb.classList.toggle('translate-x-1', !compareModeActive);
+    if (btn) btn.classList.toggle('border-cyan-200', compareModeActive);
+    if (btn) btn.classList.toggle('bg-cyan-50', compareModeActive);
+    if (btn) btn.classList.toggle('text-cyan-700', compareModeActive);
+
+    if (compareModeActive) {
+        const selectedKey = document.getElementById('slicerBulanSales')?.value || getCurrentMonthKey_();
+        const loader = document.getElementById('sales-loading');
+        if (loader) loader.classList.remove('hidden');
+        try {
+            await ensureOfficialComparisonData_(selectedKey);
+        } finally {
+            if (loader) loader.classList.add('hidden');
+        }
+    }
+    applySalesFilters();
+};
 function applyOfficialComparisonFallbacks_() {
     // Official IT = authoritative MTD Sales + BM/ABM hierarchy.
     // Store Submission = authoritative MTD Target, Sales LY and Projection SSSG.
@@ -1168,9 +1272,13 @@ function renderSalesTableFiltered(data) {
     if (thead) {
         thead.id = 'sales-table-head';
         const th = (key, label, cls='text-right') => `<th data-sort-key="${key}" class="px-4 py-3 ${cls} text-xs font-black text-slate-400 uppercase tracking-wider">${label}<span class="table-sort-icon">${tableSortIcon_(key)}</span></th>`;
+        // Poin 3: saat mode banding aktif, header "MTD Sales" diberi label
+        // tambahan supaya jelas isinya berubah jadi dua angka (bukan
+        // menambah kolom baru -- sesuai permintaan agar tabel tetap ringkas).
+        const mtdSalesLabel = compareModeActive ? 'MTD Sales (Submission vs Official)' : 'MTD Sales';
         thead.innerHTML = `<tr>
             ${th('storeCode','No / Store','text-left')}
-            ${th('mtdSales','MTD Sales')}
+            ${th('mtdSales',mtdSalesLabel)}
             ${th('mtdTarget','MTD Target')}
             ${th('achPercent','Ach %','text-center')}
             ${th('level','Level','text-center')}
@@ -1191,9 +1299,10 @@ function renderSalesTableFiltered(data) {
         const level = getAchievementLevel_(ach, item.mtdTarget, item.mtdSales);
         const sssgCls = sssg >= 0 ? 'text-emerald-600' : 'text-rose-500';
         const projCls = proj >= 0 ? 'text-cyan-600' : 'text-rose-500';
+        const mtdSalesCellHtml = compareModeActive ? buildMtdSalesCompareCell_(item) : `Rp ${Math.round(item.mtdSales || 0).toLocaleString('id-ID')}`;
         return `<tr class="${index % 2 ? 'bg-slate-50/60' : 'bg-white'} border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
             <td class="px-4 py-3"><div class="flex items-center gap-2"><span class="text-[10px] font-black text-slate-400 w-5">${index + 1}</span><div class="min-w-0"><p class="font-bold text-sm text-slate-800 truncate">${escapeHtml_(item.store)}</p><p class="text-[9px] font-bold text-slate-400 uppercase">${escapeHtml_(item.storeCode || '-')}</p></div></div></td>
-            <td class="px-4 py-3 text-right text-sm font-bold text-slate-700">Rp ${Math.round(item.mtdSales || 0).toLocaleString('id-ID')}</td>
+            <td class="px-4 py-3 text-right text-sm font-bold text-slate-700">${mtdSalesCellHtml}</td>
             <td class="px-4 py-3 text-right text-sm font-semibold text-slate-600">Rp ${Math.round(item.mtdTarget || 0).toLocaleString('id-ID')}</td>
             <td class="px-4 py-3 text-center"><span class="px-3 py-1.5 rounded-xl text-[11px] font-black border ${ach >= 100 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}">${ach.toFixed(2)}%</span></td>
             <td class="px-4 py-3 text-center"><span class="achievement-level-badge ${level.cls}">${level.icon} ${level.label}</span></td>
@@ -1203,6 +1312,34 @@ function renderSalesTableFiltered(data) {
         </tr>`;
     }).join('');
     document.dispatchEvent(new Event('salesTableRendered'));
+}
+
+/**
+ * Bangun isi sel "MTD Sales" untuk mode banding (Poin 3): angka Submission
+ * & Official ditumpuk dalam SATU sel yang sama (tidak menambah kolom baru
+ * sama sekali), plus selisih (Δ) berwarna. Kalau salah satu sisi tidak
+ * ditemukan padanannya (mis. toko baru), tampilkan "-" dan delta diabaikan.
+ */
+function buildMtdSalesCompareCell_(item) {
+    const pair = getMtdSalesComparisonPair_(item);
+    const subVal = pair.submission, offVal = pair.official;
+    const hasBoth = subVal !== null && offVal !== null;
+    const delta = hasBoth ? (offVal - subVal) : null;
+    const deltaPct = hasBoth && subVal !== 0 ? (delta / subVal * 100) : null;
+    const deltaCls = delta === null ? 'text-slate-400' : (delta === 0 ? 'text-slate-500' : (delta > 0 ? 'text-emerald-600' : 'text-rose-500'));
+    const deltaLabel = delta === null
+        ? 'Data tidak lengkap'
+        : `${delta >= 0 ? '+' : '-'}Rp ${Math.abs(Math.round(delta)).toLocaleString('id-ID')}${deltaPct !== null ? ' (' + (deltaPct >= 0 ? '+' : '') + deltaPct.toFixed(1) + '%)' : ''}`;
+
+    return `
+        <div class="text-right leading-tight">
+            <p class="text-[9px] font-bold text-slate-400 uppercase">Submission</p>
+            <p class="text-xs font-bold text-slate-700">${subVal !== null ? 'Rp ' + Math.round(subVal).toLocaleString('id-ID') : '-'}</p>
+            <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">Official</p>
+            <p class="text-xs font-bold text-slate-700">${offVal !== null ? 'Rp ' + Math.round(offVal).toLocaleString('id-ID') : '-'}</p>
+            <p class="text-[10px] font-black ${deltaCls} mt-1">${deltaLabel}</p>
+        </div>
+    `;
 }
 /* ==========================================================================
    8. MODAL HANDLER & UPLOAD PDF OFFICIAL IT REPORT
