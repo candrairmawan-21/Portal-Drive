@@ -156,29 +156,55 @@ function parseDashboardCSV(text) {
     //    mulai dari index 5 ke kanan. Menambah bulan baru di sheet cukup
     //    menambah kolom di sebelah kanan -- kode ini tidak perlu diubah.
     const headerCells = splitCsvRow_(lines[0] || '');
-    dashboardMonthColumns = [];
+
+    // PERBAIKAN: sebelumnya kalau HANYA SEBAGIAN header yang teksnya
+    // dikenali sebagai nama bulan (mis. kolom September ditulis "September
+    // 2026" tapi kolom Juli/Agustus lama cuma ditulis "UPT" tanpa nama
+    // bulan), kolom yang TIDAK dikenali itu hilang sama sekali -- bukan
+    // cuma dipakai fallback, karena fallback lama hanya aktif kalau
+    // SEMUANYA gagal terdeteksi (length === 0). Ini yang membuat "Agustus
+    // hilang" padahal kolomnya masih ada di sheet.
+    //
+    // Sekarang: kolom yang headernya tidak dikenali TETAP dimasukkan,
+    // bulannya ditebak dari POSISI relatif terhadap kolom lain yang
+    // berhasil dikenali (asumsi: satu kolom = satu bulan berurutan, sesuai
+    // cara kolom-kolom ini memang ditambah dari waktu ke waktu). Kalau
+    // tidak ada satu pun kolom yang bisa dikenali dari teksnya, baru pakai
+    // asumsi lama: kolom pertama (index 5) = Juli tahun berjalan.
+    const detectedByCol = {};
     for (let c = 5; c < headerCells.length; c++) {
         const detected = detectMonthFromHeader_(headerCells[c]);
-        if (detected) {
-            dashboardMonthColumns.push({
-                key: detected.key,
-                label: detected.label,
-                colIndex: c,
-                sortValue: detected.year * 12 + detected.monthIndex
-            });
-        }
+        if (detected) detectedByCol[c] = detected.year * 12 + detected.monthIndex;
     }
 
-    // Fallback: header tidak terbaca / tidak mengandung nama bulan sama sekali.
-    // Pertahankan perilaku lama (kolom F = Juli, kolom G = Agustus) supaya
-    // dashboard tetap tampil, bukan kosong total.
-    if (dashboardMonthColumns.length === 0) {
-        console.warn('Header bulan tidak terdeteksi di sheet Summary; memakai fallback kolom F/G.');
-        const fallbackYear = new Date().getFullYear();
-        dashboardMonthColumns = [
-            { key: `Jul${String(fallbackYear).slice(-2)}`, label: `Juli ${fallbackYear}`, colIndex: 5, sortValue: fallbackYear * 12 + 6 },
-            { key: `Aug${String(fallbackYear).slice(-2)}`, label: `Agustus ${fallbackYear}`, colIndex: 6, sortValue: fallbackYear * 12 + 7 }
-        ];
+    dashboardMonthColumns = [];
+    const totalCols = headerCells.length;
+    if (totalCols > 5) {
+        const detectedCols = Object.keys(detectedByCol).map(Number);
+        let anchorCol, anchorSortValue;
+        if (detectedCols.length > 0) {
+            anchorCol = detectedCols[0];
+            anchorSortValue = detectedByCol[anchorCol];
+        } else {
+            console.warn('Tidak ada satu pun header kolom yang dikenali sebagai nama bulan; memakai asumsi lama (kolom pertama = Juli tahun berjalan).');
+            anchorCol = 5;
+            anchorSortValue = new Date().getFullYear() * 12 + 6; // Juli = index 6
+        }
+
+        for (let c = 5; c < totalCols; c++) {
+            const sortValue = Object.prototype.hasOwnProperty.call(detectedByCol, c)
+                ? detectedByCol[c]
+                : anchorSortValue + (c - anchorCol); // ditebak dari posisi
+            const year = Math.floor(sortValue / 12);
+            const monthIndex = ((sortValue % 12) + 12) % 12;
+            dashboardMonthColumns.push({
+                key: `${MONTH_ABBR_EN[monthIndex]}${String(year).slice(-2)}`,
+                label: `${MONTH_LABEL_ID[monthIndex]} ${year}`,
+                colIndex: c,
+                sortValue: sortValue,
+                inferred: !Object.prototype.hasOwnProperty.call(detectedByCol, c)
+            });
+        }
     }
 
     // Urutkan dari bulan paling lama ke paling baru.
@@ -216,37 +242,64 @@ function parseDashboardCSV(text) {
  * membuat dashboard otomatis pindah ke September begitu kolom September
  * ditambahkan, dan otomatis pindah ke Oktober bulan depan, tanpa ubah kode.
  */
+/**
+ * Bulan default: SELALU bulan berjalan (lihat populateDashboardMonthSlicer_
+ * -- daftar bulan sekarang selalu mencakup sisa tahun berjalan, jadi bulan
+ * ini pasti ada di opsi, tidak perlu lagi jatuh ke "bulan terbaru yang ada").
+ */
 function getDefaultDashboardMonthKey_() {
-    if (dashboardMonthColumns.length === 0) return null;
     const now = new Date();
-    const currentKey = `${MONTH_ABBR_EN[now.getMonth()]}${String(now.getFullYear()).slice(-2)}`;
-    const exact = dashboardMonthColumns.find(mc => mc.key === currentKey);
-    if (exact) return exact.key;
-    // Kolom bulan berjalan belum dibuat di sheet -> pakai yang paling baru.
-    return dashboardMonthColumns[dashboardMonthColumns.length - 1].key;
+    return `${MONTH_ABBR_EN[now.getMonth()]}${String(now.getFullYear()).slice(-2)}`;
 }
 
 /**
- * Isi ulang dropdown Slicer Bulan dari kolom yang benar-benar ADA di sheet,
- * urut dari bulan terbaru di atas, lalu pilih bulan berjalan sebagai default.
- * Pilihan user yang sedang aktif dipertahankan kalau bulannya masih tersedia
- * (penting supaya auto-refresh data tidak melompat balik ke default).
+ * Isi ulang dropdown Slicer Bulan.
+ *
+ * Daftar opsi = SEMUA kolom bulan yang nyata ada di sheet (dari
+ * dashboardMonthColumns, jadi riwayat bulan lama tetap bisa dipilih) DITAMBAH
+ * sisa bulan tahun berjalan sampai Desember yang BELUM punya kolom di sheet
+ * (supaya slicer tidak perlu diubah lagi tiap kali kolom bulan baru dibuat --
+ * bulan itu sudah muncul duluan di slicer, cuma datanya 0/kosong sampai
+ * kolomnya benar-benar ditambahkan). Sesuai permintaan: ditampilkan sampai
+ * akhir tahun berjalan saja, bukan tahun berikutnya.
+ *
+ * Default selalu bulan berjalan, kecuali user sudah memilih bulan lain secara
+ * manual (ditandai lewat dataset.userPicked) dan bulan itu masih ada di daftar.
  */
 function populateDashboardMonthSlicer_() {
     const slicer = document.getElementById('slicerBulan');
-    if (!slicer || dashboardMonthColumns.length === 0) return;
+    if (!slicer) return;
 
     const previousValue = slicer.dataset.userPicked === 'true' ? slicer.value : null;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    const optionsMap = new Map(); // key -> { label, sortValue }
+    dashboardMonthColumns.forEach(mc => optionsMap.set(mc.key, { label: mc.label, sortValue: mc.sortValue }));
+
+    // Tambah sisa bulan TAHUN BERJALAN (dari bulan ini sampai Desember) yang
+    // belum punya kolom nyata di sheet -- bukan dari Januari, supaya tidak
+    // memunculkan bulan-bulan sebelum sheet mulai dipakai.
+    for (let m = now.getMonth(); m <= 11; m++) {
+        const sortValue = currentYear * 12 + m;
+        const key = `${MONTH_ABBR_EN[m]}${String(currentYear).slice(-2)}`;
+        if (!optionsMap.has(key)) {
+            optionsMap.set(key, { label: `${MONTH_LABEL_ID[m]} ${currentYear}`, sortValue });
+        }
+    }
+
+    const sortedKeys = Array.from(optionsMap.keys())
+        .sort((a, b) => optionsMap.get(b).sortValue - optionsMap.get(a).sortValue); // terbaru di atas
 
     slicer.innerHTML = '';
-    [...dashboardMonthColumns].reverse().forEach(mc => {
+    sortedKeys.forEach(key => {
         const opt = document.createElement('option');
-        opt.value = mc.key;
-        opt.textContent = mc.label;
+        opt.value = key;
+        opt.textContent = optionsMap.get(key).label;
         slicer.appendChild(opt);
     });
 
-    const stillAvailable = previousValue && dashboardMonthColumns.some(mc => mc.key === previousValue);
+    const stillAvailable = previousValue && optionsMap.has(previousValue);
     slicer.value = stillAvailable ? previousValue : getDefaultDashboardMonthKey_();
 }
 
@@ -315,13 +368,12 @@ function initSlicers() {
 function getSelectedUptValue(item) {
     if (!item || !item.uptByMonth) return 0;
     const selectedMonth = document.getElementById('slicerBulan')?.value || getDefaultDashboardMonthKey_();
-    if (selectedMonth && Object.prototype.hasOwnProperty.call(item.uptByMonth, selectedMonth)) {
-        return item.uptByMonth[selectedMonth] || 0;
-    }
-    // Bulan yang dipilih tidak punya kolom di sheet -> pakai bulan terbaru
-    // yang tersedia supaya kartu/peringkat tidak mendadak kosong.
-    const fallbackKey = getDefaultDashboardMonthKey_();
-    return (fallbackKey && item.uptByMonth[fallbackKey]) || 0;
+    // Bulan yang dipilih mungkin belum punya kolom nyata di sheet (mis. bulan
+    // depan yang sengaja sudah muncul di slicer -- lihat
+    // populateDashboardMonthSlicer_). Dalam kasus itu tampilkan 0/kosong apa
+    // adanya, JANGAN diam-diam menampilkan angka bulan lain seolah-olah itu
+    // datanya -- itu yang dulu membuat data terlihat "salah bulan".
+    return (selectedMonth && item.uptByMonth[selectedMonth]) || 0;
 }
 
 function applyDashboardFilters() {
