@@ -8,6 +8,51 @@ Urutan dari terbaru ke terlama.
 
 ---
 
+## 2026-09 — Perbaikan lanjutan: kolom bulan tak berlabel & slicer sampai akhir tahun
+
+### Bug: "Agustus hilang" dari slicer UPT
+
+**Apa terjadi:** Setelah perubahan deteksi header di atas, kolom Agustus
+hilang total dari dropdown padahal datanya masih ada di sheet.
+
+**Akar masalah:** Deteksi sebelumnya hanya punya SATU jalur fallback: kalau
+**seluruh** header gagal dikenali (`dashboardMonthColumns.length === 0`),
+baru dipakai asumsi lama (kolom F=Juli, G=Agustus). Tapi kasus nyatanya
+**sebagian** — kolom September baru diberi label teks yang jelas
+("September 2026"), sedangkan kolom Juli/Agustus lama headernya generik
+(mis. cuma "UPT") dari sebelum fitur deteksi otomatis ada. Karena minimal
+satu kolom (September) berhasil dikenali, fallback total tidak pernah aktif,
+dan kolom yang gagal dikenali (Juli, Agustus) dibuang begitu saja alih-alih
+di-fallback.
+
+**Perbaikan:** kolom yang headernya tidak dikenali sekarang TIDAK dibuang.
+Bulannya ditebak dari **posisi relatif** terhadap kolom lain yang berhasil
+dikenali (asumsi: satu kolom = satu bulan berurutan, sesuai cara kolom-kolom
+ini memang ditambah dari waktu ke waktu). Asumsi lama (kolom pertama = Juli
+tahun berjalan) sekarang jadi fallback TERAKHIR, hanya dipakai kalau
+benar-benar tidak ada satu pun kolom yang teksnya dikenali.
+
+### Slicer UPT diperluas sampai akhir tahun berjalan
+
+**Apa:** `populateDashboardMonthSlicer_()` sekarang menggabungkan kolom nyata
+dari sheet dengan sisa bulan tahun berjalan (dari bulan ini sampai Desember)
+yang belum punya kolom — supaya bulan mendatang sudah bisa dipilih di slicer
+sebelum kolomnya benar-benar dibuat di sheet. Default tetap selalu bulan
+berjalan.
+
+**Kenapa:** Permintaan eksplisit — supaya slicer tidak perlu terus disentuh
+tiap kali kolom bulan baru ditambahkan; bulan itu sudah "siap" duluan di
+dropdown (datanya 0 sampai kolomnya benar-benar ada).
+
+**Efek samping yang disengaja:** `getSelectedUptValue()` tidak lagi jatuh ke
+"bulan terbaru yang tersedia" saat bulan yang dipilih belum punya data —
+sekarang menampilkan 0 apa adanya. Ini konsisten dengan slicer yang sekarang
+sengaja menampilkan bulan-bulan yang belum ada datanya; diam-diam mengganti
+ke bulan lain akan menyesatkan (user pilih "Desember", tapi yang tampil
+angka November).
+
+---
+
 ## 2026-09 — Slicer bulan otomatis (Dashboard UPT & Sales)
 
 ### Dashboard UPT — kolom bulan ditemukan otomatis dari header sheet

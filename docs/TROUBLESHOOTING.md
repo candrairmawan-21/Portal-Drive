@@ -147,6 +147,34 @@ baru tidak muncul:
 Kalau kolom bulan berjalan memang belum ada di sheet, dashboard sengaja
 menampilkan bulan **terbaru yang tersedia** — bukan kosong.
 
+### Dashboard UPT
+
+Kolom bulan ditemukan otomatis dari **baris header** sheet Summary — dan
+sekarang **tidak ada lagi kolom yang hilang sekadar karena headernya tidak
+berlabel nama bulan**: kolom seperti itu ditebak posisinya dari kolom lain
+yang berhasil dikenali. Slicer juga sudah otomatis diperluas sampai Desember
+tahun berjalan meskipun kolomnya belum ada di sheet (data akan tampil 0
+sampai kolomnya benar-benar dibuat).
+
+Kalau bulan tertentu tetap tidak sesuai:
+
+1. **Cek console** untuk peringatan `Tidak ada satu pun header kolom yang
+   dikenali...` — kalau muncul, berarti SEMUA header di baris 1 gagal
+   dikenali dan sistem terpaksa memakai asumsi terakhir (kolom pertama =
+   Juli tahun berjalan). Beri label nama bulan yang jelas di header sheet
+   untuk hasil paling akurat.
+2. **Cache CSV.** Sheet dibaca sebagai CSV publik yang di-cache Google;
+   kolom baru bisa butuh beberapa menit untuk terlihat.
+3. **Kolom disisipkan di tengah, bukan di ujung kanan.** Penebakan posisi
+   mengasumsikan kolom bulan ditambah berurutan dari kiri ke kanan. Kalau
+   ada yang menyisipkan kolom baru di tengah (bukan di ujung), penebakan
+   untuk kolom-kolom setelahnya bisa salah. Selalu tambah kolom bulan baru
+   di **paling kanan**.
+
+Kalau kolom bulan berjalan memang belum ada di sheet, slicer tetap
+menampilkannya (sesuai desain "sampai akhir tahun") dan datanya akan tampil
+0/kosong sampai kolomnya dibuat — ini bukan bug.
+
 ### Sales
 
 Daftar bulan berasal dari `SHEET_GIDS` di `js/sales-dashboard.js`, bukan dari
