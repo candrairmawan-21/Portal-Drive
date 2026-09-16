@@ -487,8 +487,12 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
                     <select id="slicerBulan" class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
-                        <option value="august" selected>August 2026</option>
-                        <option value="july">July 2026</option>
+                        <!-- Opsi bulan diisi OTOMATIS oleh dashboard.js dari kolom bulan
+                             yang ada di sheet Summary (populateDashboardMonthSlicer_),
+                             dan default-nya mengikuti bulan berjalan. Jangan hardcode
+                             bulan di sini -- menambah kolom bulan baru di sheet sudah
+                             cukup, tanpa mengubah kode. -->
+                        <option value="">Memuat bulan...</option>
                     </select>
                 </div>
                 <div>
@@ -608,18 +612,11 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slicer 1: Bulan</label>
                         <select id="slicerBulanSales" class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-700 focus:outline-none focus:border-amber-500">
-                            <option value="Oct26">Oktober 2026</option>
-                            <option value="Sep26">September 2026</option>
-                            <option value="Aug26" selected>Agustus 2026</option>
-                            <option value="Jul26">Juli 2026</option>
-                            <option value="Jun26">Juni 2026</option>
-                            <option value="May26">Mei 2026</option>
-                            <option value="Apr26">April 2026</option>
-                            <option value="Mar26">Maret 2026</option>
-                            <option value="Feb26">Februari 2026</option>
-                            <option value="Jan26">Januari 2026</option>
-                            <option value="Dec25">Desember 2025</option>
-                            <option value="Nov25">November 2025</option>
+                            <!-- Opsi bulan diisi OTOMATIS oleh sales-dashboard.js dari
+                                 SHEET_GIDS (populateSalesMonthSlicer_), dan default-nya
+                                 mengikuti bulan berjalan. Jangan hardcode bulan di sini --
+                                 cukup tambah satu baris di SHEET_GIDS. -->
+                            <option value="">Memuat bulan...</option>
                         </select>
                     </div>
                     <div>
@@ -977,7 +974,7 @@
             <div class="space-y-4">
                 <!-- Area Drop Zone -->
                 <div class="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center bg-slate-50/50 transition-all relative cursor-pointer">
-                    <input type="file" id="officialPdfInput" accept=".pdf" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" onchange="previewPdfSelection(this)">
+                    <input type="file" id="officialPdfInput" accept=".pdf" multiple class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" onchange="previewPdfSelection(this)">
                     <i data-lucide="upload-cloud" class="w-8 h-8 text-emerald-500 mx-auto mb-2"></i>
                     <!-- Nama file dinamis: Jika belum dipilih akan kosong/default instruksi -->
                     <p id="pdfFileNameDisplay" class="text-xs font-bold text-slate-700">Klik atau seret file .PDF laporan ke sini</p>
