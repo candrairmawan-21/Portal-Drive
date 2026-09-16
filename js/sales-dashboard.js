@@ -48,6 +48,16 @@ let salesTableSortBound = false;
 
 
 // GID Sheet Lengkap (Termasuk Alias untuk Official IT Report)
+//
+// PENTING -- ini SATU-SATUNYA tempat daftar bulan didefinisikan. Dropdown
+// "Slicer Bulan" diisi otomatis dari objek ini oleh populateSalesMonthSlicer_(),
+// jadi JANGAN menulis ulang daftar bulan di index.html.
+//
+// Menambah bulan baru = tambah SATU baris di sini. GID-nya tidak bisa ditebak
+// otomatis karena Google yang menentukannya saat tab sheet baru dibuat; ambil
+// dari URL sheet (bagian `#gid=...`). Selama bulan berjalan belum ditambahkan,
+// dashboard akan menampilkan bulan terbaru yang tersedia dan memberi catatan
+// di UI + peringatan di console -- bukan diam-diam menampilkan bulan lama.
 const SHEET_GIDS = {
     'OFFICIAL_IT_REPORT': '1129267198',
     'OFFICIAL_IT': '1129267198', // Alias agar aman dari bug pemanggilan key
@@ -69,6 +79,7 @@ const SHEET_GIDS = {
    2. INITIALIZATION & SOURCE SWITCHER
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
+    populateSalesMonthSlicer_();
     setDefaultBulanSlicer_();
     displayUpdateDate();
     initSalesSlicers();
@@ -98,18 +109,109 @@ function getCurrentMonthKey_() {
     return monthKeyFromDate_(new Date());
 }
 
+/** Ubah key bulan ("Sep26") jadi label Indonesia ("September 2026"). */
+function monthKeyToLabel_(key) {
+    const abbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const labels = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const m = String(key).match(/^([A-Za-z]{3})(\d{2})$/);
+    if (!m) return key;
+    const idx = abbr.findIndex(a => a.toLowerCase() === m[1].toLowerCase());
+    if (idx === -1) return key;
+    return `${labels[idx]} 20${m[2]}`;
+}
+
+/** Nilai urut untuk key bulan, supaya bisa di-sort kronologis. */
+function monthKeySortValue_(key) {
+    const abbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const m = String(key).match(/^([A-Za-z]{3})(\d{2})$/);
+    if (!m) return -1;
+    const idx = abbr.findIndex(a => a.toLowerCase() === m[1].toLowerCase());
+    if (idx === -1) return -1;
+    return (2000 + parseInt(m[2], 10)) * 12 + idx;
+}
+
+/**
+ * Isi dropdown bulan dari SHEET_GIDS -- satu-satunya sumber kebenaran soal
+ * bulan mana yang datanya benar-benar ada. Sebelumnya daftar bulan ditulis
+ * dua kali (di HTML dan di SHEET_GIDS), jadi keduanya bisa tidak sinkron.
+ * Sekarang: menambah satu entri di SHEET_GIDS = otomatis muncul di dropdown.
+ */
+function populateSalesMonthSlicer_() {
+    const el = document.getElementById('slicerBulanSales');
+    if (!el) return;
+
+    const monthKeys = Object.keys(SHEET_GIDS)
+        .filter(k => monthKeySortValue_(k) > 0)
+        .sort((a, b) => monthKeySortValue_(b) - monthKeySortValue_(a)); // terbaru di atas
+
+    if (monthKeys.length === 0) return;
+
+    const previousValue = el.dataset.userPicked === 'true' ? el.value : null;
+
+    el.innerHTML = '';
+    monthKeys.forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k;
+        opt.textContent = monthKeyToLabel_(k);
+        el.appendChild(opt);
+    });
+
+    if (previousValue && monthKeys.includes(previousValue)) el.value = previousValue;
+}
+
 /**
  * Slicer 1 (Bulan) harus default ke bulan yang sedang berjalan saat halaman
- * dibuka, bukan bulan yang di-hardcode di HTML (mis. Agustus). Kalau opsi
- * untuk bulan berjalan tidak tersedia di dropdown (mis. GID belum dibuat),
- * biarkan default HTML apa adanya.
+ * dibuka, bukan bulan yang di-hardcode (mis. Agustus).
+ *
+ * PENTING: kalau GID untuk bulan berjalan BELUM ditambahkan ke SHEET_GIDS,
+ * jangan diam-diam jatuh ke nilai default lama (dulu selalu Agustus 2026 --
+ * makin lama makin menyesatkan). Sekarang jatuh ke bulan TERBARU yang
+ * datanya tersedia, plus peringatan di console supaya ketahuan bahwa ada
+ * GID yang perlu ditambahkan.
  */
 function setDefaultBulanSlicer_() {
     const el = document.getElementById('slicerBulanSales');
-    if (!el || !el.options) return;
+    if (!el || !el.options || el.options.length === 0) return;
+
     const currentKey = getCurrentMonthKey_();
-    const hasOption = [...el.options].some(o => o.value === currentKey);
-    if (hasOption) el.value = currentKey;
+    const available = [...el.options].map(o => o.value);
+
+    if (available.includes(currentKey)) {
+        el.value = currentKey;
+        return;
+    }
+
+    // Bulan berjalan belum punya GID -> pakai bulan terbaru yang tersedia.
+    const newest = available
+        .filter(k => monthKeySortValue_(k) > 0)
+        .sort((a, b) => monthKeySortValue_(b) - monthKeySortValue_(a))[0];
+
+    if (newest) {
+        el.value = newest;
+        console.warn(
+            `[Sales] GID untuk bulan berjalan (${currentKey}) belum ada di SHEET_GIDS. ` +
+            `Menampilkan bulan terbaru yang tersedia: ${newest}. ` +
+            `Tambahkan '${currentKey}': '<gid sheet>' ke SHEET_GIDS di js/sales-dashboard.js.`
+        );
+        showMissingMonthGidNotice_(currentKey);
+    }
+}
+
+/**
+ * Tampilkan catatan kecil di UI kalau bulan berjalan belum punya sheet/GID,
+ * supaya user tidak mengira data bulan ini hilang padahal memang belum
+ * didaftarkan. Tidak menghalangi apa pun -- murni informasi.
+ */
+function showMissingMonthGidNotice_(missingKey) {
+    const el = document.getElementById('slicerBulanSales');
+    if (!el || !el.parentNode) return;
+    if (document.getElementById('sales-month-gid-notice')) return;
+
+    const note = document.createElement('p');
+    note.id = 'sales-month-gid-notice';
+    note.className = 'mt-1 text-[10px] font-bold text-amber-600';
+    note.textContent = `Data ${monthKeyToLabel_(missingKey)} belum tersedia — menampilkan bulan terbaru yang ada.`;
+    el.parentNode.appendChild(note);
 }
 
 function displayUpdateDate() {
@@ -171,6 +273,9 @@ function initSalesSlicers() {
 
     if (slicerBulan) {
         slicerBulan.addEventListener('change', async () => {
+            // Tandai pilihan manual supaya populateSalesMonthSlicer_() tidak
+            // menariknya balik ke bulan berjalan saat dropdown diisi ulang.
+            slicerBulan.dataset.userPicked = 'true';
             await fetchSalesData();
             if (!isOfficialSource_() && typeof fetchAndRenderUptSalesTable === "function") {
                 fetchAndRenderUptSalesTable();
@@ -302,6 +407,26 @@ async function ensureOfficialSlicerReference_() {
     }
 }
 
+/**
+ * Ambil GID untuk sebuah key bulan. Kalau bulan itu belum terdaftar di
+ * SHEET_GIDS, jatuh ke bulan TERBARU yang tersedia -- bukan ke GID Agustus
+ * 2026 yang dulu di-hardcode sebagai fallback (nilai itu akan makin salah
+ * seiring waktu berjalan).
+ */
+function resolveMonthGid_(monthKey) {
+    if (SHEET_GIDS[monthKey]) return SHEET_GIDS[monthKey];
+
+    const newest = Object.keys(SHEET_GIDS)
+        .filter(k => monthKeySortValue_(k) > 0)
+        .sort((a, b) => monthKeySortValue_(b) - monthKeySortValue_(a))[0];
+
+    if (newest) {
+        console.warn(`[Sales] GID untuk ${monthKey} tidak ada; memakai bulan terbaru: ${newest}.`);
+        return SHEET_GIDS[newest];
+    }
+    return SHEET_GIDS['OFFICIAL_IT_REPORT'] || '1129267198';
+}
+
 async function fetchSalesData() {
     const loader = document.getElementById('sales-loading');
     if (loader) loader.classList.remove('hidden');
@@ -310,7 +435,7 @@ async function fetchSalesData() {
         const selectedKey = document.getElementById('slicerBulanSales')?.value || getCurrentMonthKey_();
         const gid = isOfficialSource_()
             ? (SHEET_GIDS['OFFICIAL_IT_REPORT'] || '1129267198')
-            : (SHEET_GIDS[selectedKey] || '1766415704');
+            : resolveMonthGid_(selectedKey);
         const finalUrl = `${SALES_BASE_URL}&gid=${gid}&t=${Date.now()}`;
 
         const response = await fetch(finalUrl, { cache: 'no-store' });
@@ -1352,7 +1477,7 @@ window.openUploadPdfModal = function() {
     if (input) input.value = '';
     
     const display = document.getElementById('pdfFileNameDisplay');
-    if (display) display.textContent = "Klik atau seret file .PDF laporan ke sini";
+    if (display) display.textContent = "Klik atau seret file .PDF laporan ke sini (boleh lebih dari 1)";
     
     const progContainer = document.getElementById('uploadProgressContainer');
     if (progContainer) progContainer.classList.add('hidden');
@@ -1379,11 +1504,24 @@ window.closeUploadPdfModal = function() {
 
 window.previewPdfSelection = function(input) {
     const display = document.getElementById('pdfFileNameDisplay');
-    if (input.files && input.files[0] && display) {
-        display.textContent = `📄 File terpilih: ${input.files[0].name}`;
-    } else if (display) {
-        display.textContent = "Klik atau seret file .PDF laporan ke sini";
+    if (!display) return;
+
+    const files = (input && input.files) ? Array.from(input.files) : [];
+    if (files.length === 0) {
+        display.textContent = "Klik atau seret file .PDF laporan ke sini (boleh lebih dari 1)";
+        return;
     }
+    if (files.length === 1) {
+        display.textContent = `📄 File terpilih: ${files[0].name}`;
+        return;
+    }
+    // Multi-file: tampilkan jumlah + daftar nama, dipotong kalau kebanyakan
+    // supaya tidak merusak layout modal.
+    const names = files.map(f => f.name);
+    const preview = names.length > 4
+        ? names.slice(0, 4).join(', ') + `, dan ${names.length - 4} lainnya`
+        : names.join(', ');
+    display.textContent = `📄 ${files.length} file terpilih: ${preview}`;
 };
 
 /**
@@ -1542,12 +1680,18 @@ window.submitOfficialPdf = async function() {
         statusBox.classList.remove('hidden');
     };
 
-    if (!input || !input.files || !input.files[0]) {
+    if (!input || !input.files || input.files.length === 0) {
         alert("Silakan pilih file PDF terlebih dahulu!");
         return;
     }
 
-    const file = input.files[0];
+    // MULTI-FILE: input sekarang ber-atribut `multiple`, jadi user bisa
+    // memilih beberapa PDF sekaligus (mis. TrxSales Juli + Agustus). Semua
+    // file diproses BERURUTAN (bukan paralel) supaya tidak menabrak batas
+    // eksekusi/kuota Apps Script dan supaya LockService di backend tidak
+    // terus-terusan bentrok. Setiap file tetap melewati pemecahan otomatis
+    // per-chunk seperti sebelumnya kalau halamannya banyak.
+    const files = Array.from(input.files);
     // Tanggal per-baris tetap diambil dari isi PDF itu sendiri (setiap baris
     // punya tanggalnya sendiri, penting untuk PDF bulanan yang mencakup
     // banyak tanggal sekaligus) — input ini cuma label/metadata untuk log.
@@ -1560,29 +1704,21 @@ window.submitOfficialPdf = async function() {
     setProgress(5, "Memeriksa ukuran PDF...");
 
     try {
-        // 1. Cek jumlah halaman & pecah otomatis kalau terlalu besar untuk
-        //    1x konversi (Google Docs yang dipakai backend untuk baca teks
-        //    PDF punya batas ~1 juta karakter — PDF bulanan bisa jauh
-        //    melebihi itu). Kalau pdf-lib gagal dimuat (mis. offline),
-        //    lanjut sebagai upload tunggal seperti biasa — backend tetap
-        //    punya penjaga & akan menolak dengan pesan jelas kalau kebesaran.
-        let splitInfo;
-        try {
-            splitInfo = await splitPdfIntoChunks_(file);
-        } catch (splitErr) {
-            console.warn("Gagal memeriksa/memecah PDF, lanjut sebagai upload tunggal:", splitErr);
-            splitInfo = { totalPages: null, chunks: null };
-        }
-
+        // Satu batchId untuk SATU SESI upload, dipakai bersama oleh semua
+        // file & semua chunk di sesi ini. Itu yang membuat riwayat di
+        // UPLOAD_LOG bisa ditelusuri sebagai satu kesatuan walaupun terdiri
+        // dari banyak baris log terpisah.
         const batchId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const aggregate = { count: 0, skippedCount: 0, duplicateCount: 0, updatedCount: 0 };
-        // Toko yang "hilang" di 1 chunk sangat mungkin justru ketemu di chunk
-        // lain (laporan bulanan biasa mencakup ribuan toko lintas cabang,
-        // tersebar di rentang halaman berbeda) — union foundStoreCodes dari
-        // SEMUA chunk dulu, baru status hilang dihitung di akhir, supaya
-        // tidak menyesatkan seperti kalau dilihat per-chunk saja.
+        // Toko yang "hilang" di 1 chunk/1 file sangat mungkin justru ketemu
+        // di chunk/file lain (laporan bulanan biasa mencakup ribuan toko
+        // lintas cabang, tersebar di rentang halaman berbeda; dan sesi
+        // multi-file bisa mencakup beberapa bulan sekaligus) — union
+        // foundStoreCodes dari SEMUA file & chunk dulu, baru status hilang
+        // dihitung di akhir, supaya tidak menyesatkan.
         const foundCodesUnion = new Set();
         let registeredStoreCodes = null;
+        const perFileSummary = []; // ringkasan per file untuk pesan akhir
 
         const trackResult = (result) => {
             aggregate.count += result.count || 0;
@@ -1593,30 +1729,70 @@ window.submitOfficialPdf = async function() {
             if (!registeredStoreCodes && result.registeredStoreCodes) registeredStoreCodes = result.registeredStoreCodes;
         };
 
-        if (!splitInfo.chunks) {
-            // File cukup kecil (atau pdf-lib gagal dimuat) -> upload langsung, 1 request.
-            setProgress(30, "Membaca dan mengirim file PDF...");
-            const base64Content = await readFileAsDataURL_(file);
-            setProgress(60, "Melakukan lookup Store Code dan menyimpan ke Master...");
-            const result = await uploadPdfPayload_(file.name, base64Content, reportDate, { batchId, chunkIndex: 1, totalChunks: 1 });
-            trackResult(result);
-        } else {
-            // File besar (mis. laporan bulanan) -> otomatis dipecah jadi
-            // beberapa bagian dan diunggah berurutan. Aman diulang kalau
-            // gagal di tengah: anti-duplikat Store Code + Tanggal di
-            // backend otomatis melewati data yang sudah berhasil masuk.
-            const total = splitInfo.chunks.length;
-            for (const chunk of splitInfo.chunks) {
-                const pct = 10 + Math.round((chunk.index / total) * 80);
-                setProgress(pct, `Mengunggah bagian ${chunk.index} dari ${total} (halaman ${chunk.startPage}-${chunk.endPage})...`);
+        // Proses file satu per satu, BERURUTAN. Progress bar dibagi rata
+        // antar file: file ke-i menempati slot [base, base + span).
+        const totalFiles = files.length;
+        for (let fileIdx = 0; fileIdx < totalFiles; fileIdx++) {
+            const file = files[fileIdx];
+            const fileIndex = fileIdx + 1;
+            const base = Math.round((fileIdx / totalFiles) * 95);
+            const span = Math.round((1 / totalFiles) * 95);
+            const filePrefix = totalFiles > 1 ? `[File ${fileIndex}/${totalFiles}] ` : '';
 
-                const dataUrl = pdfBytesToDataURL_(chunk.bytes);
-                const chunkFileName = `${file.name} (hal ${chunk.startPage}-${chunk.endPage})`;
-                const result = await uploadPdfPayload_(chunkFileName, dataUrl, reportDate, {
-                    batchId, chunkIndex: chunk.index, totalChunks: total
+            setProgress(base + 2, `${filePrefix}Memeriksa ukuran PDF...`);
+
+            // 1. Cek jumlah halaman & pecah otomatis kalau terlalu besar untuk
+            //    1x konversi (Google Docs yang dipakai backend untuk baca teks
+            //    PDF punya batas ~1 juta karakter — PDF bulanan bisa jauh
+            //    melebihi itu). Kalau pdf-lib gagal dimuat (mis. offline),
+            //    lanjut sebagai upload tunggal seperti biasa — backend tetap
+            //    punya penjaga & akan menolak dengan pesan jelas kalau kebesaran.
+            let splitInfo;
+            try {
+                splitInfo = await splitPdfIntoChunks_(file);
+            } catch (splitErr) {
+                console.warn("Gagal memeriksa/memecah PDF, lanjut sebagai upload tunggal:", splitErr);
+                splitInfo = { totalPages: null, chunks: null };
+            }
+
+            const before = { count: aggregate.count, updated: aggregate.updatedCount, dup: aggregate.duplicateCount };
+
+            if (!splitInfo.chunks) {
+                // File cukup kecil (atau pdf-lib gagal dimuat) -> upload langsung, 1 request.
+                setProgress(base + Math.round(span * 0.3), `${filePrefix}Membaca dan mengirim file PDF...`);
+                const base64Content = await readFileAsDataURL_(file);
+                setProgress(base + Math.round(span * 0.6), `${filePrefix}Lookup Store Code dan menyimpan ke Master...`);
+                const result = await uploadPdfPayload_(file.name, base64Content, reportDate, {
+                    batchId, chunkIndex: 1, totalChunks: 1, fileIndex, totalFiles
                 });
                 trackResult(result);
+            } else {
+                // File besar (mis. laporan bulanan) -> otomatis dipecah jadi
+                // beberapa bagian dan diunggah berurutan. Aman diulang kalau
+                // gagal di tengah: anti-duplikat Store Code + Tanggal di
+                // backend otomatis melewati data yang sudah berhasil masuk.
+                const total = splitInfo.chunks.length;
+                for (const chunk of splitInfo.chunks) {
+                    const pct = base + Math.round((chunk.index / total) * span);
+                    setProgress(pct, `${filePrefix}Mengunggah bagian ${chunk.index}/${total} (halaman ${chunk.startPage}-${chunk.endPage})...`);
+
+                    const dataUrl = pdfBytesToDataURL_(chunk.bytes);
+                    const chunkFileName = `${file.name} (hal ${chunk.startPage}-${chunk.endPage})`;
+                    const result = await uploadPdfPayload_(chunkFileName, dataUrl, reportDate, {
+                        batchId, chunkIndex: chunk.index, totalChunks: total, fileIndex, totalFiles
+                    });
+                    trackResult(result);
+                }
             }
+
+            perFileSummary.push({
+                name: file.name,
+                pages: splitInfo.totalPages,
+                chunks: splitInfo.chunks ? splitInfo.chunks.length : 1,
+                inserted: aggregate.count - before.count,
+                updated: aggregate.updatedCount - before.updated,
+                duplicates: aggregate.duplicateCount - before.dup
+            });
         }
 
         setProgress(100, "Selesai!");
@@ -1627,7 +1803,7 @@ window.submitOfficialPdf = async function() {
         if (aggregate.skippedCount > 0) parts.push(`${aggregate.skippedCount} baris dilewati (kode toko tidak valid/tidak terdaftar)`);
 
         // Status hilang yang SEBENARNYA: toko terdaftar yang TIDAK ketemu
-        // di SATUPUN chunk dari batch ini (bukan cuma 1 chunk tertentu).
+        // di SATUPUN file/chunk dari batch ini.
         if (registeredStoreCodes) {
             const trulyMissing = registeredStoreCodes.filter(c => !foundCodesUnion.has(c));
             if (trulyMissing.length > 0) {
@@ -1635,7 +1811,16 @@ window.submitOfficialPdf = async function() {
             }
         }
 
-        const prefix = splitInfo.chunks ? `PDF (${splitInfo.totalPages} halaman) otomatis dipecah jadi ${splitInfo.chunks.length} bagian. ` : '';
+        let prefix = '';
+        if (files.length > 1) {
+            const detail = perFileSummary
+                .map(s => `${s.name}${s.pages ? ` (${s.pages} hal${s.chunks > 1 ? `, ${s.chunks} bagian` : ''})` : ''}: +${s.inserted}`)
+                .join(' | ');
+            prefix = `${files.length} file diproses — ${detail}. `;
+        } else if (perFileSummary[0] && perFileSummary[0].chunks > 1) {
+            const s = perFileSummary[0];
+            prefix = `PDF (${s.pages} halaman) otomatis dipecah jadi ${s.chunks} bagian. `;
+        }
 
         showStatus(true, prefix + parts.join(', ') + '.');
         if (btnText) btnText.textContent = "Berhasil Disimpan";

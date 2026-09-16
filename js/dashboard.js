@@ -5,6 +5,105 @@ const DASHBOARD_API_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLSx
 let dashboardData = [];
 let chartInstance = null;
 
+/* --------------------------------------------------------------------------
+   KOLOM BULAN DINAMIS (perbaikan: dashboard tidak lagi hardcode Juli/Agustus)
+   --------------------------------------------------------------------------
+   Sebelumnya parser hanya membaca kolom F (Juli) dan G (Agustus) secara
+   hardcode, jadi begitu kolom bulan BARU ditambahkan di sheet Summary
+   (mis. September di kolom H), dashboard tetap menampilkan Agustus sampai
+   ada yang mengedit kode ini. Sekarang kolom bulan DITEMUKAN OTOMATIS dari
+   BARIS HEADER sheet, jadi menambah kolom bulan baru di sheet = langsung
+   muncul di dashboard tanpa ubah kode sama sekali.
+
+   `dashboardMonthColumns` diisi saat parsing: [{ key, label, colIndex }, ...]
+   diurutkan dari yang paling lama ke paling baru.
+   -------------------------------------------------------------------------- */
+let dashboardMonthColumns = [];
+
+const MONTH_ABBR_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_LABEL_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+// Semua ejaan bulan yang mungkin muncul di header sheet (Indonesia & Inggris,
+// lengkap maupun singkatan). Dicek dari yang TERPANJANG dulu supaya "juni"
+// tidak keburu cocok dengan "jun" milik bulan lain saat ejaannya mirip.
+const MONTH_NAME_PATTERNS = [
+    { i: 0,  names: ['januari', 'january', 'jan'] },
+    { i: 1,  names: ['februari', 'february', 'feb', 'peb'] },
+    { i: 2,  names: ['maret', 'march', 'mar'] },
+    { i: 3,  names: ['april', 'apr'] },
+    { i: 4,  names: ['mei', 'may'] },
+    { i: 5,  names: ['juni', 'june', 'jun'] },
+    { i: 6,  names: ['juli', 'july', 'jul'] },
+    { i: 7,  names: ['agustus', 'august', 'agu', 'ags', 'aug'] },
+    { i: 8,  names: ['september', 'sept', 'sep'] },
+    { i: 9,  names: ['oktober', 'october', 'okt', 'oct'] },
+    { i: 10, names: ['november', 'nopember', 'nov'] },
+    { i: 11, names: ['desember', 'december', 'des', 'dec'] }
+];
+
+/**
+ * Tebak bulan & tahun dari satu teks header kolom.
+ * Menerima bentuk bebas: "UPT Agustus", "Agustus 2026", "Sep-26", "AUG26",
+ * "2026-09", "09/2026". Mengembalikan null kalau tidak terlihat seperti bulan.
+ */
+function detectMonthFromHeader_(rawHeader) {
+    const text = String(rawHeader || '').toLowerCase().replace(/[\r"]/g, '').trim();
+    if (!text) return null;
+
+    let monthIndex = null;
+
+    // a) Cari nama/singkatan bulan. Urutan pengecekan: nama terpanjang dulu.
+    const flat = [];
+    MONTH_NAME_PATTERNS.forEach(p => p.names.forEach(n => flat.push({ i: p.i, n })));
+    flat.sort((a, b) => b.n.length - a.n.length);
+    for (const cand of flat) {
+        if (new RegExp(`(^|[^a-z])${cand.n}([^a-z]|$)`).test(text)) { monthIndex = cand.i; break; }
+    }
+
+    // b) Format numerik "2026-09" atau "09/2026".
+    if (monthIndex === null) {
+        const iso = text.match(/\b(20\d{2})[-/](\d{1,2})\b/);
+        if (iso) monthIndex = parseInt(iso[2], 10) - 1;
+        else {
+            const rev = text.match(/\b(\d{1,2})[-/](20\d{2})\b/);
+            if (rev) monthIndex = parseInt(rev[1], 10) - 1;
+        }
+    }
+
+    if (monthIndex === null || monthIndex < 0 || monthIndex > 11) return null;
+
+    // c) Tahun: prioritaskan tahun penuh (2026), lalu 2 digit (26).
+    const now = new Date();
+    let year = null;
+    const full = text.match(/\b(20\d{2})\b/);
+    if (full) {
+        year = parseInt(full[1], 10);
+    } else {
+        const two = text.match(/(\d{2})(?!\d)/);
+        if (two) {
+            const candidate = 2000 + parseInt(two[1], 10);
+            // Hanya terima kalau masuk akal sebagai tahun (bukan sisa angka lain).
+            if (candidate >= 2020 && candidate <= now.getFullYear() + 2) year = candidate;
+        }
+    }
+
+    // d) Tanpa tahun eksplisit: asumsikan tahun berjalan. Kalau itu membuat
+    //    bulannya jauh di masa depan (>6 bulan), berarti maksudnya tahun lalu
+    //    (mis. header "Desember" dibaca pada bulan Januari).
+    if (year === null) {
+        year = now.getFullYear();
+        const monthsAhead = (year - now.getFullYear()) * 12 + (monthIndex - now.getMonth());
+        if (monthsAhead > 6) year -= 1;
+    }
+
+    return {
+        monthIndex,
+        year,
+        key: `${MONTH_ABBR_EN[monthIndex]}${String(year).slice(-2)}`,
+        label: `${MONTH_LABEL_ID[monthIndex]} ${year}`
+    };
+}
+
 /* ==========================================================================
    2. PENGAMBIL DATA UPT (FETCH LOGIC)
    ========================================================================== */
@@ -16,7 +115,13 @@ async function fetchDashboardData() {
         const response = await fetch(DASHBOARD_API_URL);
         const csvText = await response.text();
         dashboardData = parseDashboardCSV(csvText);
-        
+
+        // Dropdown bulan diisi dari kolom yang benar-benar ada di sheet,
+        // lalu otomatis memilih bulan berjalan. Harus dijalankan SEBELUM
+        // applyDashboardFilters() supaya render pertama sudah pakai bulan
+        // yang benar, bukan sisa nilai lama.
+        populateDashboardMonthSlicer_();
+
         initSlicers();
         applyDashboardFilters();
         if (typeof fetchAndRenderUptSalesTable === "function") {
@@ -29,36 +134,120 @@ async function fetchDashboardData() {
     }
 }
 
+function splitCsvRow_(line) {
+    const row = [];
+    let inQuotes = false;
+    let currentStr = "";
+    for (const char of line) {
+        if (char === '"') { inQuotes = !inQuotes; }
+        else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; }
+        else { currentStr += char; }
+    }
+    row.push(currentStr.trim());
+    return row;
+}
+
 function parseDashboardCSV(text) {
     let lines = text.split('\n');
     if (lines.length === 0) return [];
-    
+
+    // 1. Baca BARIS HEADER untuk menemukan kolom bulan secara otomatis.
+    //    Kolom 0-4 adalah identitas (BM, ABM, Store, NIK, Staff); kolom bulan
+    //    mulai dari index 5 ke kanan. Menambah bulan baru di sheet cukup
+    //    menambah kolom di sebelah kanan -- kode ini tidak perlu diubah.
+    const headerCells = splitCsvRow_(lines[0] || '');
+    dashboardMonthColumns = [];
+    for (let c = 5; c < headerCells.length; c++) {
+        const detected = detectMonthFromHeader_(headerCells[c]);
+        if (detected) {
+            dashboardMonthColumns.push({
+                key: detected.key,
+                label: detected.label,
+                colIndex: c,
+                sortValue: detected.year * 12 + detected.monthIndex
+            });
+        }
+    }
+
+    // Fallback: header tidak terbaca / tidak mengandung nama bulan sama sekali.
+    // Pertahankan perilaku lama (kolom F = Juli, kolom G = Agustus) supaya
+    // dashboard tetap tampil, bukan kosong total.
+    if (dashboardMonthColumns.length === 0) {
+        console.warn('Header bulan tidak terdeteksi di sheet Summary; memakai fallback kolom F/G.');
+        const fallbackYear = new Date().getFullYear();
+        dashboardMonthColumns = [
+            { key: `Jul${String(fallbackYear).slice(-2)}`, label: `Juli ${fallbackYear}`, colIndex: 5, sortValue: fallbackYear * 12 + 6 },
+            { key: `Aug${String(fallbackYear).slice(-2)}`, label: `Agustus ${fallbackYear}`, colIndex: 6, sortValue: fallbackYear * 12 + 7 }
+        ];
+    }
+
+    // Urutkan dari bulan paling lama ke paling baru.
+    dashboardMonthColumns.sort((a, b) => a.sortValue - b.sortValue);
+
+    // 2. Baca baris data.
     let result = [];
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i]) continue;
-        let row = []; let inQuotes = false; let currentStr = "";
-        
-        for (let char of lines[i]) {
-            if (char === '"') { inQuotes = !inQuotes; } 
-            else if (char === ',' && !inQuotes) { row.push(currentStr.trim()); currentStr = ""; } 
-            else { currentStr += char; }
-        }
-        row.push(currentStr.trim());
-        
+        const row = splitCsvRow_(lines[i]);
+
         if (row.length >= 6) {
+            const uptByMonth = {};
+            dashboardMonthColumns.forEach(mc => {
+                const raw = (row[mc.colIndex] || '').replace(/[\r"]/g, "");
+                uptByMonth[mc.key] = parseFloat(raw) || 0;
+            });
+
             result.push({
                 namaBM: row[0].replace(/[\r"]/g, ""),
                 namaABM: row[1].replace(/[\r"]/g, ""),
                 namaStore: row[2].replace(/[\r"]/g, ""),
                 nik: row[3].replace(/[\r"]/g, ""),
                 namaStaff: row[4].replace(/[\r"]/g, ""),
-                uptJuly: parseFloat(row[5].replace(/[\r"]/g, "")) || 0,
-                // Pembacaan Kolom G (index 6) Sheet Summary khusus untuk nilai UPT Periode Agustus
-                uptAugust: parseFloat((row[6] || '').replace(/[\r"]/g, "")) || parseFloat(row[5].replace(/[\r"]/g, "")) || 0
+                uptByMonth: uptByMonth
             });
         }
     }
     return result;
+}
+
+/**
+ * Bulan yang harus dipilih secara default: BULAN BERJALAN kalau kolomnya ada
+ * di sheet, kalau belum ada ya bulan terbaru yang tersedia. Inilah yang
+ * membuat dashboard otomatis pindah ke September begitu kolom September
+ * ditambahkan, dan otomatis pindah ke Oktober bulan depan, tanpa ubah kode.
+ */
+function getDefaultDashboardMonthKey_() {
+    if (dashboardMonthColumns.length === 0) return null;
+    const now = new Date();
+    const currentKey = `${MONTH_ABBR_EN[now.getMonth()]}${String(now.getFullYear()).slice(-2)}`;
+    const exact = dashboardMonthColumns.find(mc => mc.key === currentKey);
+    if (exact) return exact.key;
+    // Kolom bulan berjalan belum dibuat di sheet -> pakai yang paling baru.
+    return dashboardMonthColumns[dashboardMonthColumns.length - 1].key;
+}
+
+/**
+ * Isi ulang dropdown Slicer Bulan dari kolom yang benar-benar ADA di sheet,
+ * urut dari bulan terbaru di atas, lalu pilih bulan berjalan sebagai default.
+ * Pilihan user yang sedang aktif dipertahankan kalau bulannya masih tersedia
+ * (penting supaya auto-refresh data tidak melompat balik ke default).
+ */
+function populateDashboardMonthSlicer_() {
+    const slicer = document.getElementById('slicerBulan');
+    if (!slicer || dashboardMonthColumns.length === 0) return;
+
+    const previousValue = slicer.dataset.userPicked === 'true' ? slicer.value : null;
+
+    slicer.innerHTML = '';
+    [...dashboardMonthColumns].reverse().forEach(mc => {
+        const opt = document.createElement('option');
+        opt.value = mc.key;
+        opt.textContent = mc.label;
+        slicer.appendChild(opt);
+    });
+
+    const stillAvailable = previousValue && dashboardMonthColumns.some(mc => mc.key === previousValue);
+    slicer.value = stillAvailable ? previousValue : getDefaultDashboardMonthKey_();
 }
 
 /* ==========================================================================
@@ -102,10 +291,20 @@ function initSlicers() {
         if (typeof fetchAndRenderUptSalesTable === "function") fetchAndRenderUptSalesTable();
     });
 
-    document.getElementById('slicerBulan')?.addEventListener('change', () => {
-        applyDashboardFilters();
-        if (typeof fetchAndRenderUptSalesTable === "function") fetchAndRenderUptSalesTable();
-    });
+    // initSlicers() dipanggil ulang setiap fetch, jadi pasang listener bulan
+    // hanya SEKALI (ditandai lewat dataset) supaya tidak menumpuk duplikat.
+    const slicerBulanEl = document.getElementById('slicerBulan');
+    if (slicerBulanEl && slicerBulanEl.dataset.listenerBound !== 'true') {
+        slicerBulanEl.dataset.listenerBound = 'true';
+        slicerBulanEl.addEventListener('change', () => {
+            // Tandai bahwa bulan ini dipilih MANUAL oleh user, supaya
+            // populateDashboardMonthSlicer_() tidak menariknya balik ke bulan
+            // berjalan saat data di-refresh.
+            slicerBulanEl.dataset.userPicked = 'true';
+            applyDashboardFilters();
+            if (typeof fetchAndRenderUptSalesTable === "function") fetchAndRenderUptSalesTable();
+        });
+    }
     
     document.getElementById('slicerSpesifik')?.addEventListener('change', () => {
         applyDashboardFilters();
@@ -114,8 +313,15 @@ function initSlicers() {
 }
 
 function getSelectedUptValue(item) {
-    const selectedMonth = document.getElementById('slicerBulan')?.value || 'august';
-    return selectedMonth === 'august' ? (item.uptAugust || item.uptJuly || 0) : (item.uptJuly || 0);
+    if (!item || !item.uptByMonth) return 0;
+    const selectedMonth = document.getElementById('slicerBulan')?.value || getDefaultDashboardMonthKey_();
+    if (selectedMonth && Object.prototype.hasOwnProperty.call(item.uptByMonth, selectedMonth)) {
+        return item.uptByMonth[selectedMonth] || 0;
+    }
+    // Bulan yang dipilih tidak punya kolom di sheet -> pakai bulan terbaru
+    // yang tersedia supaya kartu/peringkat tidak mendadak kosong.
+    const fallbackKey = getDefaultDashboardMonthKey_();
+    return (fallbackKey && item.uptByMonth[fallbackKey]) || 0;
 }
 
 function applyDashboardFilters() {
@@ -150,9 +356,9 @@ function renderPodiumTop3(data) {
     if (!container) return;
 
     let sorted = [...data].sort((a, b) => getSelectedUptValue(b) - getSelectedUptValue(a));
-    const p1 = sorted[0] || { namaStaff: '-', namaStore: '-', uptJuly: 0, uptAugust: 0 };
-    const p2 = sorted[1] || { namaStaff: '-', namaStore: '-', uptJuly: 0, uptAugust: 0 };
-    const p3 = sorted[2] || { namaStaff: '-', namaStore: '-', uptJuly: 0, uptAugust: 0 };
+    const p1 = sorted[0] || { namaStaff: '-', namaStore: '-', uptByMonth: {} };
+    const p2 = sorted[1] || { namaStaff: '-', namaStore: '-', uptByMonth: {} };
+    const p3 = sorted[2] || { namaStaff: '-', namaStore: '-', uptByMonth: {} };
 
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'top');
 }
@@ -165,9 +371,9 @@ function renderPodiumBottom3(data) {
     if (validData.length === 0) validData = data;
 
     let sorted = [...validData].sort((a, b) => getSelectedUptValue(a) - getSelectedUptValue(b));
-    const p1 = sorted[0] || { namaStaff: '-', namaStore: '-', uptJuly: 0, uptAugust: 0 };
-    const p2 = sorted[1] || { namaStaff: '-', namaStore: '-', uptJuly: 0, uptAugust: 0 };
-    const p3 = sorted[2] || { namaStaff: '-', namaStore: '-', uptJuly: 0, uptAugust: 0 };
+    const p1 = sorted[0] || { namaStaff: '-', namaStore: '-', uptByMonth: {} };
+    const p2 = sorted[1] || { namaStaff: '-', namaStore: '-', uptByMonth: {} };
+    const p3 = sorted[2] || { namaStaff: '-', namaStore: '-', uptByMonth: {} };
 
     container.innerHTML = generatePodiumHTML(p1, p2, p3, 'bottom');
 }
@@ -287,7 +493,12 @@ const SALES_GIDS_FALLBACK = {
     'Nov25': '564328385'
 };
 
-// Pemetaan sederhana dari nilai slicer di Dashboard (mis. 'august') ke key sheet yang dipakai sales-dashboard ('Aug26').
+// LEGACY. Dulu slicerBulan di Dashboard UPT bernilai 'august'/'july' (hardcode
+// di HTML), jadi perlu dipetakan ke key sheet sales ('Aug26'). Sekarang
+// slicerBulan sudah langsung memakai key bulan dinamis ('Sep26', 'Oct26', ...)
+// hasil populateDashboardMonthSlicer_(), sehingga getDefaultSalesMonthKey()
+// langsung lolos lewat cek regex di bawah dan peta ini tidak terpakai lagi.
+// Dibiarkan sebagai jaring pengaman kalau ada HTML lama yang ter-cache.
 const MONTH_SLICER_TO_SALES_KEY = {
     'august': 'Aug26',
     'july': 'Jul26',
