@@ -39,7 +39,8 @@ Portal-Drive-main/
 │   ├── ai-sop.js           # AI SOP Assistant
 │   └── sales-dashboard.js  # Sales Intelligence Center + Upload PDF Official IT Report
 ├── backend/
-│   └── Code.gs             # Google Apps Script backend (upload PDF → Sheet)
+│   ├── Code.gs             # Google Apps Script backend (upload PDF → Sheet)
+│   └── ai-sop-backend.gs   # Google Apps Script backend AI SOP (Gemini + retry/fallback, cache Drive)
 ├── docs/                   # Dokumentasi (lihat tabel di atas)
 ├── F003_Template.xlsx      # Template Excel untuk modul F003
 └── midnorth java (1).png   # Aset logo

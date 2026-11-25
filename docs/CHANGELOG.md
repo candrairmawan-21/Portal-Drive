@@ -8,6 +8,47 @@ Urutan dari terbaru ke terlama.
 
 ---
 
+## 2026-11 — AI SOP: error "high demand" dari Gemini ditangani dengan retry & fallback model
+
+### Bug: AI SOP selalu menampilkan "This model is currently experiencing high demand"
+
+**Apa terjadi:** Hampir setiap pertanyaan di menu AI SOP berakhir dengan pesan
+error mentah dari Gemini API.
+
+**Akar masalah:** Pesan itu adalah HTTP 503 dari Gemini: kapasitas model sedang
+penuh (sementara, di sisi Google). Yang membuatnya terasa "selalu error":
+1. Frontend dan backend sama-sama menyerah di percobaan pertama, tanpa retry.
+2. Backend (Apps Script) hanya memakai satu model dan mengembalikan error Gemini
+   sebagai teks jawaban, sehingga retry di frontend tidak pernah terpicu.
+
+**Perbaikan:**
+- `js/ai-sop.js`: retry otomatis (maks. 4 percobaan, jeda 2s/4s/8s + jitter) khusus
+  error sementara; error permanen (mis. API key salah) tidak diulang. Ada status
+  "mencoba lagi (n/4)", timeout 60 detik, tombol **Coba Lagi** tanpa mengetik
+  ulang, pesan error berbahasa Indonesia, dan kirim ganda dicegah.
+- `js/ai-sop.js`: jawaban AI sekarang di-escape sebelum diformat (sebelumnya masuk
+  `innerHTML` mentah); riwayat percakapan hanya menyimpan pertanyaan yang berhasil;
+  `innerHTML +=` diganti `insertAdjacentHTML` (tidak membangun ulang seluruh chat).
+- `backend/ai-sop-backend.gs` (BARU, pengganti utuh script Apps Script AI SOP):
+  - Akar masalah sebenarnya: `callGemini_` lama mengembalikan error Gemini sebagai
+    TEKS JAWABAN ("Error dari Gemini API: ..."), sehingga frontend mengira itu
+    jawaban normal dan retry tidak pernah terpicu. Sekarang error dilempar dan
+    dikirim sebagai `{error, exhausted}`.
+  - Retry + exponential backoff, lalu pindah ke model cadangan (urutan bisa diubah
+    lewat Script property `GEMINI_MODEL_CHAIN` tanpa deploy ulang kode).
+  - Daftar file Drive di-cache 5 menit; cache upload Gemini per file (satu properti
+    per file, bukan satu manifest ~9KB); anggaran waktu upload; tunggu status ACTIVE;
+    deteksi URI file kedaluwarsa lalu ulang otomatis; LockService anti-upload ganda;
+    API key lewat header; system_instruction + riwayat sebagai giliran asli;
+    `warmUpLibrary()` / `installWarmupTrigger()` untuk menyiapkan file di latar belakang.
+  - **Harus ditempel menggantikan seluruh isi Code.gs AI SOP lalu deploy ulang.**
+
+**Jangan dibalik:** retry di frontend dan di backend sengaja sama-sama ada, dengan
+anggaran waktu backend (45 dtk) < timeout frontend (90 dtk). Kalau backend dibuat
+lebih lama dari frontend, browser akan menyerah duluan padahal backend masih bekerja.
+
+---
+
 ## 2026-09 — Perbaikan lanjutan: kolom bulan tak berlabel & slicer sampai akhir tahun
 
 ### Bug: "Agustus hilang" dari slicer UPT

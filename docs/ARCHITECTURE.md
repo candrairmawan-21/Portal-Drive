@@ -57,7 +57,7 @@ menambah kode.
 | `monitoring.js` | ~864 | Monitoring tugas & inbox, accordion dengan state persist saat auto-refresh, update status via Apps Script terpisah |
 | `f003-builder.js` | ~498 | Form pengajuan barang rusak F003, generate Excel dari `F003_Template.xlsx` |
 | `analyze.js` | ~491 | Modul analisa: bandingkan file DB vs file kedua |
-| `ai-sop.js` | ~168 | AI SOP Assistant, menyimpan histori 6 giliran terakhir, anti-CORS via Apps Script |
+| `ai-sop.js` | ~340 | AI SOP Assistant: histori 6 pesan terakhir, anti-CORS via Apps Script, retry otomatis + tombol Coba Lagi untuk error sementara Gemini; backend: lihat backend/ai-sop-backend.gs |
 | `sales-dashboard.js` | ~1719 | Sales Intelligence Center: dua sumber data (Submission vs Official IT Report), chart, tabel perbandingan, **dan seluruh alur Upload PDF** |
 
 `sales-dashboard.js` adalah file terbesar dan paling aktif berubah. Bagian
