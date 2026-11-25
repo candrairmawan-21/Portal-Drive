@@ -282,6 +282,7 @@ async function sendAiPrompt(retryQuestion) {
                 <div class="bg-rose-50 border border-rose-200 px-6 py-4 rounded-2xl text-base text-rose-700 shadow-sm space-y-2 max-w-2xl">
                     <p class="font-bold">${escapeHtml(friendly.title)}</p>
                     <p class="text-sm text-rose-600">${escapeHtml(friendly.body)}</p>
+                    <p class="text-xs text-rose-400 break-words">Detail teknis: ${escapeHtml(String(error.message || '').slice(0, 300))}</p>
                     <button type="button" onclick="retryLastAiPrompt()" class="mt-1 inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold rounded-xl shadow-sm transition-all">
                         <i data-lucide="refresh-cw" class="w-4 h-4"></i> Coba Lagi
                     </button>
