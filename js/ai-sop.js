@@ -139,6 +139,14 @@ async function callAiWithRetry_(question, onRetry) {
 // Ubah pesan error teknis jadi bahasa yang dimengerti user operasional.
 function friendlyAiErrorMessage_(message) {
     const m = String(message || '').toLowerCase();
+    // Timeout dicek PERTAMA: pesan timeout dari backend ikut menyertakan error terakhir
+    // (mis. 503), padahal penyebab utamanya waktu habis, bukan sekadar "sibuk".
+    if (m.includes('waktu pemrosesan habis') || m.includes('timeout') || m.includes('timed out') || m.includes('aborted')) {
+        return {
+            title: 'Server AI terlalu lama merespons',
+            body: 'Permintaan melewati batas waktu karena server AI sedang lambat/sibuk atau dokumen yang dibaca terlalu banyak. Tunggu sebentar lalu tekan "Coba Lagi". Kalau berulang, coba pertanyaan yang lebih spesifik (sebut nama dokumen/topiknya).'
+        };
+    }
     if (m.includes('high demand') || m.includes('overloaded') || m.includes('unavailable') || m.includes('503') || m.includes('sibuk')) {
         return {
             title: 'Server AI sedang sangat sibuk',
@@ -149,12 +157,6 @@ function friendlyAiErrorMessage_(message) {
         return {
             title: 'Batas penggunaan AI tercapai',
             body: 'Terlalu banyak pertanyaan dalam waktu singkat atau kuota harian habis. Tunggu beberapa saat lalu coba lagi.'
-        };
-    }
-    if (m.includes('timeout') || m.includes('timed out') || m.includes('aborted')) {
-        return {
-            title: 'Server AI terlalu lama merespons',
-            body: 'Koneksi ke server melewati batas waktu. Coba lagi, atau persingkat pertanyaan.'
         };
     }
     if (m.includes('non-json') || m.includes('failed to fetch') || m.includes('networkerror')) {
