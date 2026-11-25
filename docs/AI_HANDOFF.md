@@ -80,6 +80,40 @@ Jangan "optimasi" jadi `Promise.all()`. Apps Script punya `LockService` dengan
 timeout 30 detik dan batas eksekusi. Paralel akan membuat upload saling
 menggagalkan.
 
+### 3.7 Warna, sudut, dan bayangan hanya diatur di DUA tempat
+
+Tampilan memakai palet logo Midnorth (cokelat `#6F4A2A`, oranye `#D4692B`, kuning `#EFAE38`).
+Sumber kebenarannya:
+
+1. `tailwind.config` di `index.html` (tepat setelah `<script src="…cdn.tailwindcss.com">`):
+   skala warna, `borderRadius`, `boxShadow`, `letterSpacing`.
+2. `css/theme.css`: variabel `:root` dan aturan khusus (sidebar, tabel, KPI, modal).
+
+Yang perlu diketahui sebelum menyentuh tampilan:
+
+- **Nama kelas Tailwind sengaja tidak sama dengan warna aslinya.** `slate` = netral hangat,
+  `amber`/`orange` = oranye logo, `indigo`/`blue`/`cyan`/`violet` = cokelat logo. Jangan
+  "memperbaiki" kelas ini ke warna lain atau mengganti nama kelasnya; ubah skalanya di config.
+- `amber-500` (`#BF5A1F`) adalah oranye logo yang **sengaja digelapkan** agar teks putih di
+  atasnya lolos kontras 4,5:1. Oranye logo asli ada di `amber-400`.
+- **Jangan menulis hex baru** di JS/HTML kalau sudah ada token atau kelas yang cocok. Kalau
+  perlu warna baru, tambahkan ke config/`:root`, lalu pakai.
+- **Sudut:** kartu 8px (`rounded-2xl/3xl`), kontrol 6px (`rounded-lg/xl`). `rounded-full` hanya
+  untuk pil status kecil dan bar progres. **Bayangan:** hanya `shadow-sm`(none) s.d. `shadow-2xl`
+  yang tipis; kartu dibedakan dengan garis tipis, bukan bayangan.
+- **Tanpa gradien dekoratif.** Tombol utama solid. Satu-satunya gradien yang masih ada adalah
+  animasi `.skeleton` di `style.css`.
+- **Penanda level bukan emoji.** `getAchievementLevel_()` mengembalikan `icon` berupa HTML
+  (`<span class="level-dot">`); jangan mengembalikannya ke emoji. Hati-hati kalau `icon`
+  dipakai di tempat yang menganggapnya teks biasa (mis. ekspor Excel); saat ini hanya dipakai
+  di tabel achievement.
+- **Hijau neon `#39FF14` di AI SOP sengaja dipertahankan** (keputusan pemilik). Jangan ikut
+  "diselaraskan" ke palet.
+- Hijau = sukses, merah/rose = gagal atau telat. Itu warna status, jangan diubah jadi palet.
+- Blok `<style id="professional-visual-refresh">` yang lama sudah dihapus; isinya pindah ke
+  `css/theme.css`. Jangan menambah blok `<style>` baru di `index.html`.
+- Cache: setelah mengubah `theme.css` atau `style.css`, naikkan angka `?v…` di tag `<link>`.
+
 ---
 
 ## 4. Jebakan yang paling sering menyesatkan
@@ -140,6 +174,9 @@ Berdasarkan sesi-sesi sebelumnya:
   disodorkan sesuai dengan isi repo saat ini.
 - Prioritas pada kecepatan/responsivitas sistem.
 - Lebih suka membangun di dalam sistem yang sudah ada daripada pindah stack.
+- Hijau neon di menu AI SOP adalah pilihan sadar, bukan sisa template.
+- Menyetujui perubahan tampilan **bertahap** (tahap 1 selesai: palet & komponen dasar). Jangan
+  mengerjakan semua rekomendasi sekaligus.
 
 ---
 
@@ -153,6 +190,9 @@ Berdasarkan sesi-sesi sebelumnya:
 - [ ] Kalau konstanta konfigurasi berubah: cek tabel sinkronisasi di `README.md`
 - [ ] Update `docs/CHANGELOG.md` dengan **apa** dan **kenapa**
 - [ ] Beri daftar eksplisit file yang berubah vs yang tidak disentuh
+- [ ] Kalau menyentuh tampilan: cek di browser untuk Sales Monitoring, UPT (podium), Monitoring
+      Tugas, AI SOP, dan modal login (perubahan tahap 1 hanya diperiksa lewat `node --check`)
+- [ ] Naikkan `?v…` pada `<link>` CSS yang berubah
 
 ---
 
@@ -169,3 +209,23 @@ Berdasarkan sesi-sesi sebelumnya:
   Lagi" manual (aman, karena anti-duplikat).
 - **Belum ada tes otomatis** sama sekali. Verifikasi masih manual lewat upload
   file sungguhan.
+
+### Roadmap tampilan & fitur (disetujui bertahap)
+
+- **Tahap 1 — SELESAI:** palet logo, skala sudut/bayangan, tanpa gradien/emoji, `tabular-nums`.
+  Sisa kecil tahap 1: kode toko monospace baru di satu tabel; warna hex abu dingin
+  (`#f1f5f9` dst.) masih ada di `<style>` yang disuntik `sales-dashboard.js` (ranking BM/ABM).
+- **Tahap 2 — belum:** Beranda "Hari ini" (sales MTD, UPT, tugas jatuh tempo, pengumuman) dan
+  navigasi bawah untuk HP. Saat ini menu pertama masih File Manager.
+- **Tahap 3 — belum:** daftar bulan/GID dipindah ke tab "Config" di Google Sheet (sekarang
+  `SHEET_GIDS` di `sales-dashboard.js` — sudah satu tempat, tetapi tiap bulan baru masih perlu
+  edit kode + unggah ke GitHub). Dashboard membaca tab `DATA_STORE` yang **sudah ada** sebagai
+  master toko, bukan membuat tab baru.
+- **Tahap 4 — belum:** kunci versi library CDN (`lucide@latest`, `xlsx-latest`, dan Tailwind
+  CDN). Mengganti Tailwind CDN dengan CSS hasil build akan menambah build step dan bertentangan
+  dengan prinsip di `ARCHITECTURE.md` — jangan dikerjakan tanpa persetujuan eksplisit.
+- Setelahnya (tanpa urutan): pengumuman & memo, kalender operasional, perbaikan AI SOP
+  (👍/👎, saran pertanyaan, kuis), pencarian global, halaman peringkat.
+- **Periksa dulu:** README menyebut `backend/Code.gs`, tetapi berkas itu tidak ada di salinan
+  repo yang dipakai pada sesi tahap 1 (hanya `ai-sop-backend.gs`). Minta berkasnya sebelum
+  menyentuh fitur upload PDF.

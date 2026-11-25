@@ -255,7 +255,7 @@ async function sendAiPrompt(retryQuestion) {
                         <div class="font-extrabold text-slate-900 border-b border-slate-100 pb-3 mb-3 flex items-center justify-between">
                             <span class="text-sm tracking-wide uppercase text-slate-500">MR.DIY Operations Assistant</span>
                             <div class="flex items-center gap-2">
-                                <a href="https://drive.google.com/drive/folders/18xwtLtJY_U7_q7UPFLdlIydKzx4VV6qs?usp=drive_link" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-full shadow-sm transition-all border border-emerald-500/30">
+                                <a href="https://drive.google.com/drive/folders/18xwtLtJY_U7_q7UPFLdlIydKzx4VV6qs?usp=drive_link" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-full shadow-sm transition-all border border-emerald-500/30">
                                     <i data-lucide="folder" class="w-3.5 h-3.5"></i> Arsip SOP Google Drive
                                 </a>
                                 <span class="text-xs bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full font-bold">Live Drive</span>

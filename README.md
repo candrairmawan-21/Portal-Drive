@@ -29,7 +29,9 @@ apa adanya sebagai static site.
 ```
 Portal-Drive-main/
 ├── index.html              # Seluruh UI (SPA satu file, section di-toggle via JS)
-├── css/style.css           # Styling tambahan di luar Tailwind CDN
+├── css/
+│   ├── style.css           # Styling dasar tambahan di luar Tailwind CDN
+│   └── theme.css           # Token warna/sudut/bayangan (palet logo) — lihat AI_HANDOFF §3.7
 ├── js/
 │   ├── app.js              # Auth, navigasi sidebar, file explorer Drive
 │   ├── dashboard.js        # Dashboard UPT

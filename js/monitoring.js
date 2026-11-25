@@ -400,7 +400,7 @@ function renderSuperiorDashboard(tbody) {
     }).length;
 
     let kpiHTML = `
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 w-full bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-slate-800">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 w-full bg-slate-900 p-6 rounded-3xl text-white shadow-xl border border-slate-800">
         <div class="space-y-1">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 text-amber-400 text-xs font-black tracking-wider uppercase border border-amber-400/20">
                 <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Mode Pengawas Aktif
@@ -409,17 +409,17 @@ function renderSuperiorDashboard(tbody) {
             <p class="text-xs text-slate-300">Memantau tingkat penyelesaian tugas seluruh ABM & BM secara langsung dan akurat.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2.5">
-            <a href="https://docs.google.com/spreadsheets/d/1DwQNbu8KstZnm8PKE7d0Wtdf7Ox9pH4IgdSu3KQnemc/edit?gid=1742374499#gid=1742374499" target="_blank" rel="noopener noreferrer" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-900/30 transition-all flex items-center gap-2 border border-emerald-500/30 active:scale-95">
+            <a href="https://docs.google.com/spreadsheets/d/1DwQNbu8KstZnm8PKE7d0Wtdf7Ox9pH4IgdSu3KQnemc/edit?gid=1742374499#gid=1742374499" target="_blank" rel="noopener noreferrer" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-900/30 transition-all flex items-center gap-2 border border-emerald-500/30 active:scale-95">
                 <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Rekap Google Sheet
             </a>
-            <button onclick="resetAllTasksCache()" class="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-rose-900/30 transition-all flex items-center gap-2 border border-rose-500/30 active:scale-95">
+            <button onclick="resetAllTasksCache()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-rose-900/30 transition-all flex items-center gap-2 border border-rose-500/30 active:scale-95">
                 <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset Button
             </button>
         </div>
     </div>
     
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8 w-full">
-        <div class="bg-gradient-to-br from-rose-50/80 via-white to-white border border-rose-200/80 rounded-3xl p-5 shadow-lg shadow-rose-900/5 relative overflow-hidden group">
+        <div class="bg-white border border-rose-200/80 rounded-3xl p-5 shadow-lg shadow-rose-900/5 relative overflow-hidden group">
             <div class="flex justify-between items-start mb-3">
                 <p class="text-xs font-extrabold uppercase tracking-wider text-rose-600 flex items-center gap-2">
                     <span class="p-2 rounded-xl bg-rose-100 text-rose-600 shadow-inner"><i data-lucide="alert-circle" class="w-4 h-4"></i></span> Tugas Terlambat
@@ -429,7 +429,7 @@ function renderSuperiorDashboard(tbody) {
             <p class="text-[11px] text-slate-500 mt-2 font-medium">Memerlukan tindak lanjut segera.</p>
         </div>
 
-        <div class="bg-gradient-to-br from-indigo-50/50 via-white to-white border border-indigo-100 rounded-3xl p-5 shadow-lg relative overflow-hidden group">
+        <div class="bg-white border border-indigo-100 rounded-3xl p-5 shadow-lg relative overflow-hidden group">
             <div class="flex justify-between items-start mb-3">
                 <p class="text-xs font-extrabold uppercase tracking-wider text-indigo-600 flex items-center gap-2">
                     <span class="p-2 rounded-xl bg-indigo-100 text-indigo-600 shadow-inner"><i data-lucide="calendar-days" class="w-4 h-4"></i></span> Agenda Hari Ini
@@ -439,7 +439,7 @@ function renderSuperiorDashboard(tbody) {
             <p class="text-[11px] text-slate-500 mt-2 font-medium">Target operasional hari ini.</p>
         </div>
 
-        <div class="bg-gradient-to-br from-emerald-50/80 via-white to-white border border-emerald-200/80 rounded-3xl p-5 shadow-lg relative overflow-hidden group">
+        <div class="bg-white border border-emerald-200/80 rounded-3xl p-5 shadow-lg relative overflow-hidden group">
             <div class="flex justify-between items-start mb-3">
                 <p class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 flex items-center gap-2">
                     <span class="p-2 rounded-xl bg-emerald-100 text-emerald-600 shadow-inner"><i data-lucide="check-circle-2" class="w-4 h-4"></i></span> Tuntas Sempurna
@@ -449,7 +449,7 @@ function renderSuperiorDashboard(tbody) {
             <p class="text-[11px] text-slate-500 mt-2 font-medium">Diselesaikan penuh oleh tim.</p>
         </div>
 
-        <div class="bg-gradient-to-br from-amber-50/80 via-white to-white border border-amber-200/80 rounded-3xl p-5 shadow-lg relative overflow-hidden group">
+        <div class="bg-white border border-amber-200/80 rounded-3xl p-5 shadow-lg relative overflow-hidden group">
             <div class="flex justify-between items-start mb-3">
                 <p class="text-xs font-extrabold uppercase tracking-wider text-amber-600 flex items-center gap-2">
                     <span class="p-2 rounded-xl bg-amber-100 text-amber-600 shadow-inner"><i data-lucide="activity" class="w-4 h-4"></i></span> Efektivitas Kinerja
@@ -471,18 +471,18 @@ function renderSuperiorDashboard(tbody) {
         const p = personalStats[key];
         const pct = p.total > 0 ? Math.round((p.done / p.total) * 100) : 0;
         
-        let barGradient = 'from-rose-500 to-red-600';
+        let barGradient = 'bg-rose-500';
         let badgeStyle = 'bg-rose-50 text-rose-700 border-rose-200';
         if (pct >= 100) {
-            barGradient = 'from-emerald-500 to-teal-600';
+            barGradient = 'bg-emerald-500';
             badgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-200';
         } else if (pct >= 50) {
-            barGradient = 'from-amber-400 to-amber-500';
+            barGradient = 'bg-amber-500';
             badgeStyle = 'bg-amber-50 text-amber-700 border-amber-200';
         }
 
         teamProgressHTML += `
-            <div class="bg-gradient-to-b from-white via-slate-50/50 to-slate-100/60 p-4 rounded-2xl border border-slate-200/80 shadow-md flex flex-col justify-between group">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-md flex flex-col justify-between group">
                 <div>
                     <div class="flex justify-between items-center text-xs font-bold text-slate-800 mb-2">
                         <span class="truncate font-black text-slate-900">${p.name}</span>
@@ -491,7 +491,7 @@ function renderSuperiorDashboard(tbody) {
                     <p class="text-[11px] text-slate-500 font-medium mb-3">Tuntas: <strong class="text-slate-800">${p.done}</strong> dari ${p.total} tugas</p>
                 </div>
                 <div class="w-full bg-slate-200/80 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
-                    <div class="bg-gradient-to-r ${barGradient} h-full rounded-full transition-all duration-700" style="width: ${pct}%"></div>
+                    <div class="${barGradient} h-full rounded-full transition-all duration-700" style="width: ${pct}%"></div>
                 </div>
             </div>`;
     });

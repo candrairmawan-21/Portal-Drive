@@ -8,6 +8,47 @@ Urutan dari terbaru ke terlama.
 
 ---
 
+## 2026-11 — Tampilan tahap 1: palet logo, satu skala sudut/bayangan, tanpa gradien & emoji
+
+### Kenapa
+Tampilan terasa seperti "template" karena warna bawaan Tailwind (slate dingin + amber + hijau)
+tidak berasal dari identitas Midnorth, sudut sangat bulat (`rounded-2xl/3xl` ±76 kali), bayangan
+tebal (`shadow-` ±97 kali), gradien (18 kali), dan emoji sebagai penanda level. Fitur dan menu
+tidak diubah; ini murni lapisan visual.
+
+### Apa yang berubah
+- **`css/theme.css` (BARU)** menggantikan blok inline `<style id="professional-visual-refresh">`
+  di `index.html`. Berisi token (`:root`) dan aturan tampilan. Warna logo: cokelat `#6F4A2A`,
+  oranye `#D4692B`, kuning `#EFAE38`.
+- **`tailwind.config` (di `index.html`, tepat setelah CDN Tailwind)** memetakan ulang skala:
+  `slate` = netral hangat, `amber`/`orange` = oranye logo, `indigo`/`blue`/`cyan`/`violet` =
+  cokelat logo. Kelas lama (`bg-slate-900`, `text-amber-600`, dst.) TIDAK dihapus dari kode —
+  hanya warnanya yang berubah. Config yang sama menetapkan sudut (kartu 8px, kontrol 6px),
+  bayangan tipis (`shadow-sm` = none), dan `tracking-wider/widest` lebih rapat.
+- **Gradien → warna solid:** hero Sales & Monitoring, kartu ringkasan & bar progres di
+  `monitoring.js`, podium di `dashboard.js`, tombol "Live Drive" di `ai-sop.js`.
+  (Gradien skeleton loading di `style.css` sengaja dipertahankan; itu animasi, bukan hiasan.)
+- **Emoji level → penanda warna:** `getAchievementLevel_()` kini mengembalikan `icon` berupa
+  HTML `<span class="level-dot">`, bukan emoji. Ranking BM/ABM memakai angka. Skala level
+  dibedakan lewat intensitas oranye → cokelat solid untuk Level 4.
+- **Warna chart** di `sales-dashboard.js` (cyan/ungu/indigo) diganti oranye/cokelat logo.
+- **Angka rata (`tabular-nums`)** pada tabel & KPI; **kode toko monospace** hanya di tabel
+  achievement `sales-dashboard.js` (baris `storeCode`). Tempat lain belum.
+- `css/style.css`: warna latar & skeleton disamakan dengan palet; `hover-lift` -4px → -2px.
+
+### Sengaja TIDAK diubah
+- Hijau neon `#39FF14` + animasi bounce di menu AI SOP (sudah ditandai "intentionally preserve"
+  oleh pemilik). Aturannya dipindah apa adanya ke `theme.css`.
+- Hijau (sukses) dan merah/rose (gagal/telat) — itu warna status, bukan dekorasi.
+- Logika data, GID, backend, dan urutan menu.
+
+### Catatan verifikasi
+Perubahan sudah lolos `node --check`, tetapi **belum dilihat di browser** (tidak ada akses
+jaringan saat dikerjakan; Tailwind CDN dibutuhkan untuk merender). Cek manual: Sales Monitoring,
+UPT (podium), Monitoring Tugas, AI SOP, dan modal login.
+
+---
+
 ## 2026-11 — AI SOP: error "high demand" dari Gemini ditangani dengan retry & fallback model
 
 ### Bug: AI SOP selalu menampilkan "This model is currently experiencing high demand"

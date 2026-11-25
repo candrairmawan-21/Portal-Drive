@@ -1,0 +1,189 @@
+/* ==========================================================================
+   THEME MIDNORTH — SATU-SATUNYA tempat token warna, sudut, dan bayangan.
+   Palet diambil dari logo Midnorth Java (midnorth java (1).png):
+     cokelat #6F4A2A (tulisan logo) · oranye #D4692B · kuning #EFAE38
+   Tailwind ikut memakai palet ini lewat `tailwind.config` di index.html
+   (amber/orange = oranye logo, slate = netral hangat, indigo = cokelat),
+   jadi kelas seperti `bg-slate-900` atau `text-amber-600` TIDAK dihapus
+   dari kode, hanya warnanya yang berubah. Ubah warna di SATU tempat:
+   skala di tailwind.config + variabel :root di bawah.
+   Menggantikan blok <style id="professional-visual-refresh"> lama.
+   ========================================================================== */
+:root {
+    --brand-brown: #6F4A2A;
+    --brand-orange: #D4692B;
+    --brand-orange-strong: #BF5A1F; /* oranye logo, digelapkan agar teks putih terbaca (4.5:1) */
+    --brand-amber: #EFAE38;
+
+    --ink: #2A2018;
+    --muted: #7F7467;
+    --line: #E7DFD4;
+    --page: #F6F2EC;
+    --surface: #FFFFFF;
+    --surface-soft: #FAF7F3;
+    --sidebar-bg: #2A2018;
+
+    --accent: var(--brand-orange-strong);
+    --accent-soft: #FDF5EC;
+    --accent-ring: rgba(212, 105, 43, .22);
+
+    --success: #15966F;
+    --danger: #DF5266;
+
+    /* Skala sudut: kartu 8px, kontrol 6px. Pil (rounded-full) hanya untuk status kecil. */
+    --radius-card: 8px;
+    --radius-control: 6px;
+}
+
+html { background: var(--page); }
+body#mainBody { background: var(--page); color: var(--ink); }
+
+/* Angka rata agar kolom angka lurus; kode toko memakai kelas Tailwind font-mono. */
+table, #section-sales, #section-dashboard, #section-monitoring { font-variant-numeric: tabular-nums; }
+
+/* ---- Sidebar: solid, tanpa gradien ---- */
+#sidebarMenu {
+    background: var(--sidebar-bg);
+    border-right-color: rgba(255,255,255,.06);
+    padding: 16px 12px;
+}
+#sidebarMenu nav { space-y: 0 !important; }
+#sidebarMenu nav > * { margin-bottom: 4px; }
+#sidebarMenu button, #sidebarMenu a {
+    border: 1px solid transparent;
+    min-height: 44px;
+    border-radius: var(--radius-control);
+}
+#sidebarMenu button:hover, #sidebarMenu a:hover {
+    background: rgba(255,255,255,.06);
+    border-color: rgba(255,255,255,.05);
+}
+#sidebarMenu .border-b, #sidebarMenu .border-t { border-color: rgba(255,255,255,.08) !important; }
+#sidebarMenu .header-container { margin-bottom: 16px; }
+#sidebarMenu .logo-text-group img {
+    border-radius: var(--radius-control);
+    height: 40px !important;
+    width: auto !important;
+    max-width: 40px;
+    max-height: 40px;
+}
+#sidebarMenu [id^="menu-"].bg-slate-800,
+#sidebarMenu button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* ---- Header ---- */
+header {
+    background: rgba(255,255,255,.92) !important;
+    border-bottom-color: var(--line) !important;
+    box-shadow: none !important;
+}
+header .container { max-width: 1680px; padding-top: 13px; padding-bottom: 13px; }
+#pageTitle { font-size: 17px; letter-spacing: -.01em; }
+#userInfoDisplay { background: #fff; box-shadow: none; }
+#fileTools input, header input {
+    background: #fff !important;
+    border-color: var(--line) !important;
+    border-radius: var(--radius-control) !important;
+}
+
+/* ---- Konten: garis tipis menggantikan bayangan tebal ---- */
+main.container { max-width: 1680px; }
+main.container, #section-ai-sop { padding-top: 28px !important; padding-bottom: 36px !important; }
+.bg-white.border {
+    border-color: var(--line) !important;
+    box-shadow: 0 1px 2px rgba(42,32,24,.05) !important;
+}
+
+select, input[type="text"], input[type="date"], input[type="file"] { border-color: var(--line) !important; }
+select:focus, input:focus { box-shadow: 0 0 0 3px var(--accent-ring) !important; }
+label { color: var(--muted) !important; }
+.bg-slate-50 { background-color: var(--surface-soft) !important; }
+
+/* ---- Kartu KPI ---- */
+#section-sales .grid > .bg-white.border,
+#section-dashboard .grid > .bg-white.border { position: relative; overflow: hidden; }
+#section-sales .grid > .bg-white.border::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--brand-orange);
+}
+#section-sales [id^="summary-"] {
+    font-size: clamp(1.2rem, 1.8vw, 1.7rem) !important;
+    letter-spacing: -.02em;
+    line-height: 1.15;
+    margin-top: 5px;
+}
+#section-sales .grid > .bg-white.border p { color: var(--muted) !important; }
+
+/* ---- Tabel ---- */
+table thead { background: var(--surface-soft) !important; }
+table thead th {
+    color: var(--muted) !important;
+    font-size: 10px !important;
+    letter-spacing: .04em !important;
+}
+table tbody tr:hover { background: var(--surface-soft); }
+table tbody td { border-color: #EFE8DE !important; }
+.overflow-x-auto { scrollbar-color: #D3C8B9 transparent; }
+
+/* ---- Tombol: solid, tanpa bayangan dekoratif ---- */
+button, a { transition-duration: .18s !important; }
+.bg-slate-900, .bg-amber-500 { box-shadow: none; }
+
+/* ---- Hero Sales Monitoring: solid (kelas gradien sudah dilepas di index.html) ---- */
+#section-sales > .bg-slate-900 { border-color: rgba(255,255,255,.06) !important; }
+
+/* ---- File manager ---- */
+#breadcrumbs { border-color: var(--line) !important; background: rgba(255,255,255,.92) !important; }
+#portalGrid > * { transition: border-color .18s ease; }
+#portalGrid > *:hover { border-color: var(--brand-orange) !important; }
+
+/* ---- F003 & Analyze ---- */
+#damage-form-container > .grid,
+#section-monitoring .bg-slate-50,
+#section-analyze .bg-white > .hidden + * { border-color: var(--line) !important; }
+#section-damage table thead { background: var(--sidebar-bg) !important; }
+#section-analyze .max-w-2xl,
+#section-monitoring > .bg-white { max-width: 1320px; }
+
+/* ---- AI SOP: hijau neon + bounce SENGAJA dipertahankan (keputusan pemilik) ---- */
+#menu-ai-sop [data-lucide="bot"] { color: #39FF14 !important; }
+#menu-ai-sop span[class*="animate-bounce"] {
+    background: rgba(57,255,20,.12) !important;
+    color: #39FF14 !important;
+    border-color: rgba(57,255,20,.28) !important;
+}
+#section-ai-sop .bg-emerald-500 { box-shadow: 0 0 22px rgba(57,255,20,.18); }
+
+/* ---- Modal & login ---- */
+[id$="Modal"] > .bg-white, #loginOverlay > .bg-white {
+    border-radius: var(--radius-card) !important;
+    box-shadow: 0 12px 32px rgba(42,32,24,.18) !important;
+}
+#loginOverlay { background: var(--sidebar-bg) !important; }
+#loginOverlay > .bg-white { max-width: 430px; }
+
+/* ---- Aksesibilitas ---- */
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 2px solid var(--brand-orange) !important;
+    outline-offset: 2px;
+}
+
+/* ---- Penanda level (pengganti emoji 🏆🥈🥉⭐) ---- */
+.level-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex: none;
+}
+
+@media (max-width: 768px) {
+    main.container { padding-left: 16px !important; padding-right: 16px !important; }
+    header .container { padding-left: 16px; padding-right: 16px; }
+    #section-sales > .bg-slate-900 { padding: 20px !important; }
+    #section-sales .grid > .bg-white.border { min-height: 100px; }
+}

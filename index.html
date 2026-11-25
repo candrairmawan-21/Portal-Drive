@@ -8,6 +8,32 @@
     
     <!-- Dependensi Pihak Ketiga (Tailwind, Lucide Icons, Chart.js, Excel & FileSaver) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Palet Midnorth (dari logo) + skala sudut/bayangan. Detail & alasan: css/theme.css dan docs/AI_HANDOFF.md -->
+    <script>
+        tailwind.config = {
+            theme: { extend: {
+                colors: {
+                    slate: { 50:'#FAF7F3',100:'#F3EEE7',200:'#E7DFD4',300:'#D3C8B9',400:'#A69A8A',500:'#7F7467',600:'#625848',700:'#4B4236',800:'#352D24',900:'#2A2018',950:'#1C140D' },
+                    amber: { 50:'#FDF5EC',100:'#FAE8D0',200:'#F5D2A3',300:'#EFAE38',400:'#D4692B',500:'#BF5A1F',600:'#A04A18',700:'#7F3A13',800:'#5F2C10',900:'#45200C',950:'#2E1409' },
+                    orange: { 50:'#FDF5EC',100:'#FAE8D0',200:'#F5D2A3',300:'#EFAE38',400:'#D4692B',500:'#BF5A1F',600:'#A04A18',700:'#7F3A13',800:'#5F2C10',900:'#45200C',950:'#2E1409' },
+                    indigo: { 50:'#F7F1EA',100:'#EDE1D3',200:'#DAC4A9',300:'#BFA07A',400:'#9A7550',500:'#6F4A2A',600:'#5C3D22',700:'#4A311B',800:'#382515',900:'#2A1B0F',950:'#1C120A' },
+                    blue: { 50:'#F7F1EA',100:'#EDE1D3',200:'#DAC4A9',300:'#BFA07A',400:'#9A7550',500:'#6F4A2A',600:'#5C3D22',700:'#4A311B',800:'#382515',900:'#2A1B0F',950:'#1C120A' },
+                    cyan: { 50:'#F7F1EA',100:'#EDE1D3',200:'#DAC4A9',300:'#BFA07A',400:'#9A7550',500:'#6F4A2A',600:'#5C3D22',700:'#4A311B',800:'#382515',900:'#2A1B0F',950:'#1C120A' },
+                    violet: { 50:'#F7F1EA',100:'#EDE1D3',200:'#DAC4A9',300:'#BFA07A',400:'#9A7550',500:'#6F4A2A',600:'#5C3D22',700:'#4A311B',800:'#382515',900:'#2A1B0F',950:'#1C120A' }
+                },
+                borderRadius: { lg:'6px', xl:'6px', '2xl':'8px', '3xl':'8px' },
+                boxShadow: {
+                    sm:'none',
+                    DEFAULT:'0 1px 2px rgba(42,32,24,.06)',
+                    md:'0 1px 2px rgba(42,32,24,.06)',
+                    lg:'0 1px 3px rgba(42,32,24,.08)',
+                    xl:'0 2px 6px rgba(42,32,24,.08)',
+                    '2xl':'0 4px 12px rgba(42,32,24,.12)'
+                },
+                letterSpacing: { wider:'0.04em', widest:'0.06em' }
+            } }
+        };
+    </script>
     
     <!-- FONT BARU: GENERAL SANS (Fontshare) - Tidak umum digunakan AI, sangat nyaman dibaca -->
     <link href="https://api.fontshare.com/v2/css?f[]=general-sans@300,400,500,600,700&display=swap" rel="stylesheet">
@@ -26,228 +52,7 @@
     <!-- Menghubungkan Style Khusus -->
     <link rel="stylesheet" href="css/style.css?v20260904">
 
-    <style id="professional-visual-refresh">
-        :root {
-            --ink: #172033;
-            --muted: #64748b;
-            --line: #e7ebf0;
-            --surface: #ffffff;
-            --surface-soft: #f7f8fa;
-            --accent: #d99718;
-            --accent-soft: #fff7e8;
-            --success: #15966f;
-            --danger: #df5266;
-            --radius-card: 20px;
-        }
-
-        html { background: #f5f6f8; }
-        body#mainBody {
-            background:
-                radial-gradient(circle at 92% 4%, rgba(217,151,24,.07), transparent 23rem),
-                radial-gradient(circle at 12% 100%, rgba(15,23,42,.045), transparent 30rem),
-                #f5f6f8;
-            color: var(--ink);
-        }
-
-        /* Sidebar: calmer, denser and easier to scan */
-        #sidebarMenu {
-            background: linear-gradient(180deg, #121a28 0%, #101724 100%);
-            border-right-color: rgba(255,255,255,.055);
-            padding: 16px 12px;
-        }
-        #sidebarMenu nav { space-y: 0 !important; }
-        #sidebarMenu nav > * { margin-bottom: 4px; }
-        #sidebarMenu button, #sidebarMenu a {
-            border: 1px solid transparent;
-            min-height: 44px;
-            border-radius: 12px;
-            letter-spacing: -.01em;
-        }
-        #sidebarMenu button:hover, #sidebarMenu a:hover {
-            background: rgba(255,255,255,.055);
-            border-color: rgba(255,255,255,.05);
-            transform: translateX(2px);
-        }
-        #sidebarMenu .border-b, #sidebarMenu .border-t { border-color: rgba(255,255,255,.075) !important; }
-        #sidebarMenu .header-container { margin-bottom: 16px; }
-        #sidebarMenu .logo-text-group img {
-            border-radius: 10px;
-            height: 40px !important;
-            width: auto !important;
-            max-width: 40px;
-            max-height: 40px;
-        }
-        #sidebarMenu [id^="menu-"].bg-slate-800,
-        #sidebarMenu button:focus-visible {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(217,151,24,.14);
-        }
-
-        /* Header */
-        header {
-            background: rgba(255,255,255,.86) !important;
-            border-bottom-color: rgba(15,23,42,.07) !important;
-            box-shadow: 0 1px 0 rgba(15,23,42,.025) !important;
-        }
-        header .container { max-width: 1680px; padding-top: 13px; padding-bottom: 13px; }
-        #pageTitle { font-size: 17px; letter-spacing: -.025em; }
-        #userInfoDisplay { background: #fff; box-shadow: none; }
-        #fileTools input, header input {
-            background: #fff !important;
-            border-color: var(--line) !important;
-            border-radius: 12px !important;
-        }
-
-        /* Main content rhythm */
-        main.container { max-width: 1680px; }
-        main.container, #section-ai-sop { padding-top: 28px !important; padding-bottom: 36px !important; }
-        .bg-white.border, .bg-white.rounded-3xl {
-            border-color: var(--line) !important;
-            box-shadow: 0 8px 24px rgba(15,23,42,.035) !important;
-        }
-        .rounded-3xl { border-radius: var(--radius-card) !important; }
-        .rounded-2xl { border-radius: 14px !important; }
-        .rounded-xl { border-radius: 10px !important; }
-
-        /* Form/filter panels: stronger hierarchy */
-        select, input[type="text"], input[type="date"], input[type="file"] {
-            border-color: #dfe5eb !important;
-        }
-        select:focus, input:focus {
-            box-shadow: 0 0 0 3px rgba(217,151,24,.11) !important;
-        }
-        label { color: #6b7788 !important; }
-        .bg-slate-50 { background-color: #f7f8fa !important; }
-
-        /* KPI cards: data-first */
-        #section-sales .grid > .bg-white.border,
-        #section-dashboard .grid > .bg-white.border {
-            position: relative;
-            overflow: hidden;
-        }
-        #section-sales .grid > .bg-white.border::before {
-            content: "";
-            position: absolute;
-            left: 0; top: 0; bottom: 0;
-            width: 3px;
-            background: #d99718;
-            opacity: .85;
-        }
-        #section-sales [id^="summary-"] {
-            font-size: clamp(1.2rem, 1.8vw, 1.7rem) !important;
-            letter-spacing: -.035em;
-            line-height: 1.15;
-            margin-top: 5px;
-        }
-        #section-sales .grid > .bg-white.border p {
-            color: #7b8796 !important;
-            letter-spacing: .07em;
-        }
-
-        /* Tables: improve scanability */
-        table thead {
-            background: #f7f8fa !important;
-        }
-        table thead th {
-            color: #7a8593 !important;
-            font-size: 10px !important;
-            letter-spacing: .075em !important;
-        }
-        table tbody tr {
-            transition: background-color .16s ease, transform .16s ease;
-        }
-        table tbody tr:hover { background: #fbfcfd; }
-        table tbody td { border-color: #edf0f3 !important; }
-        .overflow-x-auto { scrollbar-color: #cbd5df transparent; }
-
-        /* Buttons: consistent hierarchy */
-        button, a { transition-duration: .18s !important; }
-        .bg-slate-900 {
-            box-shadow: 0 5px 14px rgba(15,23,42,.12);
-        }
-        .bg-slate-900:hover { box-shadow: 0 8px 20px rgba(15,23,42,.16); }
-        .bg-amber-500 { box-shadow: 0 5px 14px rgba(217,151,24,.17); }
-
-        /* Sales hero */
-        #section-sales > .bg-gradient-to-r {
-            background: linear-gradient(115deg, #111a29 0%, #17243a 55%, #101827 100%) !important;
-            border-color: rgba(255,255,255,.06) !important;
-            border-radius: 22px !important;
-            position: relative;
-            overflow: hidden;
-        }
-        #section-sales > .bg-gradient-to-r::after {
-            content: "";
-            position: absolute;
-            width: 320px; height: 320px;
-            right: -100px; top: -200px;
-            border-radius: 999px;
-            background: radial-gradient(circle, rgba(217,151,24,.16), transparent 66%);
-            pointer-events: none;
-        }
-
-        /* Chart framing */
-        .h-72, .h-56 {
-            background: linear-gradient(180deg, rgba(248,250,252,.45), rgba(255,255,255,0));
-            border-radius: 14px;
-            padding: 8px;
-        }
-
-        /* File manager */
-        #breadcrumbs {
-            border-color: var(--line) !important;
-            background: rgba(255,255,255,.88) !important;
-        }
-        #portalGrid > * {
-            transition: transform .18s ease, box-shadow .18s ease;
-        }
-        #portalGrid > *:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 22px rgba(15,23,42,.07);
-        }
-
-        /* F003 and Analyze: reduce visual noise */
-        #damage-form-container > .grid,
-        #section-monitoring .bg-slate-50,
-        #section-analyze .bg-white > .hidden + * {
-            border-color: #e9edf1 !important;
-        }
-        #section-damage table thead { background: #1a2433 !important; }
-        #section-analyze .max-w-2xl,
-        #section-monitoring > .bg-white { max-width: 1320px; }
-
-        /* AI SOP: intentionally preserve green neon + bounce */
-        #menu-ai-sop [data-lucide="bot"] { color: #39FF14 !important; }
-        #menu-ai-sop span[class*="animate-bounce"] {
-            background: rgba(57,255,20,.12) !important;
-            color: #39FF14 !important;
-            border-color: rgba(57,255,20,.28) !important;
-        }
-        #section-ai-sop .bg-emerald-500 {
-            box-shadow: 0 0 22px rgba(57,255,20,.18);
-        }
-
-        /* Modals */
-        [id$="Modal"] > .bg-white, #loginOverlay > .bg-white {
-            border-radius: 22px !important;
-            box-shadow: 0 24px 70px rgba(15,23,42,.22) !important;
-        }
-        #loginOverlay { background: linear-gradient(135deg, #101827, #1b2638) !important; }
-        #loginOverlay > .bg-white { max-width: 430px; }
-
-        /* Accessibility */
-        button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
-            outline: 2px solid rgba(217,151,24,.75) !important;
-            outline-offset: 2px;
-        }
-
-        @media (max-width: 768px) {
-            main.container { padding-left: 16px !important; padding-right: 16px !important; }
-            header .container { padding-left: 16px; padding-right: 16px; }
-            #section-sales > .bg-gradient-to-r { padding: 20px !important; }
-            #section-sales .grid > .bg-white.border { min-height: 100px; }
-        }
-    </style>
+    <link rel="stylesheet" href="css/theme.css?v20261125">
 
 
 <style id="logo-render-fix">
@@ -573,7 +378,7 @@
         <main id="section-sales" class="container mx-auto px-6 py-8 flex-1 hidden">
             
             <!-- A. LANDING PAGE STATUS BANNER + SOURCE SELECTOR + UPLOAD BUTTON -->
-            <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl mb-6 text-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl mb-6 text-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div class="space-y-1.5">
                     <div class="flex items-center gap-3">
                         <span class="px-3 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-black rounded-full uppercase tracking-wider">
