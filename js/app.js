@@ -11,7 +11,7 @@ let pendingUrl = '';
 let pendingPassword = '';
 
 const userDatabase = {
-    'candra': 'admin', 'guest': 'guest',
+    'candra': 'admin',
     'bm agus': 'BM', 'bm didik': 'BM', 'bm galih': 'BM',
     'abm dani': 'ABM', 'abm bayu': 'ABM', 'abm ika': 'ABM', 'abm adinda': 'ABM',
     'abm ridho': 'ABM', 'abm fachri': 'ABM', 'abm gading': 'ABM', 'abm wildan': 'ABM', 'abm satria': 'ABM',
@@ -52,6 +52,17 @@ function toggleSidebarMobile() {
     const backdrop = document.getElementById('sidebarBackdrop');
     sidebar.classList.toggle('-translate-x-full');
     backdrop.classList.toggle('hidden');
+}
+
+// Tutup (bukan toggle) sidebar di HP. Dipakai switchView: dulu memakai toggle,
+// akibatnya sidebar justru TERBUKA saat halaman pertama kali dimuat di HP
+// (state awalnya sudah tertutup) dan salah buka/tutup kalau pindah halaman
+// lewat navigasi bawah. Menutup hanya kalau memang sedang terbuka.
+function closeSidebarMobile() {
+    const sidebar = document.getElementById('sidebarMenu');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (sidebar) sidebar.classList.add('-translate-x-full');
+    if (backdrop) backdrop.classList.add('hidden');
 }
 
 /* ==========================================================================
@@ -157,7 +168,7 @@ function renderLoggedInUser() {
 function applyGuestRestrictions() {
     const role = sessionStorage.getItem('portalRole');
     const hiddenForGuest = [
-        'menu-files', 'menu-dashboard', 'menu-sales',
+        'menu-home', 'menu-files', 'menu-dashboard', 'menu-sales',
         'menu-cek-pengiriman', 'menu-cek-barcode', 'menu-cek-sku'
     ];
     
@@ -182,13 +193,13 @@ function applyGuestRestrictions() {
 function switchView(view) {
     sessionStorage.setItem('lastActiveView', view); 
 
-    const allSections = ['files', 'dashboard', 'sales', 'damage', 'monitoring', 'ai-sop', 'itemize', 'fast-moving'];
+    const allSections = ['home', 'files', 'dashboard', 'sales', 'damage', 'monitoring', 'ai-sop', 'itemize', 'fast-moving'];
     allSections.forEach(id => {
         const el = document.getElementById('section-' + id);
         if(el) el.classList.add('hidden');
     });
               
-    const standardButtons = ['files', 'dashboard', 'sales', 'damage', 'monitoring', 'ai-sop'];
+    const standardButtons = ['home', 'files', 'dashboard', 'sales', 'damage', 'monitoring', 'ai-sop'];
     standardButtons.forEach(id => {
         let btnId;
         if (id === 'damage') btnId = 'nav-damage';
@@ -222,7 +233,18 @@ function switchView(view) {
     const title = document.getElementById('pageTitle');
     const fileTools = document.getElementById('fileTools');
 
-    if (view === 'dashboard') {
+    if (view === 'home') {
+        document.getElementById('section-home')?.classList.remove('hidden');
+        const homeBtn = document.getElementById('menu-home');
+        if (homeBtn) {
+            homeBtn.classList.remove('text-slate-400');
+            homeBtn.classList.add('bg-amber-500', 'text-white');
+        }
+        title.innerText = "Beranda";
+        if(fileTools) fileTools.classList.add('invisible');
+        if (typeof loadHomeDashboard === "function") loadHomeDashboard();
+
+    } else if (view === 'dashboard') {
         document.getElementById('section-dashboard').classList.remove('hidden');
         const btn = document.getElementById('menu-dashboard');
         btn.classList.remove('text-slate-400');
@@ -289,7 +311,7 @@ function switchView(view) {
         if(fileTools) fileTools.classList.add('invisible');
 
     } else if (view === 'itemize') {
-        document.getElementById('section-itemize').classList.remove('hidden');
+        document.getElementById('section-itemize')?.classList.remove('hidden');
         const itemizeBtn = document.getElementById('nav-itemize');
         if(itemizeBtn) {
             itemizeBtn.classList.remove('text-slate-400');
@@ -301,7 +323,7 @@ function switchView(view) {
         if(fileTools) fileTools.classList.add('invisible');
 
     } else if (view === 'fast-moving') {
-        document.getElementById('section-fast-moving').classList.remove('hidden');
+        document.getElementById('section-fast-moving')?.classList.remove('hidden');
         const fmBtn = document.getElementById('nav-fast-moving');
         if(fmBtn) {
             fmBtn.classList.remove('text-slate-400');
@@ -321,7 +343,8 @@ function switchView(view) {
         if(fileTools) fileTools.classList.remove('invisible');
     }
 
-    if(window.innerWidth < 768) toggleSidebarMobile();
+    if (typeof updateBottomNav === "function") updateBottomNav(view);
+    if(window.innerWidth < 768) closeSidebarMobile();
 }
 
 /* ==========================================================================
@@ -539,7 +562,7 @@ document.getElementById('loginForm')?.addEventListener('submit', function(e) {
         showAttitudeModal();
 
         if (userRole === 'guest') switchView('damage');
-        else switchView('files');
+        else switchView('home');
     } else { 
         errorText.classList.remove('hidden'); 
     }
@@ -581,9 +604,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof fetchMonitoringData === "function") fetchMonitoringData();
 
         const urlParams = new URLSearchParams(window.location.search);
-        const requestedView = urlParams.get('view') || sessionStorage.getItem('lastActiveView') || (role === 'guest' ? 'damage' : 'files');
+        const requestedView = urlParams.get('view') || sessionStorage.getItem('lastActiveView') || (role === 'guest' ? 'damage' : 'home');
         
-        switchView(role === 'guest' ? 'damage' : requestedView);
+        // View yang tidak punya section (mis. ?view=salah atau sisa sessionStorage lama)
+        // dulu membuat halaman kosong; sekarang jatuh ke Beranda.
+        const viewExists = !!document.getElementById('section-' + requestedView);
+        switchView(role === 'guest' ? 'damage' : (viewExists ? requestedView : 'home'));
     } else {
         if (overlay) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
     }

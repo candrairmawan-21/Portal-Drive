@@ -63,7 +63,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     
     <!-- Menghubungkan Style Khusus -->
-    <link rel="stylesheet" href="css/style.css?v20260904">
+    <link rel="stylesheet" href="css/style.css?v20261125c">
 
     <link rel="stylesheet" href="css/theme.css?v20261125b">
 
@@ -178,6 +178,10 @@
             </div>
 
             <nav class="space-y-2">
+                <button onclick="switchView('home')" id="menu-home" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
+                    <i data-lucide="home" class="w-4 h-4 flex-shrink-0"></i> 
+                    <span class="sidebar-text-element">Beranda</span>
+                </button>
                 <button onclick="switchView('files')" id="menu-files" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
                     <i data-lucide="folder-open" class="w-4 h-4 flex-shrink-0"></i> 
                     <span class="sidebar-text-element">File Manager</span>
@@ -253,6 +257,25 @@
 
     <div id="sidebarBackdrop" onclick="toggleSidebarMobile()" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
+    <!-- NAVIGASI BAWAH (HP): tampil hanya < 768px lewat class `has-bottom-nav` di <body> (lihat css/style.css & js/home.js) -->
+    <nav id="bottomNav" aria-label="Navigasi bawah" class="fixed bottom-0 inset-x-0 z-[25] bg-white border-t border-slate-200">
+        <button type="button" data-bn-view="home" onclick="switchView('home')" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold text-slate-500">
+            <i data-lucide="home" class="w-5 h-5"></i><span>Beranda</span>
+        </button>
+        <button type="button" data-bn-view="sales" onclick="switchView('sales')" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold text-slate-500">
+            <i data-lucide="trending-up" class="w-5 h-5"></i><span>Sales</span>
+        </button>
+        <button type="button" data-bn-view="dashboard" onclick="switchView('dashboard')" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold text-slate-500">
+            <i data-lucide="bar-chart-3" class="w-5 h-5"></i><span>UPT</span>
+        </button>
+        <button type="button" id="bn-monitoring" data-bn-view="monitoring" onclick="switchView('monitoring')" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold text-slate-500">
+            <i data-lucide="clipboard-check" class="w-5 h-5"></i><span>Tugas</span>
+        </button>
+        <button type="button" onclick="toggleSidebarMobile()" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold text-slate-500">
+            <i data-lucide="menu" class="w-5 h-5"></i><span>Menu</span>
+        </button>
+    </nav>
+
     <!-- AREA KERJA UTAMA & HEADER -->
     <div class="flex-1 flex flex-col h-screen overflow-y-auto w-full min-w-0 relative">
         <header class="bg-white/70 backdrop-blur-xl shadow-sm sticky top-0 z-20 border-b border-slate-200/50">
@@ -286,6 +309,55 @@
                 </div>
             </div>
         </header>
+
+        <!-- SEKSI 0: BERANDA "HARI INI" (isi diisi js/home.js) -->
+        <main id="section-home" class="container mx-auto px-6 py-8 flex-1 hidden">
+            <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+                <div>
+                    <p id="homeDate" class="text-xs font-bold text-slate-500 uppercase tracking-wider"></p>
+                    <h3 id="homeGreeting" class="text-xl font-black text-slate-800 mt-1">Beranda</h3>
+                </div>
+                <button type="button" id="homeRefreshBtn" onclick="loadHomeDashboard(true)" class="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 transition">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Muat ulang
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <section id="home-card-sales" class="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-amber-500"></i>
+                            <h4 class="text-sm font-black text-slate-800">Sales MTD</h4>
+                        </div>
+                        <span id="home-sales-period" class="text-[11px] font-bold text-slate-400"></span>
+                    </div>
+                    <div id="home-sales-body" class="flex-1"><div class="skeleton h-24 rounded-xl"></div></div>
+                    <button type="button" onclick="switchView('sales')" class="mt-4 self-start text-xs font-bold text-amber-600 hover:text-amber-700">Lihat detail &rarr;</button>
+                </section>
+
+                <section id="home-card-upt" class="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="w-4 h-4 text-amber-500"></i>
+                            <h4 class="text-sm font-black text-slate-800">UPT</h4>
+                        </div>
+                        <span id="home-upt-period" class="text-[11px] font-bold text-slate-400"></span>
+                    </div>
+                    <div id="home-upt-body" class="flex-1"><div class="skeleton h-24 rounded-xl"></div></div>
+                    <button type="button" onclick="switchView('dashboard')" class="mt-4 self-start text-xs font-bold text-amber-600 hover:text-amber-700">Lihat detail &rarr;</button>
+                </section>
+
+                <section id="home-card-tasks" class="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i data-lucide="clipboard-check" class="w-4 h-4 text-amber-500"></i>
+                        <h4 class="text-sm font-black text-slate-800">Tugas Hari Ini</h4>
+                    </div>
+                    <div id="home-tasks-body" class="flex-1"><div class="skeleton h-24 rounded-xl"></div></div>
+                    <button type="button" onclick="switchView('monitoring')" class="mt-4 self-start text-xs font-bold text-amber-600 hover:text-amber-700">Lihat detail &rarr;</button>
+                </section>
+
+            </div>
+        </main>
 
         <!-- SEKSI 1: FILE MANAGER -->
         <main id="section-files" class="container mx-auto px-6 py-8 flex-1 hidden">
@@ -833,7 +905,7 @@
     </div>
 
     <!-- PEMUATAN KUMPULAN SKRIP LOGIKA -->
-    <script src="js/app.js?v20260904"></script>
+    <script src="js/app.js?v20261125c"></script>
     <script src="js/dashboard.js?v20260904"></script>
     <script src="js/sales-dashboard.js?v20260904"></script>
     <script src="js/f003-builder.js?v20260904"></script>
@@ -841,7 +913,8 @@
     <!-- SCRIPT GABUNGAN ANALYZE CENTER -->
     <script src="js/analyze.js?v20260904"></script>
     
-    <script src="js/monitoring.js?v20260904"></script>
+    <script src="js/monitoring.js?v20261125c"></script>
+    <script src="js/home.js?v20261125c"></script>
     <script src="js/ai-sop.js?v20260904"></script>
 
     <!-- PATCH: mencegah section menu (khususnya Analyze Center) tetap tampil/"bocor" ke menu lain saat berpindah halaman -->

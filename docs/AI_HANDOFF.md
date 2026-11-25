@@ -181,7 +181,7 @@ Berdasarkan sesi-sesi sebelumnya:
 - Lebih suka membangun di dalam sistem yang sudah ada daripada pindah stack.
 - Hijau neon di menu AI SOP adalah pilihan sadar, bukan sisa template.
 - **Tidak mau warna terpaku pada logo Midnorth** dan menolak palet cokelat/oranye. Ingin yang lebih kreatif.
-- Menyetujui perubahan tampilan **bertahap** (tahap 1 selesai: palet & komponen dasar). Jangan
+- Menyetujui perubahan tampilan **bertahap** (tahap 1 selesai: palet & komponen dasar; tahap 2 selesai: Beranda + navigasi bawah). Jangan
   mengerjakan semua rekomendasi sekaligus.
 
 ---
@@ -218,11 +218,12 @@ Berdasarkan sesi-sesi sebelumnya:
 
 ### Roadmap tampilan & fitur (disetujui bertahap)
 
-- **Tahap 1 — SELESAI (menunggu pemilik memilih tema):** tiga tema warna, skala sudut/bayangan, tanpa gradien/emoji, `tabular-nums`.
+- **Tahap 1 — SELESAI (pemilik memutuskan tema tetap 3 opsi, pemilih tema dipertahankan):** tiga tema warna, skala sudut/bayangan, tanpa gradien/emoji, `tabular-nums`.
   Sisa kecil tahap 1: kode toko monospace baru di satu tabel; warna hex abu dingin
   (`#f1f5f9` dst.) masih ada di `<style>` yang disuntik `sales-dashboard.js` (ranking BM/ABM).
-- **Tahap 2 — belum:** Beranda "Hari ini" (sales MTD, UPT, tugas jatuh tempo, pengumuman) dan
-  navigasi bawah untuk HP. Saat ini menu pertama masih File Manager.
+- **Tahap 2 — SELESAI (perlu dilihat di browser sungguhan):** Beranda "Hari ini" (`js/home.js`: sales MTD, UPT, tugas) dan navigasi bawah HP. Detail & perubahan perilaku kode lama: lihat CHANGELOG entri "Tahap 2".
+  Sisa kecil: item bottom-nav (Beranda · Sales · UPT · Tugas · Menu)
+  bisa ditukar di `index.html` (`#bottomNav`).
 - **Tahap 3 — belum:** daftar bulan/GID dipindah ke tab "Config" di Google Sheet (sekarang
   `SHEET_GIDS` di `sales-dashboard.js` — sudah satu tempat, tetapi tiap bulan baru masih perlu
   edit kode + unggah ke GitHub). Dashboard membaca tab `DATA_STORE` yang **sudah ada** sebagai

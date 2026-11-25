@@ -8,6 +8,48 @@ Urutan dari terbaru ke terlama.
 
 ---
 
+## 2026-11 — Tahap 2: Beranda "Hari ini" + navigasi bawah untuk HP
+
+### Kenapa
+Menu pertama sebelumnya File Manager, jadi tidak ada tempat untuk melihat kondisi hari ini sekilas
+(sales, UPT, tugas). Di HP, pindah halaman harus membuka sidebar dulu setiap kali.
+
+### Apa yang berubah
+- **`js/home.js` (BARU):** halaman Beranda dengan tiga kartu —
+  **Sales MTD** (total, target, % ach, jumlah toko ≥ 100% dari tab Store Submission bulan berjalan),
+  **UPT** (rata-rata UPT staff bulan berjalan + staff tertinggi),
+  **Tugas Hari Ini** (BM/ABM: tugas milik sendiri yang hari ini/terlambat dan belum selesai; admin: ringkasan tim; staff: kartu disembunyikan),
+  Tiap kartu gagal sendiri-sendiri dengan tombol "Coba lagi".
+  Data Sales/UPT di-cache 3 menit; tombol "Muat ulang" memaksa ambil ulang.
+- **`index.html`:** menu "Beranda" paling atas di sidebar, `<main id="section-home">`, `<nav id="bottomNav">`
+  (Beranda · Sales · UPT · Tugas · Menu), tag `<script src="js/home.js">`. Versi `?v` app.js, monitoring.js, style.css dinaikkan.
+- **`js/app.js`:** `'home'` ditambahkan ke `switchView`; login & reload sekarang default ke Beranda (guest tetap ke F003);
+  `menu-home` disembunyikan untuk guest; fungsi baru `closeSidebarMobile()`.
+- **`js/monitoring.js`:** satu baris hook (`renderHomeTasksCard`) setelah polling 5 detik, supaya kartu tugas ikut segar.
+- **`css/style.css`:** aturan navigasi bawah (hanya < 768px, memberi ruang di bawah konten, memperhitungkan safe-area).
+
+### Perubahan perilaku pada kode lama (disengaja)
+- **Sidebar di HP:** `switchView` dulu memakai `toggleSidebarMobile()`, sehingga sidebar justru *terbuka sendiri* saat halaman
+  pertama dimuat di HP dan salah buka/tutup lewat navigasi bawah. Sekarang `closeSidebarMobile()` (hanya menutup).
+- **View yang tidak ada** (`?view=salah`, atau sisa `sessionStorage`) dulu menghasilkan halaman kosong (patch di index.html
+  menyembunyikan semua section); sekarang jatuh ke Beranda. Cabang `itemize`/`fast-moving` di `switchView` mencari elemen yang
+  tidak ada di HTML dan melempar error bila dipanggil; diberi `?.` supaya aman.
+
+### Dikeluarkan atas permintaan pemilik
+- Kartu **Pengumuman** tidak dibuat (belum diperlukan). Kalau nanti dibutuhkan, perlu satu sumber data baru (mis. tab Google Sheet).
+- **Username `guest` dihapus** dari `userDatabase` di `app.js`, jadi tidak ada lagi cara login sebagai guest. Kode penanganan role
+  guest (`applyGuestRestrictions`, cabang `'guest'` di `switchView`, `home.js`) sengaja dibiarkan; sekarang tidak terjangkau dan
+  tidak berbahaya.
+- Sistem tema 3 pilihan (cobalt / laut / anggur) dibiarkan apa adanya, termasuk pemilih tema di bawah sidebar.
+
+### Catatan
+- `parseDashboardCSV` mengisi global `dashboardMonthColumns`; Beranda menyimpan & memulihkan nilainya agar halaman Performa UPT tidak terganggu.
+- Navigasi bawah disembunyikan di halaman AI SOP (kolom chat butuh tinggi penuh) dan untuk guest.
+- Diuji lewat simulasi browser (jsdom) dengan data contoh untuk role admin/BM/ABM/staff/guest, semua view, mobile, kegagalan sumber data,
+  dan reload sesi — **belum** diuji di browser sungguhan (tampilan visual perlu dilihat langsung).
+
+---
+
 ## 2026-11 — Tampilan tahap 1 (revisi): palet logo diganti sistem tema 3 pilihan
 
 ### Kenapa

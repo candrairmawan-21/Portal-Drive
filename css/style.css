@@ -40,3 +40,18 @@ body {
 .sidebar-transition { 
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
 }
+
+
+/* ==========================================================
+   NAVIGASI BAWAH (HP) -- Roadmap Tahap 2
+   Disembunyikan secara default. Class `has-bottom-nav` dipasang di <body>
+   oleh updateBottomNav() (js/home.js) hanya untuk user non-guest, bukan di
+   halaman AI SOP, dan layar < 768px. Konten diberi ruang di bawah supaya
+   baris terakhir tidak tertutup bar.
+   ========================================================== */
+#bottomNav { display: none; padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+@media (max-width: 767px) {
+    body.has-bottom-nav #bottomNav { display: flex; }
+    body.has-bottom-nav main[id^="section-"] { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+}

@@ -34,6 +34,7 @@ Portal-Drive-main/
 │   └── theme.css           # Tema warna (cobalt/laut/anggur), sudut, bayangan — lihat AI_HANDOFF §3.7
 ├── js/
 │   ├── app.js              # Auth, navigasi sidebar, file explorer Drive
+│   ├── home.js             # Beranda "Hari ini" (Sales MTD, UPT, tugas) + navigasi bawah HP
 │   ├── dashboard.js        # Dashboard UPT
 │   ├── monitoring.js       # Monitoring tugas & inbox
 │   ├── f003-builder.js     # Form pengajuan barang rusak (F003)

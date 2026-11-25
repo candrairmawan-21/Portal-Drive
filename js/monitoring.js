@@ -265,6 +265,8 @@ async function fetchMonitoringData() {
         allTaskLogs = newLogs;
         renderMonitoringTable();
         updateInboxBadge();
+        // Beranda (js/home.js): perbarui kartu "Tugas Hari Ini" bila sedang tampil.
+        if (typeof renderHomeTasksCard === 'function') renderHomeTasksCard();
     } catch (error) {
         console.error('Gagal mengambil data monitoring:', error);
     }

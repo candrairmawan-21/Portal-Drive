@@ -53,6 +53,7 @@ menambah kode.
 | File | Baris | Tanggung jawab |
 |---|---|---|
 | `app.js` | ~590 | Login (`userDatabase` hardcoded), navigasi sidebar, file explorer Drive (grid/list), breadcrumb, modal password |
+| `home.js` | ~460 | Beranda "Hari ini" (3 kartu, tiap kartu gagal sendiri-sendiri) + status navigasi bawah HP. Hanya dibungkus IIFE; mengekspos `loadHomeDashboard`, `renderHomeTasksCard`, `updateBottomNav`. Memakai ulang parser `parseSalesCSV` & `parseDashboardCSV` dan data tugas milik `monitoring.js` |
 | `dashboard.js` | ~470 | Dashboard UPT: fetch CSV, render KPI, Chart.js |
 | `monitoring.js` | ~864 | Monitoring tugas & inbox, accordion dengan state persist saat auto-refresh, update status via Apps Script terpisah |
 | `f003-builder.js` | ~498 | Form pengajuan barang rusak F003, generate Excel dari `F003_Template.xlsx` |
