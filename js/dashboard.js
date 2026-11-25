@@ -605,6 +605,34 @@ function parseLineCSVCells(line) {
     return cells.map(c => c.replace(/^"|"$/g, '').trim());
 }
 
+/**
+ * Pilih GID sheet sales untuk key bulan (mis. 'Nov26').
+ * Kalau key itu belum terdaftar: pakai bulan terdekat SEBELUMNYA yang punya GID; kalau tidak ada,
+ * bulan terbaru yang tersedia. Mengembalikan { gid, usedKey } supaya pemanggil tahu bila terjadi fallback.
+ */
+function resolveUptSalesGid_(gidsSource, salesKey) {
+    if (gidsSource[salesKey]) return { gid: gidsSource[salesKey], usedKey: salesKey };
+
+    const sortValue = k => {
+        const m = String(k).match(/^([A-Za-z]{3})(\d{2})$/);
+        if (!m) return -1;
+        const idx = MONTH_ABBR_EN.findIndex(a => a.toLowerCase() === m[1].toLowerCase());
+        return idx === -1 ? -1 : (2000 + parseInt(m[2], 10)) * 12 + idx;
+    };
+    const wanted = sortValue(salesKey);
+    const monthKeys = Object.keys(gidsSource).filter(k => sortValue(k) > 0)
+        .sort((a, b) => sortValue(b) - sortValue(a)); // terbaru dulu
+
+    const earlier = monthKeys.find(k => wanted > 0 && sortValue(k) <= wanted);
+    const usedKey = earlier || monthKeys[0];
+    if (usedKey) {
+        console.warn(`[UPT] GID untuk ${salesKey} belum ada; memakai ${usedKey}. Tambahkan '${salesKey}' ke SHEET_GIDS.`);
+        return { gid: gidsSource[usedKey], usedKey };
+    }
+    const fallbackGid = Object.values(gidsSource)[0];
+    return { gid: fallbackGid, usedKey: salesKey };
+}
+
 async function fetchAndRenderUptSalesTable() {
     const tbody = document.getElementById('upt-sales-table-body');
     if (!tbody) return;
@@ -620,7 +648,14 @@ async function fetchAndRenderUptSalesTable() {
     const baseUrl = (typeof SALES_BASE_URL !== 'undefined') ? SALES_BASE_URL : SALES_FALLBACK_BASE_URL;
     const gidsSource = (typeof SHEET_GIDS !== 'undefined') ? SHEET_GIDS : SALES_GIDS_FALLBACK;
 
-    const gid = gidsSource[salesKey] || gidsSource['Aug26'] || Object.values(gidsSource)[0];
+    // Dulu fallback-nya di-hardcode ke 'Aug26': kalau GID bulan berjalan belum didaftarkan, tabel UPT
+    // diam-diam menampilkan data AGUSTUS (toko baru seperti XCLM jadi "hilang"). Sekarang jatuh ke bulan
+    // terdekat sebelumnya yang punya GID, dan user diberi catatan terlihat di atas tabel.
+    const resolved = resolveUptSalesGid_(gidsSource, salesKey);
+    const gid = resolved.gid;
+    const fallbackNotice = resolved.usedKey !== salesKey
+        ? `<tr><td colspan="5" class="text-center py-3 px-4 text-xs font-bold text-amber-700 bg-amber-50 border-b border-amber-100">GID sheet untuk ${salesKey} belum ditambahkan, jadi yang tampil data ${resolved.usedKey}. Tambahkan GID ${salesKey} di SHEET_GIDS (js/sales-dashboard.js).</td></tr>`
+        : '';
     const finalUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}gid=${gid}&t=${Date.now()}`;
 
     // Tampilkan placeholder loading di tabel
@@ -695,7 +730,7 @@ async function fetchAndRenderUptSalesTable() {
         // Urutkan berdasarkan persentase achievement (%Ach) descending (Tertinggi ke Terendah)
         const sorted = rows.sort((a, b) => (b.achPercent || 0) - (a.achPercent || 0));
         
-        tbody.innerHTML = sorted.map((r, idx) => `
+        tbody.innerHTML = fallbackNotice + sorted.map((r, idx) => `
             <tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'} border-b border-slate-100 transition-colors hover:bg-blue-50">
                 <td class="px-5 py-4 text-center text-xs font-bold text-slate-400">${idx + 1}</td>
                 <td class="px-5 py-4">

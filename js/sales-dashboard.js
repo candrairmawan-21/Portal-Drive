@@ -61,6 +61,8 @@ let salesTableSortBound = false;
 const SHEET_GIDS = {
     'OFFICIAL_IT_REPORT': '1129267198',
     'OFFICIAL_IT': '1129267198', // Alias agar aman dari bug pemanggilan key
+    'Dec26': '1681902748',
+    'Nov26': '498715833',
     'Oct26': '1682478488', 
     'Sep26': '432381843', 
     'Aug26': '1766415704', 
