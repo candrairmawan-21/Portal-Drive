@@ -1,31 +1,145 @@
 /* ==========================================================================
-   THEME MIDNORTH — SATU-SATUNYA tempat token warna, sudut, dan bayangan.
-   Palet diambil dari logo Midnorth Java (midnorth java (1).png):
-     cokelat #6F4A2A (tulisan logo) · oranye #D4692B · kuning #EFAE38
-   Tailwind ikut memakai palet ini lewat `tailwind.config` di index.html
-   (amber/orange = oranye logo, slate = netral hangat, indigo = cokelat),
-   jadi kelas seperti `bg-slate-900` atau `text-amber-600` TIDAK dihapus
-   dari kode, hanya warnanya yang berubah. Ubah warna di SATU tempat:
-   skala di tailwind.config + variabel :root di bawah.
-   Menggantikan blok <style id="professional-visual-refresh"> lama.
+   THEME PORTAL — token warna, sudut, dan bayangan dalam SATU berkas.
+   Warna tidak lagi terpaku pada logo. Setiap tema hanya mengisi 3 skala
+   netral/aksen/sekunder (+ 1 warna sorot); `tailwind.config` di index.html
+   membaca variabel ini, jadi kelas seperti `bg-slate-900`, `text-amber-600`,
+   `text-cyan-600` otomatis mengikuti tema aktif.
+
+     --n-*   netral  (kelas slate & gray)      --a-*  aksen   (amber & orange)
+     --s-*   sekunder (indigo, blue, cyan, violet)   --hl-rgb  warna sorot
+
+   Ganti tema: <html data-theme="cobalt|laut|anggur"> (pemilih kecil ada di
+   bawah sidebar; pilihan disimpan di localStorage 'portalTheme').
+   Menambah tema = salin satu blok di bawah, ganti 5 nilai warna dasar.
+   Skala 50–950 dibuat dengan mencampur warna dasar (500) dengan putih/hitam.
    ========================================================================== */
+
+:root, html[data-theme="cobalt"] {
+    --n-50: 244 244 243;
+    --n-100: 233 232 231;
+    --n-200: 212 210 208;
+    --n-300: 185 181 179;
+    --n-400: 152 147 143;
+    --n-500: 120 113 108;
+    --n-600: 103 97 93;
+    --n-700: 84 79 76;
+    --n-800: 65 61 58;
+    --n-900: 46 43 41;
+    --n-950: 29 27 26;
+    --a-50: 238 241 253;
+    --a-100: 222 227 250;
+    --a-200: 188 199 245;
+    --a-300: 147 163 239;
+    --a-400: 97 121 231;
+    --a-500: 47 79 224;
+    --a-600: 40 68 193;
+    --a-700: 33 55 157;
+    --a-800: 25 43 121;
+    --a-900: 18 30 85;
+    --a-950: 11 19 54;
+    --s-50: 235 244 246;
+    --s-100: 216 234 237;
+    --s-200: 177 212 218;
+    --s-300: 128 186 195;
+    --s-400: 70 154 168;
+    --s-500: 11 122 140;
+    --s-600: 9 105 120;
+    --s-700: 8 85 98;
+    --s-800: 6 66 76;
+    --s-900: 4 46 53;
+    --s-950: 3 29 34;
+    --hl-rgb: 255 197 51;
+    --page: #F8F6F1;
+}
+
+html[data-theme="laut"] {
+    --n-50: 242 244 245;
+    --n-100: 229 232 235;
+    --n-200: 203 209 215;
+    --n-300: 170 181 191;
+    --n-400: 130 146 161;
+    --n-500: 91 112 131;
+    --n-600: 78 96 113;
+    --n-700: 64 78 92;
+    --n-800: 49 60 71;
+    --n-900: 35 43 50;
+    --n-950: 22 27 31;
+    --a-50: 236 244 246;
+    --a-100: 216 233 237;
+    --a-200: 178 211 219;
+    --a-300: 130 183 197;
+    --a-400: 72 149 171;
+    --a-500: 14 116 144;
+    --a-600: 12 100 124;
+    --a-700: 10 81 101;
+    --a-800: 8 63 78;
+    --a-900: 5 44 55;
+    --a-950: 3 28 35;
+    --s-50: 250 240 236;
+    --s-100: 245 225 216;
+    --s-200: 235 194 177;
+    --s-300: 223 156 129;
+    --s-400: 209 111 70;
+    --s-500: 194 65 12;
+    --s-600: 167 56 10;
+    --s-700: 136 46 8;
+    --s-800: 105 35 6;
+    --s-900: 74 25 5;
+    --s-950: 47 16 3;
+    --hl-rgb: 255 138 91;
+    --page: #F2F6F8;
+}
+
+html[data-theme="anggur"] {
+    --n-50: 244 243 244;
+    --n-100: 233 231 234;
+    --n-200: 211 208 212;
+    --n-300: 183 178 186;
+    --n-400: 150 143 154;
+    --n-500: 117 107 122;
+    --n-600: 101 92 105;
+    --n-700: 82 75 85;
+    --n-800: 63 58 66;
+    --n-900: 44 41 46;
+    --n-950: 28 26 29;
+    --a-50: 248 237 249;
+    --a-100: 240 219 242;
+    --a-200: 225 182 229;
+    --a-300: 207 137 213;
+    --a-400: 184 82 194;
+    --a-500: 162 28 175;
+    --a-600: 139 24 150;
+    --a-700: 113 20 122;
+    --a-800: 87 15 94;
+    --a-900: 62 11 66;
+    --a-950: 39 7 42;
+    --s-50: 247 242 235;
+    --s-100: 240 230 215;
+    --s-200: 225 205 176;
+    --s-300: 206 173 126;
+    --s-400: 184 136 67;
+    --s-500: 161 98 7;
+    --s-600: 138 84 6;
+    --s-700: 113 69 5;
+    --s-800: 87 53 4;
+    --s-900: 61 37 3;
+    --s-950: 39 24 2;
+    --hl-rgb: 249 199 79;
+    --page: #FAF6FA;
+}
+
 :root {
-    --brand-brown: #6F4A2A;
-    --brand-orange: #D4692B;
-    --brand-orange-strong: #BF5A1F; /* oranye logo, digelapkan agar teks putih terbaca (4.5:1) */
-    --brand-amber: #EFAE38;
-
-    --ink: #2A2018;
-    --muted: #7F7467;
-    --line: #E7DFD4;
-    --page: #F6F2EC;
+    --ink: rgb(var(--n-900));
+    --muted: rgb(var(--n-500));
+    --line: rgb(var(--n-200));
     --surface: #FFFFFF;
-    --surface-soft: #FAF7F3;
-    --sidebar-bg: #2A2018;
+    --surface-soft: rgb(var(--n-50));
+    --sidebar-bg: rgb(var(--n-900));
 
-    --accent: var(--brand-orange-strong);
-    --accent-soft: #FDF5EC;
-    --accent-ring: rgba(212, 105, 43, .22);
+    --accent: rgb(var(--a-500));
+    --accent-soft: rgb(var(--a-50));
+    --accent-ring: rgb(var(--a-500) / .22);
+    --highlight: rgb(var(--hl-rgb));
 
     --success: #15966F;
     --danger: #DF5266;
@@ -44,7 +158,7 @@ table, #section-sales, #section-dashboard, #section-monitoring { font-variant-nu
 /* ---- Sidebar: solid, tanpa gradien ---- */
 #sidebarMenu {
     background: var(--sidebar-bg);
-    border-right-color: rgba(255,255,255,.06);
+    border-right-color: rgb(255 255 255 / .06);
     padding: 16px 12px;
 }
 #sidebarMenu nav { space-y: 0 !important; }
@@ -55,10 +169,10 @@ table, #section-sales, #section-dashboard, #section-monitoring { font-variant-nu
     border-radius: var(--radius-control);
 }
 #sidebarMenu button:hover, #sidebarMenu a:hover {
-    background: rgba(255,255,255,.06);
-    border-color: rgba(255,255,255,.05);
+    background: rgb(255 255 255 / .06);
+    border-color: rgb(255 255 255 / .05);
 }
-#sidebarMenu .border-b, #sidebarMenu .border-t { border-color: rgba(255,255,255,.08) !important; }
+#sidebarMenu .border-b, #sidebarMenu .border-t { border-color: rgb(255 255 255 / .08) !important; }
 #sidebarMenu .header-container { margin-bottom: 16px; }
 #sidebarMenu .logo-text-group img {
     border-radius: var(--radius-control);
@@ -73,9 +187,17 @@ table, #section-sales, #section-dashboard, #section-monitoring { font-variant-nu
     box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
+/* ---- Pemilih tema (alat uji; boleh dihapus setelah tema dipilih) ---- */
+.theme-picker { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 0 2px; }
+.theme-picker > span:first-child { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: rgb(255 255 255 / .45); }
+.theme-dot { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; display: inline-block; }
+html[data-theme="cobalt"] [data-theme-btn="cobalt"] { box-shadow: 0 0 0 2px var(--sidebar-bg), 0 0 0 4px rgb(255 255 255 / .85); }
+html[data-theme="laut"] [data-theme-btn="laut"] { box-shadow: 0 0 0 2px var(--sidebar-bg), 0 0 0 4px rgb(255 255 255 / .85); }
+html[data-theme="anggur"] [data-theme-btn="anggur"] { box-shadow: 0 0 0 2px var(--sidebar-bg), 0 0 0 4px rgb(255 255 255 / .85); }
+
 /* ---- Header ---- */
 header {
-    background: rgba(255,255,255,.92) !important;
+    background: rgb(255 255 255 / .92) !important;
     border-bottom-color: var(--line) !important;
     box-shadow: none !important;
 }
@@ -93,7 +215,7 @@ main.container { max-width: 1680px; }
 main.container, #section-ai-sop { padding-top: 28px !important; padding-bottom: 36px !important; }
 .bg-white.border {
     border-color: var(--line) !important;
-    box-shadow: 0 1px 2px rgba(42,32,24,.05) !important;
+    box-shadow: 0 1px 2px rgb(var(--n-900) / .05) !important;
 }
 
 select, input[type="text"], input[type="date"], input[type="file"] { border-color: var(--line) !important; }
@@ -109,7 +231,7 @@ label { color: var(--muted) !important; }
     position: absolute;
     left: 0; top: 0; bottom: 0;
     width: 3px;
-    background: var(--brand-orange);
+    background: var(--accent);
 }
 #section-sales [id^="summary-"] {
     font-size: clamp(1.2rem, 1.8vw, 1.7rem) !important;
@@ -127,20 +249,20 @@ table thead th {
     letter-spacing: .04em !important;
 }
 table tbody tr:hover { background: var(--surface-soft); }
-table tbody td { border-color: #EFE8DE !important; }
-.overflow-x-auto { scrollbar-color: #D3C8B9 transparent; }
+table tbody td { border-color: rgb(var(--n-100)) !important; }
+.overflow-x-auto { scrollbar-color: rgb(var(--n-300)) transparent; }
 
 /* ---- Tombol: solid, tanpa bayangan dekoratif ---- */
 button, a { transition-duration: .18s !important; }
 .bg-slate-900, .bg-amber-500 { box-shadow: none; }
 
-/* ---- Hero Sales Monitoring: solid (kelas gradien sudah dilepas di index.html) ---- */
-#section-sales > .bg-slate-900 { border-color: rgba(255,255,255,.06) !important; }
+/* ---- Hero Sales Monitoring: solid ---- */
+#section-sales > .bg-slate-900 { border-color: rgb(255 255 255 / .06) !important; }
 
 /* ---- File manager ---- */
-#breadcrumbs { border-color: var(--line) !important; background: rgba(255,255,255,.92) !important; }
+#breadcrumbs { border-color: var(--line) !important; background: rgb(255 255 255 / .92) !important; }
 #portalGrid > * { transition: border-color .18s ease; }
-#portalGrid > *:hover { border-color: var(--brand-orange) !important; }
+#portalGrid > *:hover { border-color: var(--accent) !important; }
 
 /* ---- F003 & Analyze ---- */
 #damage-form-container > .grid,
@@ -162,24 +284,19 @@ button, a { transition-duration: .18s !important; }
 /* ---- Modal & login ---- */
 [id$="Modal"] > .bg-white, #loginOverlay > .bg-white {
     border-radius: var(--radius-card) !important;
-    box-shadow: 0 12px 32px rgba(42,32,24,.18) !important;
+    box-shadow: 0 12px 32px rgb(var(--n-900) / .2) !important;
 }
 #loginOverlay { background: var(--sidebar-bg) !important; }
 #loginOverlay > .bg-white { max-width: 430px; }
 
 /* ---- Aksesibilitas ---- */
 button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
-    outline: 2px solid var(--brand-orange) !important;
+    outline: 2px solid var(--accent) !important;
     outline-offset: 2px;
 }
 
-/* ---- Penanda level (pengganti emoji 🏆🥈🥉⭐) ---- */
-.level-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex: none;
-}
+/* ---- Penanda level (pengganti emoji) ---- */
+.level-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
 @media (max-width: 768px) {
     main.container { padding-left: 16px !important; padding-right: 16px !important; }

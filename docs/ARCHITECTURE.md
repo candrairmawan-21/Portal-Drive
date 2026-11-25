@@ -67,7 +67,7 @@ Upload PDF ada di section 8 / 8b di dalamnya.
 
 | Library | Dipakai untuk |
 |---|---|
-| Tailwind CSS | Seluruh styling. Palet/sudut/bayangan dikonfigurasi lewat `tailwind.config` di `index.html` + `css/theme.css` |
+| Tailwind CSS | Seluruh styling. Warna dibaca dari variabel tema di `css/theme.css` lewat `tailwind.config` di `index.html` |
 | Lucide | Ikon (`lucide.createIcons()` dipanggil ulang tiap render) |
 | Chart.js | Grafik dashboard & sales |
 | SheetJS (xlsx) | Baca/tulis Excel di modul F003 & analyze |

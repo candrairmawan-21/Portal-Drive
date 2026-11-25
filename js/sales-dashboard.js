@@ -47,6 +47,13 @@ const salesTableSortState = {
 let salesTableSortBound = false;
 
 
+// Warna chart dibaca dari variabel CSS tema aktif (css/theme.css), bukan hex tetap.
+// themeRgb_('--a-500') -> 'rgb(r,g,b)'; themeRgb_('--a-500', .5) -> 'rgba(r,g,b,.5)'.
+function themeRgb_(name, alpha) {
+    const v = (getComputedStyle(document.documentElement).getPropertyValue(name) || '0 0 0').trim().split(/\s+/).join(',');
+    return alpha === undefined ? `rgb(${v})` : `rgba(${v},${alpha})`;
+}
+
 // GID Sheet Lengkap (Termasuk Alias untuk Official IT Report)
 //
 // PENTING -- ini SATU-SATUNYA tempat daftar bulan didefinisikan. Dropdown
@@ -1058,17 +1065,17 @@ function renderOfficialChart_(data){
     const ctx=document.getElementById('salesTargetChart');if(!ctx)return;if(salesChartInstance)salesChartInstance.destroy();
     const sorted=getCanonicalStoreOrder_(data);
     salesChartInstance=new Chart(ctx,{type:'bar',data:{labels:sorted.map(i=>i.store),datasets:[
-        {type:'line',label:'Achievement (%)',data:sorted.map(i=>i.achPercent||0),borderColor:'#D4692B',backgroundColor:'#D4692B',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#fff',pointBorderColor:'#D4692B',pointBorderWidth:2,fill:false,tension:.35,yAxisID:'y1'},
-        {type:'bar',label:'MTD Target',data:sorted.map(i=>i.mtdTarget||0),backgroundColor:'rgba(111,74,42,.78)',borderColor:'#6F4A2A',borderWidth:1,borderRadius:6,yAxisID:'y'},
-        {type:'bar',label:'MTD Sales',data:sorted.map(i=>i.mtdSales||0),backgroundColor:'rgba(212,105,43,.88)',borderColor:'#D4692B',borderWidth:1,borderRadius:6,yAxisID:'y'}
-    ]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:38}},interaction:{mode:'index',intersect:false},scales:{x:{grid:{display:false},ticks:{maxRotation:55,minRotation:35,autoSkip:false}},y:{beginAtZero:true,ticks:{callback:v=>'Rp '+formatCompactOfficial_(v)}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>v+'%'}}},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label==='Achievement (%)'?`${c.dataset.label}: ${Number(c.raw||0).toFixed(1)}%`:`${c.dataset.label}: Rp ${Math.round(c.raw||0).toLocaleString('id-ID')}`}}}},plugins:[{id:'officialAchievementLabels',afterDatasetsDraw:chart=>{const ds=chart.data.datasets[0],meta=chart.getDatasetMeta(0);if(meta.hidden)return;meta.data.forEach((el,i)=>{const c=chart.ctx;c.save();c.fillStyle='#A04A18';c.font='bold 10px "Plus Jakarta Sans",sans-serif';c.textAlign='center';c.textBaseline='bottom';c.fillText(Number(ds.data[i]||0).toFixed(1)+'%',el.x,el.y-7);c.restore();});}}]});
+        {type:'line',label:'Achievement (%)',data:sorted.map(i=>i.achPercent||0),borderColor:themeRgb_('--a-500'),backgroundColor:themeRgb_('--a-500'),borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#fff',pointBorderColor:themeRgb_('--a-500'),pointBorderWidth:2,fill:false,tension:.35,yAxisID:'y1'},
+        {type:'bar',label:'MTD Target',data:sorted.map(i=>i.mtdTarget||0),backgroundColor:themeRgb_('--s-500',.78),borderColor:themeRgb_('--s-500'),borderWidth:1,borderRadius:6,yAxisID:'y'},
+        {type:'bar',label:'MTD Sales',data:sorted.map(i=>i.mtdSales||0),backgroundColor:themeRgb_('--a-500',.88),borderColor:themeRgb_('--a-500'),borderWidth:1,borderRadius:6,yAxisID:'y'}
+    ]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:38}},interaction:{mode:'index',intersect:false},scales:{x:{grid:{display:false},ticks:{maxRotation:55,minRotation:35,autoSkip:false}},y:{beginAtZero:true,ticks:{callback:v=>'Rp '+formatCompactOfficial_(v)}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>v+'%'}}},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label==='Achievement (%)'?`${c.dataset.label}: ${Number(c.raw||0).toFixed(1)}%`:`${c.dataset.label}: Rp ${Math.round(c.raw||0).toLocaleString('id-ID')}`}}}},plugins:[{id:'officialAchievementLabels',afterDatasetsDraw:chart=>{const ds=chart.data.datasets[0],meta=chart.getDatasetMeta(0);if(meta.hidden)return;meta.data.forEach((el,i)=>{const c=chart.ctx;c.save();c.fillStyle=themeRgb_('--s-700');c.font='bold 10px "Plus Jakarta Sans",sans-serif';c.textAlign='center';c.textBaseline='bottom';c.fillText(Number(ds.data[i]||0).toFixed(1)+'%',el.x,el.y-7);c.restore();});}}]});
 }
 function renderOfficialTrendChart_(data){
     const ctx=document.getElementById('salesTargetChart');if(!ctx)return;if(salesChartInstance)salesChartInstance.destroy();
     const sel=selectedMonthInfo_(),allowed=new Set(data.map(i=>normalizeStoreKey_(i.storeCode||i.store))),daily=new Map();
     officialRawData.forEach(r=>{if(r.date.getMonth()!==sel.month||r.date.getFullYear()!==sel.year)return;if(!allowed.has(normalizeStoreKey_(r.storeCode||r.store)))return;const d=r.date.getDate();if(!daily.has(d))daily.set(d,{sales:0});daily.get(d).sales+=r.netSales||0;});
     const days=new Date(sel.year,sel.month+1,0).getDate(),labels=[],sales=[];let running=0;for(let d=1;d<=days;d++){running+=(daily.get(d)?.sales||0);labels.push(String(d));sales.push(running);}
-    salesChartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Cumulative MTD Sales',data:sales,borderColor:'#D4692B',backgroundColor:'rgba(212,105,43,.10)',borderWidth:3,pointRadius:3,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>'Rp '+formatCompactOfficial_(v)}}},plugins:{legend:{position:'bottom'}}}});
+    salesChartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Cumulative MTD Sales',data:sales,borderColor:themeRgb_('--a-500'),backgroundColor:themeRgb_('--a-500',.10),borderWidth:3,pointRadius:3,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>'Rp '+formatCompactOfficial_(v)}}},plugins:{legend:{position:'bottom'}}}});
 }
 function renderOfficialDashboard_(data){renderOfficialSummary_(data);renderOfficialTable_(data);if(currentSalesChartMode==='mtd')renderOfficialChart_(data);else renderOfficialTrendChart_(data);}
 function renderSalesLoadError_(message){if(salesChartInstance){salesChartInstance.destroy();salesChartInstance=null;}const tbody=document.getElementById('sales-table-body');if(tbody)tbody.innerHTML=`<tr><td colspan="8" class="text-center py-8 text-sm font-bold text-rose-500">${escapeHtml_(message)}</td></tr>`;const count=document.getElementById('table-record-count');if(count)count.textContent='Data gagal dimuat';['summary-total-sales','summary-total-target','summary-avg-ach','summary-total-ly','summary-sssg','summary-proj-sssg'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='-';});}
@@ -1133,12 +1140,12 @@ function renderSalesChartFiltered(data) {
                     type: 'line',
                     label: 'Achievement (%)',
                     data: sortedData.map(item => item.achPercent || 0),
-                    backgroundColor: '#6F4A2A', 
-                    borderColor: '#6F4A2A', 
+                    backgroundColor: themeRgb_('--s-500'), 
+                    borderColor: themeRgb_('--s-500'), 
                     borderWidth: 2.5,
                     pointRadius: 5,
                     pointBackgroundColor: '#ffffff',
-                    pointBorderColor: '#6F4A2A',
+                    pointBorderColor: themeRgb_('--s-500'),
                     pointBorderWidth: 2,
                     fill: false, 
                     tension: 0.35, 
@@ -1158,7 +1165,7 @@ function renderSalesChartFiltered(data) {
                     type: 'bar',
                     label: 'MTD Sales',
                     backgroundColor: 'rgba(249, 115, 22, 0.9)',
-                    borderColor: '#EFAE38',
+                    borderColor: themeRgb_('--hl-rgb'),
                     borderWidth: 1,
                     borderRadius: 6,
                     data: sortedData.map(item => item.mtdSales || 0),
@@ -1186,7 +1193,7 @@ function renderSalesChartFiltered(data) {
                         const meta = chart.getDatasetMeta(i);
                         if (!meta.hidden) {
                             meta.data.forEach((element, index) => {
-                                ctx.fillStyle = '#4A311B'; 
+                                ctx.fillStyle = themeRgb_('--n-800'); 
                                 ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'bottom';
@@ -1243,7 +1250,7 @@ async function fetchAndRenderTrendChart(kategori, spesifik) {
         }))).filter(Boolean);
         if(requestId!==currentTrendRequestId)return;
         if(salesChartInstance)salesChartInstance.destroy();
-        salesChartInstance=new Chart(ctx,{type:'line',data:{labels:validData.map(x=>x.month),datasets:[{label:'Trend Achievement (%)',data:validData.map(x=>x.achPercent),borderColor:'#EFAE38',backgroundColor:'rgba(249,115,22,.10)',borderWidth:3,pointRadius:5,pointBackgroundColor:'#fff',pointBorderColor:'#EFAE38',pointBorderWidth:2,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:37}},interaction:{mode:'index',intersect:false},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>v+'%'}}},plugins:{legend:{position:'bottom'}}}});
+        salesChartInstance=new Chart(ctx,{type:'line',data:{labels:validData.map(x=>x.month),datasets:[{label:'Trend Achievement (%)',data:validData.map(x=>x.achPercent),borderColor:themeRgb_('--hl-rgb'),backgroundColor:'rgba(249,115,22,.10)',borderWidth:3,pointRadius:5,pointBackgroundColor:'#fff',pointBorderColor:themeRgb_('--hl-rgb'),pointBorderWidth:2,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:37}},interaction:{mode:'index',intersect:false},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>v+'%'}}},plugins:{legend:{position:'bottom'}}}});
     } catch(e) { console.error('Trend error',e); }
     finally { if(loader)loader.classList.add('hidden'); }
 }
@@ -1258,11 +1265,11 @@ function getAchievementLevel_(achPercent, target, salesOverride) {
     const sales = salesOverride !== undefined ? Number(salesOverride || 0) : (tgt * ach / 100);
     // Level 4 requires BOTH reaching 130% achievement AND reaching Rp700M sales.
     const level4MinimumSales = 700000000;
-    if (ach >= 130 && sales >= level4MinimumSales) return { key: 'level4', label: 'Level 4', icon: '<span class="level-dot" style="background:#EFAE38"></span>', cls: 'bg-slate-900 text-white border-slate-900' };
-    if (ach >= 120) return { key: 'level3', label: 'Level 3', icon: '<span class="level-dot" style="background:#D4692B"></span>', cls: 'bg-amber-200 text-amber-900 border-amber-300' };
-    if (ach >= 110) return { key: 'level2', label: 'Level 2', icon: '<span class="level-dot" style="background:#D4692B"></span>', cls: 'bg-amber-100 text-amber-800 border-amber-200' };
-    if (ach >= 100) return { key: 'level1', label: 'Level 1', icon: '<span class="level-dot" style="background:#EFAE38"></span>', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
-    return { key: 'not-achieve', label: 'Not achieve', icon: '<span class="level-dot" style="background:#D3C8B9"></span>', cls: 'bg-slate-50 text-slate-500 border-slate-200' };
+    if (ach >= 130 && sales >= level4MinimumSales) return { key: 'level4', label: 'Level 4', icon: '<span class="level-dot" style="background:rgb(var(--hl-rgb))"></span>', cls: 'bg-slate-900 text-white border-slate-900' };
+    if (ach >= 120) return { key: 'level3', label: 'Level 3', icon: '<span class="level-dot" style="background:rgb(var(--a-400))"></span>', cls: 'bg-amber-200 text-amber-900 border-amber-300' };
+    if (ach >= 110) return { key: 'level2', label: 'Level 2', icon: '<span class="level-dot" style="background:rgb(var(--a-400))"></span>', cls: 'bg-amber-100 text-amber-800 border-amber-200' };
+    if (ach >= 100) return { key: 'level1', label: 'Level 1', icon: '<span class="level-dot" style="background:rgb(var(--hl-rgb))"></span>', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+    return { key: 'not-achieve', label: 'Not achieve', icon: '<span class="level-dot" style="background:rgb(var(--n-300))"></span>', cls: 'bg-slate-50 text-slate-500 border-slate-200' };
 }
 function getLevelRank_(levelKey) { return ({'not-achieve':0, level1:1, level2:2, level3:3, level4:4}[levelKey] ?? 0); }
 function getTableSortValue_(item, key) {
@@ -1328,7 +1335,7 @@ function injectSalesDashboardTableStyles_() {
         .manager-ranking-abm .manager-ranking-row{height:34px;min-height:34px;gap:5px}
         .manager-rank-badge{width:24px;height:24px;min-width:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;background:#f8fafc;color:#64748b}
         .manager-ranking-abm .manager-rank-badge{width:19px;height:19px;min-width:19px;font-size:8px;border-radius:5px}
-        .manager-rank-badge.top{background:#FDF5EC;color:#A04A18}
+        .manager-rank-badge.top{background:rgb(var(--a-50));color:rgb(var(--a-700))}
         .manager-rank-name{font-size:12px;font-weight:900;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .manager-rank-meta{font-size:8px;font-weight:700;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .manager-rank-ach{font-size:12px;font-weight:900;white-space:nowrap}

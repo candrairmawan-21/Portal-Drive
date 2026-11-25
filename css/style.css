@@ -8,7 +8,7 @@ html {
 
 body { 
     font-family: 'Plus Jakarta Sans', sans-serif; 
-    background-color: #F6F2EC; 
+    background-color: var(--page, #F6F2EC); 
 }
 
 /* ==========================================================
@@ -16,7 +16,7 @@ body {
    Digunakan untuk animasi loading data di seluruh dashboard.
    ========================================================== */
 .skeleton {
-    background: linear-gradient(90deg, #F3EEE7 25%, #E7DFD4 50%, #F3EEE7 75%);
+    background: linear-gradient(90deg, rgb(var(--n-100, 243 238 231)) 25%, rgb(var(--n-200, 231 223 212)) 50%, rgb(var(--n-100, 243 238 231)) 75%);
     background-size: 200% 100%;
     animation: loading 1.5s infinite;
 }

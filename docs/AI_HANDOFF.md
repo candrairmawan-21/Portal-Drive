@@ -80,39 +80,44 @@ Jangan "optimasi" jadi `Promise.all()`. Apps Script punya `LockService` dengan
 timeout 30 detik dan batas eksekusi. Paralel akan membuat upload saling
 menggagalkan.
 
-### 3.7 Warna, sudut, dan bayangan hanya diatur di DUA tempat
+### 3.7 Warna, sudut, dan bayangan: sistem tema berbasis variabel CSS
 
-Tampilan memakai palet logo Midnorth (cokelat `#6F4A2A`, oranye `#D4692B`, kuning `#EFAE38`).
-Sumber kebenarannya:
+Pemilik **menolak palet dari logo** dan meminta arah yang lebih kreatif, jadi warna dibuat
+sebagai tema yang bisa dipilih (cobalt / laut / anggur). Sumber kebenarannya hanya dua:
 
-1. `tailwind.config` di `index.html` (tepat setelah `<script src="…cdn.tailwindcss.com">`):
-   skala warna, `borderRadius`, `boxShadow`, `letterSpacing`.
-2. `css/theme.css`: variabel `:root` dan aturan khusus (sidebar, tabel, KPI, modal).
+1. `css/theme.css`: satu blok variabel per tema + aturan tampilan.
+2. `tailwind.config` di `index.html` (tepat setelah CDN Tailwind): membaca variabel itu, plus
+   `borderRadius`, `boxShadow`, `letterSpacing`.
 
-Yang perlu diketahui sebelum menyentuh tampilan:
+Aturan yang harus dipatuhi:
 
-- **Nama kelas Tailwind sengaja tidak sama dengan warna aslinya.** `slate` = netral hangat,
-  `amber`/`orange` = oranye logo, `indigo`/`blue`/`cyan`/`violet` = cokelat logo. Jangan
-  "memperbaiki" kelas ini ke warna lain atau mengganti nama kelasnya; ubah skalanya di config.
-- `amber-500` (`#BF5A1F`) adalah oranye logo yang **sengaja digelapkan** agar teks putih di
-  atasnya lolos kontras 4,5:1. Oranye logo asli ada di `amber-400`.
-- **Jangan menulis hex baru** di JS/HTML kalau sudah ada token atau kelas yang cocok. Kalau
-  perlu warna baru, tambahkan ke config/`:root`, lalu pakai.
+- **Nama kelas Tailwind sengaja tidak sama dengan warna aslinya.** `slate`/`gray` = netral tema,
+  `amber`/`orange` = aksen tema, `indigo`/`blue`/`cyan`/`violet` = sekunder tema. Jangan
+  "memperbaikinya" ke warna lain atau mengganti nama kelasnya; ubah variabelnya di `theme.css`.
+- **Jangan menulis hex baru** di HTML/JS. Di CSS/HTML pakai `rgb(var(--a-500))`, `var(--accent)`,
+  dst. Di JS (Chart.js) pakai `themeRgb_('--a-500', alpha)` dari `sales-dashboard.js`; hex tetap
+  tidak ikut berganti saat tema diganti.
+- **Menambah tema:** salin satu blok `html[data-theme="…"]` di `theme.css`, ganti 5 nilai dasar
+  (netral, aksen, sekunder, sorot, latar). Skala 50–950 dibuat dengan mencampur warna dasar
+  dengan putih/hitam. Tambahkan juga satu `.theme-dot` di sidebar. Warna dasar aksen dan
+  sekunder harus kontras ≥ 4,5:1 di atas putih (teks putih di `bg-amber-500` dipakai di banyak
+  tempat).
+- **`localStorage 'portalTheme'`** menyimpan pilihan; `<html data-theme>` dipasang oleh skrip kecil
+  di `<head>` sebelum render. Mengganti tema memuat ulang halaman (supaya chart ikut berubah).
+  **Pemilih tema di sidebar adalah alat uji**; kalau pemilik sudah memilih satu tema, hapus
+  pemilih + tema lain dan jadikan tema itu satu-satunya di `:root`.
 - **Sudut:** kartu 8px (`rounded-2xl/3xl`), kontrol 6px (`rounded-lg/xl`). `rounded-full` hanya
-  untuk pil status kecil dan bar progres. **Bayangan:** hanya `shadow-sm`(none) s.d. `shadow-2xl`
-  yang tipis; kartu dibedakan dengan garis tipis, bukan bayangan.
-- **Tanpa gradien dekoratif.** Tombol utama solid. Satu-satunya gradien yang masih ada adalah
-  animasi `.skeleton` di `style.css`.
+  untuk pil status kecil dan bar progres. **Bayangan:** `shadow-sm` = none, sisanya tipis;
+  kartu dibedakan dengan garis tipis.
+- **Tanpa gradien dekoratif.** Satu-satunya gradien yang tersisa adalah animasi `.skeleton`.
 - **Penanda level bukan emoji.** `getAchievementLevel_()` mengembalikan `icon` berupa HTML
-  (`<span class="level-dot">`); jangan mengembalikannya ke emoji. Hati-hati kalau `icon`
-  dipakai di tempat yang menganggapnya teks biasa (mis. ekspor Excel); saat ini hanya dipakai
-  di tabel achievement.
-- **Hijau neon `#39FF14` di AI SOP sengaja dipertahankan** (keputusan pemilik). Jangan ikut
-  "diselaraskan" ke palet.
-- Hijau = sukses, merah/rose = gagal atau telat. Itu warna status, jangan diubah jadi palet.
-- Blok `<style id="professional-visual-refresh">` yang lama sudah dihapus; isinya pindah ke
-  `css/theme.css`. Jangan menambah blok `<style>` baru di `index.html`.
-- Cache: setelah mengubah `theme.css` atau `style.css`, naikkan angka `?v…` di tag `<link>`.
+  (`<span class="level-dot">`); jangan dikembalikan ke emoji. Saat ini hanya dipakai di tabel
+  achievement, jadi hati-hati kalau dipakai di tempat yang menganggapnya teks (mis. ekspor).
+- **Hijau neon `#39FF14` di AI SOP sengaja dipertahankan** (keputusan pemilik).
+- Hijau = sukses, merah/rose = gagal atau telat. Itu warna status, bukan bagian tema.
+- Blok `<style id="professional-visual-refresh">` lama sudah dihapus; jangan menambah blok
+  `<style>` baru di `index.html`.
+- Setelah mengubah `theme.css`/`style.css`, naikkan angka `?v…` di tag `<link>`.
 
 ---
 
@@ -175,6 +180,7 @@ Berdasarkan sesi-sesi sebelumnya:
 - Prioritas pada kecepatan/responsivitas sistem.
 - Lebih suka membangun di dalam sistem yang sudah ada daripada pindah stack.
 - Hijau neon di menu AI SOP adalah pilihan sadar, bukan sisa template.
+- **Tidak mau warna terpaku pada logo Midnorth** dan menolak palet cokelat/oranye. Ingin yang lebih kreatif.
 - Menyetujui perubahan tampilan **bertahap** (tahap 1 selesai: palet & komponen dasar). Jangan
   mengerjakan semua rekomendasi sekaligus.
 
@@ -212,7 +218,7 @@ Berdasarkan sesi-sesi sebelumnya:
 
 ### Roadmap tampilan & fitur (disetujui bertahap)
 
-- **Tahap 1 — SELESAI:** palet logo, skala sudut/bayangan, tanpa gradien/emoji, `tabular-nums`.
+- **Tahap 1 — SELESAI (menunggu pemilik memilih tema):** tiga tema warna, skala sudut/bayangan, tanpa gradien/emoji, `tabular-nums`.
   Sisa kecil tahap 1: kode toko monospace baru di satu tabel; warna hex abu dingin
   (`#f1f5f9` dst.) masih ada di `<style>` yang disuntik `sales-dashboard.js` (ranking BM/ABM).
 - **Tahap 2 — belum:** Beranda "Hari ini" (sales MTD, UPT, tugas jatuh tempo, pengumuman) dan

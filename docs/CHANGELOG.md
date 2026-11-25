@@ -8,7 +8,36 @@ Urutan dari terbaru ke terlama.
 
 ---
 
-## 2026-11 — Tampilan tahap 1: palet logo, satu skala sudut/bayangan, tanpa gradien & emoji
+## 2026-11 — Tampilan tahap 1 (revisi): palet logo diganti sistem tema 3 pilihan
+
+### Kenapa
+Palet cokelat/oranye dari logo (entri di bawah) ditolak pemilik: tidak perlu terpaku pada warna
+Midnorth, dan arahnya diminta lebih kreatif. Karena tidak jelas warna mana yang akan disukai,
+warna dijadikan **tema yang bisa dipilih** alih-alih menebak satu palet lagi.
+
+### Apa yang berubah
+- `css/theme.css`: warna sekarang berupa variabel CSS per tema (`--n-*` netral, `--a-*` aksen,
+  `--s-*` sekunder, `--hl-rgb` sorot, `--page` latar). Tiga tema: **cobalt** (default; netral
+  hangat + biru kobalt + kuning sorot), **laut** (biru-abu + teal samudra + koral), **anggur**
+  (mauve + magenta-plum + emas).
+- `tailwind.config` di `index.html` kini membaca variabel itu (`rgb(var(--a-500) / <alpha-value>)`),
+  jadi kelas lama (`bg-slate-900`, `text-amber-600`, …) tetap ada dan otomatis mengikuti tema.
+- `<html data-theme>` dipasang sebelum render (tanpa kedip) dan disimpan di localStorage
+  `portalTheme`. Pemilih tiga titik ada di bawah sidebar; mengganti tema memuat ulang halaman
+  supaya chart ikut berwarna baru. **Pemilih ini alat uji** — hapus markup `.theme-picker` dan
+  aturan CSS-nya kalau tema sudah dipilih (sisakan satu tema di `:root`).
+- `sales-dashboard.js`: warna chart dibaca lewat `themeRgb_('--a-500', alpha)` (bukan hex tetap);
+  titik level, badge ranking, dan tombol F003 memakai `var(--…)`.
+- Skala tiap warna dibuat otomatis dari satu warna dasar (500) dengan mencampur putih/hitam;
+  kontras teks sudah diperiksa ≥ 4,5:1 untuk aksen/sekunder/netral di ketiga tema.
+
+### Tidak berubah
+Sudut 8/6px, bayangan tipis, tanpa gradien & emoji, hijau neon AI SOP, warna status
+(hijau/merah), serta semua logika data.
+
+---
+
+## 2026-11 — Tampilan tahap 1 (DIGANTIKAN oleh entri di atas untuk soal warna): palet logo, satu skala sudut/bayangan, tanpa gradien & emoji
 
 ### Kenapa
 Tampilan terasa seperti "template" karena warna bawaan Tailwind (slate dingin + amber + hijau)
